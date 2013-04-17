@@ -98,9 +98,16 @@ class WiggleReader: public WiggleIterator {
 	FILE * infile;
 	size_t length;
 	char * line;
+	bool fixedStep;
+	int step;
+	int span;
 
 	public:
 		void pop();
 		WiggleReader (char * );
+
+	private:
+		void readLine();
+		void readHeader();
 };
 #endif

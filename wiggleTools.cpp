@@ -414,12 +414,112 @@ WiggleReader::WiggleReader(char * f) {
 	pop();
 }	
 
-void WiggleReader::pop() {
-	if (getline(&line, &length, infile) != EOF) {
-		sscanf(line, "%s\t%i\t%i\t%lf", chrom, &start, &finish, &value);
-	} else {
+void WiggleReader::readHeader() {
+	boolean chrom = true;
+	boolean start = true;
+	boolean step = true;
+	const char * seps = " \t=";
+	char * token = strtok(line, seps);
+	if (!strcmp(token, "variableStep"))
+		fixedStep = false;
+	else if (!strcmp(token, "fixedStep"))
+		fixedStep = true;
+	else {
+		printf("Header line starting with word %s\n", token);
+		exit(1);
+	}
+
+	// Default
+	span = 1;
+
+	// Reading following parameters
+	token = strtok(NULL, seps);
+	while(token) {
+		if (!strcmp(token, "chrom")) {
+			chrom = false;
+			token = strtok(NULL, seps);
+			if (!token) {
+				printf("Empty chromosome name!\n");
+				exit(1);
+			}
+			strcpy(chrom, token);
+		}
+		if (!strcmp(token, "start")) {
+			start = false;
+			token = strtok(NULL, seps);
+			if (!token) {
+				printf("Empty start position!\n");
+				exit(1);
+			}
+			sscanf(token, "%i", &start);
+		}
+		if (!strcmp(token, "span")) {
+			token = strtok(NULL, seps);
+			if (!token) {
+				printf("Empty span length!\n");
+				exit(1);
+			}
+			sscanf(token, "%i", &span);
+		}
+		if (!strcmp(token, "step")) {
+			step = false;
+			if (!fixedStep) {
+				printf("Cannot specify step length on a variable length track\n");
+				exit(1);
+			}
+			token = strtok(NULL, seps);
+			if (!token) {
+				printf("Empty step length!\n");
+				exit(1);
+			}
+			sscanf(token, "%s", &step);
+		}
+	}
+
+	// Checking that all compulsory fields were filled:
+	if ((fixedStep && (chrom || start || step)) || (!fixedStep && chrom)) {
+		printf("Invalid header, missing data: %s\n", line);
+		exit(1);
+	}
+
+	// Backing off so as not to offset the first line
+	if (fixedStep)
+		start -= step;
+}
+
+void WiggleReader::readFixedStepLine() {
+	sscanf(line, "%lf", &value);
+	start += step;
+	finish = start + span;
+}
+
+void WiggleReader::readVariableStepLine() {
+	sscanf(line, "%i\t%lf", &start, &value);
+	finish = start + span;
+}
+
+void WiggleReader::readLine(char * line) {
+	if (fixedStep)
+		this.readFixedStepLine();
+	else
+		this.readVariableStepLine();
+}
+
+void WiggleReader::popLine() {
+	if (getline(&line, &length, infile) == EOF) {
 		done = true;
 		fclose(infile);
+	}
+}
+
+void WiggleReader::pop() {
+	while (this.popLine() && !done) { 
+		if (line[0] == 'v' || line[0] == 'f') 
+			this.readHeader(line);
+		else {
+			this.readLine(line);
+			break;
+		}
 	}
 }
 
