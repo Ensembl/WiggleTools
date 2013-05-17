@@ -38,6 +38,26 @@
 
 static void printHelp() {
 	puts("Help!");
+	puts("Inputs:");
+	puts("\tThe program takes in Wig and BigWig files, which are distinguished thanks to their suffix (.wig or .bw respectively). There are several modes to run wiggletools:");
+	puts("");
+	puts("Outputs:");
+	puts("\tThe program outputs a flat file wiggle file in stdout.");
+	puts("");
+	puts("\tParameters:");
+	puts("\t// Unary operators");
+	puts("\twiggletools exp file");
+	puts("\twiggletools log file");
+	puts("\t");
+	puts("\t// Operators between a signal a scalar");
+	puts("\twiggletools scale file factor");
+	puts("\twiggletools pow file exponent");
+	puts("\twiggletools exp file radix");
+	puts("\twiggletools log file base");
+	puts("\t");
+	puts("\t// Binary operators between two signal files");
+	puts("\twiggletools add file1 file2");
+	puts("\twiggletools mult file1 file2");
 }
 
 int main(int argc, char ** argv) {
@@ -62,7 +82,8 @@ int main(int argc, char ** argv) {
 			toStdout(LogWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
 		else
 			toStdout(NaturalLogWiggleIterator(WigOrBigWigReader(argv[2])));
-	} 
+	} else if (strcmp(argv[1], "unit") == 0) 
+		toStdout(UnitWiggleIterator(WigOrBigWigReader(argv[2])));
 
 	return 1;
 }

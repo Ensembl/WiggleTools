@@ -46,13 +46,17 @@ WiggleIterator * WiggleReader(char *);
 WiggleIterator * BigWiggleReader(char *);
 
 // Algebraic operations
-WiggleIterator * SumWiggleIterator (WiggleIterator *, WiggleIterator *);
-WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
+	// Unitary
+WiggleIterator * UnitWiggleIterator (WiggleIterator *);
 WiggleIterator * NaturalLogWiggleIterator (WiggleIterator *);
-WiggleIterator * LogWiggleIterator (WiggleIterator * , double);
 WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
-WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
+	// Scalar operations
+WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
 WiggleIterator * PowerWiggleIterator (WiggleIterator *, double);
+WiggleIterator * LogWiggleIterator (WiggleIterator * , double);
+WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
+	// Binaray
+WiggleIterator * SumWiggleIterator (WiggleIterator *, WiggleIterator *);
 WiggleIterator * ProductWiggleIterator (WiggleIterator * , WiggleIterator * );
 
 // Convenience operators

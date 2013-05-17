@@ -85,6 +85,10 @@ WiggleIterator * mean(WiggleIterator** iters, int count) {
 	return ScaleWiggleIterator(sum(iters, count), 1 / (double) count);
 }
 
+//////////////////////////////////////////////////////
+// Output
+//////////////////////////////////////////////////////
+
 static void print(WiggleIterator * wi, FILE * out) {
 	while (!wi->done) {
 		fprintf(out, "%s\t%i\t%i\t%f\n", wi->chrom, wi->start, wi->finish, wi->value);
@@ -102,15 +106,60 @@ void toStdout(WiggleIterator * wi) {
 	print(wi, stdout);
 }
 
+//////////////////////////////////////////////////////
+// Basic Stats
+//////////////////////////////////////////////////////
+
 double AUC(WiggleIterator * wi) {
 	double total = 0;
 	for(;!wi->done; pop(wi)) 
-		total += (wi->finish - wi->start + 1) * wi->value;
+		total += (wi->finish - wi->start) * wi->value;
+	return total;
+}
+
+double span(WiggleIterator * wi) {
+	double total = 0;
+	for(;!wi->done; pop(wi)) 
+		if (wi->value)
+			total += (wi->finish - wi->start);
 	return total;
 }
 
 //////////////////////////////////////////////////////
-// Scaling operations
+// Unit operator
+//////////////////////////////////////////////////////
+
+typedef struct UnitWiggleIteratorData_st {
+	WiggleIterator * iter;
+} UnitWiggleIteratorData;
+
+void UnitWiggleIteratorPop(WiggleIterator * wi) {
+	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+	if (!data->iter->done) {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		if (iter->value > 0)
+			wi->value = 1;
+		else if (iter->value < 0)
+			wi->value = -1;
+		else
+			wi->value = 0;
+		pop(data->iter);
+	} else {
+		wi->done = true;
+	}
+}
+
+WiggleIterator * UnitWiggleIterator(WiggleIterator * i) {
+	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) calloc(1, sizeof(UnitWiggleIteratorData));
+	data->iter = i;
+	return newWiggleIterator(data, &UnitWiggleIteratorPop);
+}
+
+//////////////////////////////////////////////////////
+// Scaling operator
 //////////////////////////////////////////////////////
 
 typedef struct scaleWiggleIteratorData_st {
@@ -140,7 +189,7 @@ WiggleIterator * ScaleWiggleIterator(WiggleIterator * i, double s) {
 }
 
 //////////////////////////////////////////////////////
-// Log operations
+// Log operator
 //////////////////////////////////////////////////////
 
 const double E = 2.71828128459045;
@@ -182,7 +231,7 @@ WiggleIterator * LogWiggleIterator(WiggleIterator * i, double s) {
 }
 
 //////////////////////////////////////////////////////
-// Exponentiation operations
+// Exponentiation operator
 //////////////////////////////////////////////////////
 
 typedef struct expWiggleIteratorData_st {
@@ -222,7 +271,7 @@ WiggleIterator * NaturalExpWiggleIterator(WiggleIterator * i) {
 }
 
 //////////////////////////////////////////////////////
-// Power operations
+// Power operator
 //////////////////////////////////////////////////////
 
 static void PowerWiggleIteratorPop(WiggleIterator * wi) {
@@ -247,7 +296,7 @@ WiggleIterator * PowerWiggleIterator(WiggleIterator * i, double s) {
 }
 
 //////////////////////////////////////////////////////
-// Sum operations
+// Sum operator
 //////////////////////////////////////////////////////
 
 typedef struct BinaryWiggleIteratorData_st {
@@ -332,7 +381,7 @@ WiggleIterator * SumWiggleIterator(WiggleIterator * a, WiggleIterator * b) {
 }
 
 //////////////////////////////////////////////////////
-// Product operations
+// Product operator
 //////////////////////////////////////////////////////
 
 void ProductWiggleIteratorPop(WiggleIterator * wi) {
@@ -349,7 +398,7 @@ void ProductWiggleIteratorPop(WiggleIterator * wi) {
 		else if (chromDiff > 0)
 			pop(iterB);
 		else {
-			// Both iterators on the same wi->chromosome:	
+			// Both iterators on the same chromosome:	
 			wi->chrom = iterA->chrom;
 			if (iterA->start < iterB->start) {
 				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	

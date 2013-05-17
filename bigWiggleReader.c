@@ -173,14 +173,16 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 	    {
 	    case bwgTypeBedGraph:
 		{
-		wi->start = memReadBits32(&(data->blockPt), data->isSwapped);
-		wi->finish = memReadBits32(&(data->blockPt), data->isSwapped);
+		// +1 because BigWig coords are 0-based...
+		wi->start = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
+		wi->finish = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
 		wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
 		break;
 		}
 	    case bwgTypeVariableStep:
 		{
-		wi->start = memReadBits32(&(data->blockPt), data->isSwapped);
+		// +1 because BigWig coords are 0-based...
+		wi->start = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
 		wi->finish = wi->start + data->head.itemSpan;
 		wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
 		break;
@@ -189,7 +191,8 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 		{
 		if (data->i==0) 
 		    {
-		    wi->start = data->head.start;
+	 	    // +1 because BigWig coords are 0-based...
+		    wi->start = data->head.start + 1;
 		    wi->finish = wi->start + data->head.itemSpan;
 		    wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
 		    }
@@ -213,6 +216,7 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 	    assert(data->blockPt == data->blockEnd);
 	    BigWiggleReaderGoToNextBlock(data);
 	    }
+
 }
 
 WiggleIterator * BigWiggleReader(char * f) {
