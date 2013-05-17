@@ -455,6 +455,8 @@ WiggleIterator * WigOrBigWigReader(char * filename) {
 		return WiggleReader(filename);
 	else if (!strcmp(filename + length - 4, ".wig"))
 		return WiggleReader(filename);
+	else if (!strcmp(filename, "-"))
+		return WiggleReader(filename);
 	else {
 		printf("Could not recognize file format from suffix: %s\n", filename);
 		exit(1);

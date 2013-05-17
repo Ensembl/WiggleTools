@@ -14,7 +14,7 @@ Installation:
 Running:
 
 Inputs:
-	The program takes in Wig, BedGraph and BigWig files, which are distinguished thanks to their suffix (.wig, .bg or .bw respectively).
+	The program takes in Wig, BedGraph and BigWig files, which are distinguished thanks to their suffix (.wig, .bg or .bw respectively). A dash '-' signifies inputing a flat file through stdin.
 
 Outputs:
 	The program outputs a bedGraph flat file in stdout.
