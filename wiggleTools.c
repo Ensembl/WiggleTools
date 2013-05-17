@@ -48,14 +48,20 @@ int main(int argc, char ** argv) {
 		toStdout(SumWiggleIterator(WigOrBigWigReader(argv[2]), WigOrBigWigReader(argv[3])));
 	} else if (strcmp(argv[1], "scale") == 0) {
 		toStdout(ScaleWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
-	} else if (strcmp(argv[1], "product") == 0) {
+	} else if (strcmp(argv[1], "mult") == 0) {
 		toStdout(ProductWiggleIterator(WigOrBigWigReader(argv[2]), WigOrBigWigReader(argv[3])));
 	} else if (strcmp(argv[1], "pow") == 0) {
 		toStdout(PowerWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
 	} else if (strcmp(argv[1], "exp") == 0) {
-		toStdout(ExpWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+		if (argc == 4)
+			toStdout(ExpWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+		else
+			toStdout(NaturalExpWiggleIterator(WigOrBigWigReader(argv[2])));
 	} else if (strcmp(argv[1], "log") == 0) {
-		toStdout(LogWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+		if (argc == 4)
+			toStdout(LogWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+		else
+			toStdout(NaturalLogWiggleIterator(WigOrBigWigReader(argv[2])));
 	} 
 
 	return 1;

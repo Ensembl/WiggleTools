@@ -26,11 +26,11 @@ Parameters:
 
 	// Operators between a signal a scalar
 	wiggletools scale file factor
-	wiggletools power file exponent
+	wiggletools pow file exponent
 	wiggletools exp file radix
 	wiggletools log file base
 
 	// Binary operators between two signal files
 	wiggletools add file1 file2
-	wiggletools product file1 file2
+	wiggletools mult file1 file2
 
