@@ -451,6 +451,8 @@ WiggleIterator * WigOrBigWigReader(char * filename) {
 	size_t length = strlen(filename);
 	if (!strcmp(filename + length - 3, ".bw"))
 		return BigWiggleReader(filename);
+	else if (!strcmp(filename + length - 3, ".bg"))
+		return WiggleReader(filename);
 	else if (!strcmp(filename + length - 4, ".wig"))
 		return WiggleReader(filename);
 	else {
