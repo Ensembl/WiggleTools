@@ -28,44 +28,21 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
+//
+#ifndef _WIGGLETOOLS_PRIV_
+#define _WIGGLETOOLS_PRIV_
 
-#ifndef _WIGGLETOOLS_DEF_
-#define _WIGGLETOOLS_DEF_
+struct wiggleIterator_st {
+	char * chrom;
+	int start;
+	int finish;
+	double value;
+	bool done;
+	void * data;
+	void (*pop)(WiggleIterator *);
+};
 
-#ifndef true
-typedef int bool;
-#define true 1
-#define false 0
-#endif
-
-typedef struct wiggleIterator_st WiggleIterator;
-
-// Creators
-WiggleIterator * WigOrBigWigReader(char *);
-WiggleIterator * WiggleReader(char *);
-WiggleIterator * BigWiggleReader(char *);
-
-// Algebraic operations
-WiggleIterator * SumWiggleIterator (WiggleIterator *, WiggleIterator *);
-WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
-WiggleIterator * NaturalLogWiggleIterator (WiggleIterator *);
-WiggleIterator * LogWiggleIterator (WiggleIterator * , double);
-WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
-WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
-WiggleIterator * PowerWiggleIterator (WiggleIterator *, double);
-WiggleIterator * ProductWiggleIterator (WiggleIterator * , WiggleIterator * );
-
-// Convenience operators
-WiggleIterator * sum(WiggleIterator** iters, int count);
-WiggleIterator * product(WiggleIterator** iters, int count);
-WiggleIterator * mean(WiggleIterator** iters, int count);
-
-// Output
-void toFile(WiggleIterator *, char *);
-void toStdout(WiggleIterator *);
-double AUC(WiggleIterator *);
-
-// Cleaning up
-void destroyWiggleIterator(WiggleIterator *);
+FILE * openOrFail(char * filename, char * description, char * mode);
+WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *));
 
 #endif

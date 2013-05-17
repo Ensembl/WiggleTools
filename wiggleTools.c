@@ -29,43 +29,35 @@
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef _WIGGLETOOLS_DEF_
-#define _WIGGLETOOLS_DEF_
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+ 
+// Local header
+#include "wiggleTools.h"
 
-#ifndef true
-typedef int bool;
-#define true 1
-#define false 0
-#endif
+static void printHelp() {
+	puts("Help!");
+}
 
-typedef struct wiggleIterator_st WiggleIterator;
+int main(int argc, char ** argv) {
+	if (argc < 2 || strcmp(argv[1], "help") == 0) {
+		printHelp();
+		return 0;
+	} else if (strcmp(argv[1], "add") == 0) {
+		toStdout(SumWiggleIterator(WigOrBigWigReader(argv[2]), WigOrBigWigReader(argv[3])));
+	} else if (strcmp(argv[1], "scale") == 0) {
+		toStdout(ScaleWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+	} else if (strcmp(argv[1], "product") == 0) {
+		toStdout(ProductWiggleIterator(WigOrBigWigReader(argv[2]), WigOrBigWigReader(argv[3])));
+	} else if (strcmp(argv[1], "pow") == 0) {
+		toStdout(PowerWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+	} else if (strcmp(argv[1], "exp") == 0) {
+		toStdout(ExpWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+	} else if (strcmp(argv[1], "log") == 0) {
+		toStdout(LogWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+	} 
 
-// Creators
-WiggleIterator * WigOrBigWigReader(char *);
-WiggleIterator * WiggleReader(char *);
-WiggleIterator * BigWiggleReader(char *);
+	return 1;
+}
 
-// Algebraic operations
-WiggleIterator * SumWiggleIterator (WiggleIterator *, WiggleIterator *);
-WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
-WiggleIterator * NaturalLogWiggleIterator (WiggleIterator *);
-WiggleIterator * LogWiggleIterator (WiggleIterator * , double);
-WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
-WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
-WiggleIterator * PowerWiggleIterator (WiggleIterator *, double);
-WiggleIterator * ProductWiggleIterator (WiggleIterator * , WiggleIterator * );
-
-// Convenience operators
-WiggleIterator * sum(WiggleIterator** iters, int count);
-WiggleIterator * product(WiggleIterator** iters, int count);
-WiggleIterator * mean(WiggleIterator** iters, int count);
-
-// Output
-void toFile(WiggleIterator *, char *);
-void toStdout(WiggleIterator *);
-double AUC(WiggleIterator *);
-
-// Cleaning up
-void destroyWiggleIterator(WiggleIterator *);
-
-#endif
