@@ -179,19 +179,3 @@ WiggleIterator * WiggleReader(char * f) {
 	return newWiggleIterator(data, &WiggleReaderPop);
 }	
 
-//////////////////////////////////////////////////////
-// Convenience file reader
-//////////////////////////////////////////////////////
-
-WiggleIterator * WigOrBigWigReader(char * filename) {
-	size_t length = strlen(filename);
-	if (!strcmp(filename + length - 3, ".bw"))
-		return BigWiggleReader(filename);
-	else if (!strcmp(filename + length - 4, ".wig"))
-		return WiggleReader(filename);
-	else {
-		printf("Could not recognize file format from suffix: %s\n", filename);
-		exit(1);
-	}
-}
-

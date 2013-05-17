@@ -91,7 +91,7 @@ WiggleIterator * mean(WiggleIterator** iters, int count) {
 
 static void print(WiggleIterator * wi, FILE * out) {
 	while (!wi->done) {
-		fprintf(out, "%s\t%i\t%i\t%f\n", wi->chrom, wi->start, wi->finish, wi->value);
+		fprintf(out, "%s\t%i\t%i\t%f\n", wi->chrom, wi->start, wi->finish - 1, wi->value);
 		pop(wi);
 	}
 }
@@ -441,4 +441,20 @@ WiggleIterator * ProductWiggleIterator(WiggleIterator * a, WiggleIterator * b) {
 	data->iterA = a;
 	data->iterB = b;
 	return newWiggleIterator(data, &ProductWiggleIteratorPop);
+}
+
+//////////////////////////////////////////////////////
+// Convenience file reader
+//////////////////////////////////////////////////////
+
+WiggleIterator * WigOrBigWigReader(char * filename) {
+	size_t length = strlen(filename);
+	if (!strcmp(filename + length - 3, ".bw"))
+		return BigWiggleReader(filename);
+	else if (!strcmp(filename + length - 4, ".wig"))
+		return WiggleReader(filename);
+	else {
+		printf("Could not recognize file format from suffix: %s\n", filename);
+		exit(1);
+	}
 }
