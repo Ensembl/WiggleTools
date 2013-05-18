@@ -38,12 +38,12 @@
 
 static void printHelp() {
 	puts("Inputs:");
-	puts("\tThe program takes in Wig and BigWig files, which are distinguished thanks to their suffix (.wig or .bw respectively). There are several modes to run wiggletools:");
+	puts("\tThe program takes in Wig and BigWig files, which are distinguished thanks to their suffix (.wig or .bw respectively).");
 	puts("");
 	puts("Outputs:");
-	puts("\tThe program outputs a flat file wiggle file in stdout.");
+	puts("\tThe program outputs a bedGraph flat file in stdout.");
 	puts("");
-	puts("\tParameters:");
+	puts("Parameters:");
 	puts("\t// Unary operators");
 	puts("\twiggletools unit file");
 	puts("\twiggletools abs file");

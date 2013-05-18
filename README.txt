@@ -14,10 +14,10 @@ Installation:
 Running the executable:
  
 Inputs:
-	The program takes in Wig and BigWig files, which are distinguished thanks to their suffix (.wig or .bw respectively). There are several modes to run wiggletools:
+	The program takes in Wig and BigWig files, which are distinguished thanks to their suffix (.wig or .bw respectively).
 
 Outputs:
-	The program outputs a flat file wiggle file in stdout.
+	The program outputs a bedGraph flat file in stdout.
 
 Parameters:
 	// Unary operators
