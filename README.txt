@@ -11,17 +11,18 @@ Installation:
 	- In this directory type 'make'
 	- The binary file wiggletools should be produced in the same directory. You can add it to your PATH, or move it onto your PATH
 
-Running:
-
+Running the executable:
+ 
 Inputs:
-	The program takes in Wig, BedGraph and BigWig files, which are distinguished thanks to their suffix (.wig, .bg or .bw respectively). A dash '-' signifies inputing a flat file through stdin.
+	The program takes in Wig and BigWig files, which are distinguished thanks to their suffix (.wig or .bw respectively). There are several modes to run wiggletools:
 
 Outputs:
-	The program outputs a bedGraph flat file in stdout.
+	The program outputs a flat file wiggle file in stdout.
 
 Parameters:
 	// Unary operators
 	wiggletools unit file
+	wiggletools abs file
 	wiggletools exp file
 	wiggletools log file
 
@@ -31,7 +32,15 @@ Parameters:
 	wiggletools exp file radix
 	wiggletools log file base
 
-	// Binary operators between two signal files
-	wiggletools add file1 file2
-	wiggletools mult file1 file2
+	// Reduction operators
+	wiggletools add file1 file2 ... 
+	wiggletools mult file1 file2 ...
+	wiggletools min file1 file2 ...
+	wiggletools max file1 file2 ...
+	wiggletools mean file1 file2 ...
+	wiggletools var file1 file2 ...
+	wiggletools stddev file1 file2 ...
+	wiggletools median file1 file2 ...
 
+	// Other
+	wiggletools --help
