@@ -28,25 +28,29 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//
-#ifndef _WIGGLETOOLS_PRIV_
-#define _WIGGLETOOLS_PRIV_
 
-#include <stdio.h>
-#include "wiggleTools.h"
+#ifndef WIGGLE_MULTIPLEXER_H_
+#define WIGGLE_MULTIPLEXER_H_
 
-struct wiggleIterator_st {
+#include "wiggleIterators.h"
+
+typedef struct multiplexer_st {
 	char * chrom;
 	int start;
 	int finish;
-	double value;
+	double * values;
+	int count;
+	bool *inplay;
+	WiggleIterator ** iters;
 	bool done;
-	void * data;
-	void (*pop)(WiggleIterator *);
-};
+} Multiplexer;
 
-FILE * openOrFail(char * filename, char * description, char * mode);
-WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *));
-void pop(WiggleIterator *);
+void popMultiplexer(Multiplexer * multi);
+Multiplexer * newMultiplexer(WiggleIterator ** iters, int count);
+WiggleIterator * SumReduction(Multiplexer * multi);
+WiggleIterator * ProductReduction(Multiplexer * multi);
+WiggleIterator * MeanReduction(Multiplexer * multi);
+WiggleIterator * VarianceReduction(Multiplexer * multi);
+WiggleIterator * StdDevReduction(Multiplexer * multi);
 
 #endif

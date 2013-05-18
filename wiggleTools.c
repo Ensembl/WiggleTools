@@ -37,7 +37,6 @@
 #include "wiggleTools.h"
 
 static void printHelp() {
-	puts("Help!");
 	puts("Inputs:");
 	puts("\tThe program takes in Wig and BigWig files, which are distinguished thanks to their suffix (.wig or .bw respectively). There are several modes to run wiggletools:");
 	puts("");
@@ -46,6 +45,8 @@ static void printHelp() {
 	puts("");
 	puts("\tParameters:");
 	puts("\t// Unary operators");
+	puts("\twiggletools unit file");
+	puts("\twiggletools abs file");
 	puts("\twiggletools exp file");
 	puts("\twiggletools log file");
 	puts("\t");
@@ -55,9 +56,18 @@ static void printHelp() {
 	puts("\twiggletools exp file radix");
 	puts("\twiggletools log file base");
 	puts("\t");
-	puts("\t// Binary operators between two signal files");
-	puts("\twiggletools add file1 file2");
-	puts("\twiggletools mult file1 file2");
+	puts("\t// Reduction operators");
+	puts("\twiggletools add file1 file2 ... ");
+	puts("\twiggletools mult file1 file2 ...");
+	puts("\twiggletools min file1 file2 ...");
+	puts("\twiggletools max file1 file2 ...");
+	puts("\twiggletools mean file1 file2 ...");
+	puts("\twiggletools var file1 file2 ...");
+	puts("\twiggletools stddev file1 file2 ...");
+	puts("\twiggletools median file1 file2 ...");
+	puts("");
+	puts("\t// Other");
+	puts("\twiggletools --help");
 }
 
 int main(int argc, char ** argv) {
@@ -65,11 +75,63 @@ int main(int argc, char ** argv) {
 		printHelp();
 		return 0;
 	} else if (strcmp(argv[1], "add") == 0) {
-		toStdout(SumWiggleIterator(WigOrBigWigReader(argv[2]), WigOrBigWigReader(argv[3])));
+		int i;
+		int count = argc - 2;
+		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+		for (i = 0; i < count; i++)
+			iters[i] = WigOrBigWigReader(argv[i + 2]);
+		toStdout(SumWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "scale") == 0) {
 		toStdout(ScaleWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
 	} else if (strcmp(argv[1], "mult") == 0) {
-		toStdout(ProductWiggleIterator(WigOrBigWigReader(argv[2]), WigOrBigWigReader(argv[3])));
+		int i;
+		int count = argc - 2;
+		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+		for (i = 0; i < count; i++)
+			iters[i] = WigOrBigWigReader(argv[i + 2]);
+		toStdout(ProductWiggleReducer(iters, count));
+	} else if (strcmp(argv[1], "min") == 0) {
+		int i;
+		int count = argc - 2;
+		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+		for (i = 0; i < count; i++)
+			iters[i] = WigOrBigWigReader(argv[i + 2]);
+		toStdout(MinWiggleReducer(iters, count));
+	} else if (strcmp(argv[1], "max") == 0) {
+		int i;
+		int count = argc - 2;
+		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+		for (i = 0; i < count; i++)
+			iters[i] = WigOrBigWigReader(argv[i + 2]);
+		toStdout(MaxWiggleReducer(iters, count));
+	} else if (strcmp(argv[1], "mean") == 0) {
+		int i;
+		int count = argc - 2;
+		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+		for (i = 0; i < count; i++)
+			iters[i] = WigOrBigWigReader(argv[i + 2]);
+		toStdout(MeanWiggleReducer(iters, count));
+	} else if (strcmp(argv[1], "median") == 0) {
+		int i;
+		int count = argc - 2;
+		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+		for (i = 0; i < count; i++)
+			iters[i] = WigOrBigWigReader(argv[i + 2]);
+		toStdout(MedianWiggleReducer(iters, count));
+	} else if (strcmp(argv[1], "stddev") == 0) {
+		int i;
+		int count = argc - 2;
+		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+		for (i = 0; i < count; i++)
+			iters[i] = WigOrBigWigReader(argv[i + 2]);
+		toStdout(StdDevWiggleReducer(iters, count));
+	} else if (strcmp(argv[1], "var") == 0) {
+		int i;
+		int count = argc - 2;
+		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+		for (i = 0; i < count; i++)
+			iters[i] = WigOrBigWigReader(argv[i + 2]);
+		toStdout(VarianceWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "pow") == 0) {
 		toStdout(PowerWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
 	} else if (strcmp(argv[1], "exp") == 0) {
@@ -84,6 +146,13 @@ int main(int argc, char ** argv) {
 			toStdout(NaturalLogWiggleIterator(WigOrBigWigReader(argv[2])));
 	} else if (strcmp(argv[1], "unit") == 0) 
 		toStdout(UnitWiggleIterator(WigOrBigWigReader(argv[2])));
+	else if (strcmp(argv[1], "abs") == 0) 
+		toStdout(AbsWiggleIterator(WigOrBigWigReader(argv[2])));
+	else {
+		printf("Unrecognized keyword: %s\n", argv[1]);
+		puts("");
+		printHelp();
+	}
 
 	return 1;
 }

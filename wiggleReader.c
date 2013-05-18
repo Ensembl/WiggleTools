@@ -168,18 +168,18 @@ static void WiggleReaderPop(WiggleIterator * wi) {
 			WiggleReaderReadBedGraphLine(wi, line);
 			break;
 		case 2:
-			if (data->readingMode != FIXED_STEP) {
+			if (data->readingMode != VARIABLE_STEP) {
 				fprintf(stderr, "Badly formatted fixed step line:\n%s", line);
 				exit(1);
 			}
-			WiggleReaderReadFixedStepLine(wi, line, data->step, data->span);
+			WiggleReaderReadVariableStepLine(wi, line,data->span);
 			break;
 		case 1:
-			if (data->readingMode != VARIABLE_STEP) {
+			if (data->readingMode != FIXED_STEP) {
 				fprintf(stderr, "Badly formatted variable step line:\n%s", line);
 				exit(1);
 			}
-			WiggleReaderReadVariableStepLine(wi, line, data->span);
+			WiggleReaderReadFixedStepLine(wi, line, data->step, data->span);
 			break;
 		default:
 			fprintf(stderr, "Badly formatted wiggle or bed graph line :\n%s", line);

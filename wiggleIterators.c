@@ -38,10 +38,6 @@
 #include "wiggleTools.h"
 #include "wiggleIterators.h"
 
-static void pop(WiggleIterator * wi) {
-	(*(wi->pop))(wi);
-}
-
 WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *)) {
 	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
 	new->data = data;
@@ -57,32 +53,16 @@ void destroyWiggleIterator(WiggleIterator * wi) {
 	free(wi);
 }
 
+void pop(WiggleIterator * wi) {
+	(*(wi->pop))(wi);
+}
+
 FILE * openOrFail(char * filename, char * description, char * mode) {
 	FILE * file;
 	if (!(file = fopen(filename, mode))) {
 		printf("Could not open %s %s, exiting...\n", (char *) description, (char *) filename);
 	}
 	return file;
-}
-
-WiggleIterator * sum(WiggleIterator** iters, int count) {
-	WiggleIterator * s = iters[0];
-	unsigned int i;
-	for (i = 1; i < count; i++)
-		s = SumWiggleIterator(s, iters[i]);
-	return s;
-}
-
-WiggleIterator * product(WiggleIterator** iters, int count) {
-	WiggleIterator * prod = iters[0];
-	unsigned int i;
-	for (i = 1; i < count; i++)
-		prod = ProductWiggleIterator(prod, iters[i]);
-	return prod;
-}
-
-WiggleIterator * mean(WiggleIterator** iters, int count) {
-	return ScaleWiggleIterator(sum(iters, count), 1 / (double) count);
 }
 
 //////////////////////////////////////////////////////
@@ -293,6 +273,30 @@ WiggleIterator * PowerWiggleIterator(WiggleIterator * i, double s) {
 	data->iter = i;
 	data->scalar = s;
 	return newWiggleIterator(data, &PowerWiggleIteratorPop);
+}
+
+//////////////////////////////////////////////////////
+// Abs operator
+//////////////////////////////////////////////////////
+
+static void AbsWiggleIteratorPop(WiggleIterator * wi) {
+	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+	if (!iter->done) {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		wi->value = abs(iter->value);
+		pop(iter);
+	} else {
+		wi->done = true;
+	}
+}
+
+WiggleIterator * AbsWiggleIterator(WiggleIterator * i) {
+	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) calloc(1, sizeof(UnitWiggleIteratorData));
+	data->iter = i;
+	return newWiggleIterator(data, &AbsWiggleIteratorPop);
 }
 
 //////////////////////////////////////////////////////

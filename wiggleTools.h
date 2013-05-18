@@ -41,13 +41,12 @@ typedef int bool;
 typedef struct wiggleIterator_st WiggleIterator;
 
 // Creators
-WiggleIterator * WigOrBigWigReader(char *);
-WiggleIterator * WiggleReader(char *);
-WiggleIterator * BigWiggleReader(char *);
+WiggleIterator * WigOrBigWigReader (char *);
 
 // Algebraic operations
-	// Unitary
+	// Unary
 WiggleIterator * UnitWiggleIterator (WiggleIterator *);
+WiggleIterator * AbsWiggleIterator (WiggleIterator * i);
 WiggleIterator * NaturalLogWiggleIterator (WiggleIterator *);
 WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
 	// Scalar operations
@@ -55,21 +54,30 @@ WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
 WiggleIterator * PowerWiggleIterator (WiggleIterator *, double);
 WiggleIterator * LogWiggleIterator (WiggleIterator * , double);
 WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
-	// Binaray
+	// Binary
 WiggleIterator * SumWiggleIterator (WiggleIterator *, WiggleIterator *);
 WiggleIterator * ProductWiggleIterator (WiggleIterator * , WiggleIterator * );
 
-// Convenience operators
-WiggleIterator * sum(WiggleIterator** iters, int count);
-WiggleIterator * product(WiggleIterator** iters, int count);
-WiggleIterator * mean(WiggleIterator** iters, int count);
+// Reduction operators
+WiggleIterator * MaxWiggleReducer (WiggleIterator** iters, int count);
+WiggleIterator * MinWiggleReducer (WiggleIterator** iters, int count);
+WiggleIterator * SumWiggleReducer (WiggleIterator** iters, int count);
+WiggleIterator * ProductWiggleReducer (WiggleIterator** iters, int count);
+WiggleIterator * MeanWiggleReducer (WiggleIterator** iters, int count);
+WiggleIterator * VarianceWiggleReducer (WiggleIterator** iters, int count);
+WiggleIterator * StdDevWiggleReducer (WiggleIterator** iters, int count);
+WiggleIterator * MedianWiggleReducer (WiggleIterator** iters, int count);
 
 // Output
-void toFile(WiggleIterator *, char *);
-void toStdout(WiggleIterator *);
-double AUC(WiggleIterator *);
+void toFile (WiggleIterator *, char *);
+void toStdout (WiggleIterator *);
+double AUC (WiggleIterator *);
 
 // Cleaning up
-void destroyWiggleIterator(WiggleIterator *);
+void destroyWiggleIterator (WiggleIterator *);
+
+// Secondar creators (to force file format recognition)
+WiggleIterator * WiggleReader (char *);
+WiggleIterator * BigWiggleReader (char *);
 
 #endif

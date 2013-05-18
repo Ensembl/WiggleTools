@@ -21,6 +21,7 @@ Outputs:
 
 Parameters:
 	// Unary operators
+	wiggletools unit file
 	wiggletools exp file
 	wiggletools log file
 
