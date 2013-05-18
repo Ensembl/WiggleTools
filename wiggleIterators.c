@@ -371,10 +371,13 @@ void SumWiggleIteratorPop(WiggleIterator * wi) {
 				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
 				wi->value = iterA->value + iterB->value;
 				if (iterA->finish < iterB->finish) {
+					wi->finish = iterA->finish;
 					pop(iterA);
 				} else if (iterB->finish < iterA->finish) {
+					wi->finish = iterB->finish;
 					pop(iterB);
 				} else {
+					wi->finish = iterA->finish;
 					pop(iterA);
 					pop(iterB);
 				}
@@ -437,10 +440,13 @@ void ProductWiggleIteratorPop(WiggleIterator * wi) {
 				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
 				wi->value = iterA->value * iterB->value;
 				if (iterA->finish < iterB->finish) {
+					wi->finish = iterA->finish;
 					pop(iterA);
 				} else if (iterB->finish < iterA->finish) {
+					wi->finish = iterB->finish;
 					pop(iterB);
 				} else {
+					wi->finish = iterA->finish;
 					pop(iterA);
 					pop(iterB);
 				}
