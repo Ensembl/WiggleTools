@@ -41,6 +41,10 @@ Parameters:
 	wiggletools var file1 file2 ...
 	wiggletools stddev file1 file2 ...
 	wiggletools median file1 file2 ...
+		
+	// Calculations
+	wiggletools AUC file
+	wiggletools pearson file1 file2
 
 	// Other
 	wiggletools --help

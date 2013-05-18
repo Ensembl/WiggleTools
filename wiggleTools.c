@@ -65,6 +65,10 @@ static void printHelp() {
 	puts("\twiggletools var file1 file2 ...");
 	puts("\twiggletools stddev file1 file2 ...");
 	puts("\twiggletools median file1 file2 ...");
+	puts("\t");
+	puts("\t// Calculations");
+	puts("\twiggletools AUC file");
+	puts("\twiggletools pearson file1 file2");
 	puts("");
 	puts("\t// Other");
 	puts("\twiggletools --help");
@@ -150,6 +154,10 @@ int main(int argc, char ** argv) {
 		toStdout(AbsWiggleIterator(WigOrBigWigReader(argv[2])));
 	else if (strcmp(argv[1], "--help") == 0) 
 		printHelp();
+	else if (strcmp(argv[1], "pearson") == 0)
+		printf("%f\n", pearsonCorrelation(WigOrBigWigReader(argv[2]), WigOrBigWigReader(argv[3])));
+	else if (strcmp(argv[1], "AUC") == 0) 
+		printf("%f\n", AUC(WigOrBigWigReader(argv[2])));
 	else {
 		printf("Unrecognized keyword: %s\n", argv[1]);
 		puts("");

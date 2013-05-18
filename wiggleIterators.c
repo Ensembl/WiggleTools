@@ -300,7 +300,7 @@ WiggleIterator * AbsWiggleIterator(WiggleIterator * i) {
 }
 
 //////////////////////////////////////////////////////
-// Sum operator
+// Binary Sum operator
 //////////////////////////////////////////////////////
 
 typedef struct BinaryWiggleIteratorData_st {
@@ -309,7 +309,10 @@ typedef struct BinaryWiggleIteratorData_st {
 } BinaryWiggleIteratorData;
 
 static void copyInterval(WiggleIterator * wi, WiggleIterator * iter) {
-	wi->chrom = iter->chrom;
+	if (!wi->chrom || strcmp(wi->chrom, iter->chrom) < 0) {
+		wi->chrom = iter->chrom;
+		wi->finish = -1;
+	}
 	wi->start = iter->start > wi->finish? iter->start: wi->finish;
 	wi->finish = iter->finish;
 	wi->value = iter->value;
@@ -340,7 +343,10 @@ void SumWiggleIteratorPop(WiggleIterator * wi) {
 			copyInterval(wi, iterB);
 		else {
 			// Both iterators on the same wi->chromosome:	
-			wi->chrom = iterA->chrom;
+			if (!wi->chrom || strcmp(wi->chrom, iterA->chrom) < 0) {
+				wi->chrom = iterA->chrom;
+				wi->finish = -1;
+			}
 			if (iterA->start < iterB->start) {
 				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
 				if (iterA->finish <= iterB->start) {
@@ -385,7 +391,7 @@ WiggleIterator * SumWiggleIterator(WiggleIterator * a, WiggleIterator * b) {
 }
 
 //////////////////////////////////////////////////////
-// Product operator
+// Binary Product operator
 //////////////////////////////////////////////////////
 
 void ProductWiggleIteratorPop(WiggleIterator * wi) {
@@ -403,7 +409,10 @@ void ProductWiggleIteratorPop(WiggleIterator * wi) {
 			pop(iterB);
 		else {
 			// Both iterators on the same chromosome:	
-			wi->chrom = iterA->chrom;
+			if (!wi->chrom || strcmp(wi->chrom, iterA->chrom) < 0) {
+				wi->chrom = iterA->chrom;
+				wi->finish = -1;
+			}
 			if (iterA->start < iterB->start) {
 				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
 				if (iterA->finish <= iterB->start) {
@@ -445,6 +454,173 @@ WiggleIterator * ProductWiggleIterator(WiggleIterator * a, WiggleIterator * b) {
 	data->iterA = a;
 	data->iterB = b;
 	return newWiggleIterator(data, &ProductWiggleIteratorPop);
+}
+
+//////////////////////////////////////////////////////
+// Correlation function
+//////////////////////////////////////////////////////
+// Note: this is an approximate calculation of the Pearson calculation
+// which has the benefit of running in a single pass through the data
+// The origin of the code can be found at:
+// http://en.wikipedia.org/wiki?title=Talk:Correlation
+
+double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
+	double sum_sq_A = 0;
+	double sum_sq_B = 0;
+	double sum_AB = 0;
+	double meanA = iterA->value;
+	double meanB = iterB->value;
+	int totalLength = 0;
+	int halfway, width;
+	double sweep, deltaA, deltaB;
+	char *chrom = NULL; 
+	int start = -1;
+	int finish = -1;
+
+	while (!iterA->done || !iterB->done) {
+		if (iterA->done) {
+			if (!chrom || strcmp(chrom, iterB->chrom) < 0) {
+				chrom = iterB->chrom;
+				finish = -1;
+			}
+			start = iterB->start > finish? iterB->start: finish;
+			finish = iterB->finish;
+			width = (finish - start);
+			halfway = totalLength + width/2;
+			if (halfway == 0)
+				halfway = 1;
+			sweep = (halfway - 1.0) / halfway;
+			totalLength += width;
+			deltaA = -meanA;
+			deltaB = iterB->value - meanB;
+			sum_sq_A += deltaA * deltaA * sweep;
+			sum_sq_B += deltaB * deltaB * sweep;
+			sum_AB += deltaA * deltaB * sweep;
+			meanA += deltaA / totalLength;
+			meanB += deltaB / totalLength;
+			pop(iterB);
+			continue;
+		}
+		if (iterB->done) {
+
+			if (!chrom || strcmp(chrom, iterA->chrom) < 0) {
+				chrom = iterA->chrom;
+				finish = -1;
+			}
+			start = iterA->start > finish? iterA->start: finish;
+			finish = iterA->finish;
+			width = (finish - start);
+			halfway = totalLength + width/2;
+			if (halfway == 0)
+				halfway = 1;
+			sweep = (halfway - 1.0) / halfway;
+			totalLength += width;
+			deltaB = -meanB;
+			deltaA = iterA->value - meanA;
+			sum_sq_B += deltaB * deltaB * sweep;
+			sum_sq_A += deltaA * deltaA * sweep;
+			sum_AB += deltaB * deltaA * sweep;
+			meanB += deltaB / totalLength;
+			meanA += deltaA / totalLength;
+			pop(iterA);
+			continue;
+		}
+
+		int chromDiff = strcmp(iterA->chrom, iterB->chrom);
+
+		if (chromDiff < 0) {
+			if (!chrom || strcmp(chrom, iterA->chrom) < 0) {
+				chrom = iterA->chrom;
+				finish = -1;
+			}
+			start = iterA->start > finish? iterA->start: finish;
+			finish = iterA->finish;
+			width = (finish - start);
+			halfway = totalLength + width/2;
+			if (halfway == 0)
+				halfway = 1;
+			sweep = (halfway - 1.0) / halfway;
+			totalLength += width;
+			deltaB = -meanB;
+			deltaA = iterA->value - meanA;
+			sum_sq_B += deltaB * deltaB * sweep;
+			sum_sq_A += deltaA * deltaA * sweep;
+			sum_AB += deltaB * deltaA * sweep;
+			meanB += deltaB / totalLength;
+			meanA += deltaA / totalLength;
+			pop(iterA);
+		} else if (chromDiff > 0) {
+			if (!chrom || strcmp(chrom, iterB->chrom) < 0) {
+				chrom = iterB->chrom;
+				finish = -1;
+			}
+			start = iterB->start > finish? iterB->start: finish;
+			finish = iterB->finish;
+			width = (finish - start);
+			halfway = totalLength + width/2;
+			if (halfway == 0)
+				halfway = 1;
+			sweep = (halfway - 1.0) / halfway;
+			totalLength += width;
+			deltaA = -meanA;
+			deltaB = iterB->value - meanB;
+			sum_sq_A += deltaA * deltaA * sweep;
+			sum_sq_B += deltaB * deltaB * sweep;
+			sum_AB += deltaA * deltaB * sweep;
+			meanA += deltaA / totalLength;
+			meanB += deltaB / totalLength;
+			pop(iterB);
+		} else {
+			// Both iterators on the same chromosome:	
+			chrom = iterA->chrom;
+
+			if (iterA->start < iterB->start) {
+				start = iterA->start > finish? iterA->start: finish;	
+				if (iterA->finish <= iterB->start) {
+					finish = iterA->finish;
+				} else {
+					finish = iterB->start - 1;
+				}
+				deltaB = -meanB;
+				deltaA = iterA->value - meanA;
+			} else if (iterB->start < iterA->start) {
+				start = iterB->start > finish? iterB->start: finish;	
+				if (iterB->finish <= iterA->start) {
+					finish = iterB->finish;
+				} else {
+					finish = iterA->start - 1;
+				}
+				deltaA = -meanA;
+				deltaB = iterB->value - meanB;
+			} else {
+				start = iterA->start > finish? iterA->start: finish;	
+				finish = iterA->finish < iterB->finish ? iterA->finish: iterB->finish;
+				deltaA = iterA->value - meanA;
+				deltaB = iterB->value - meanB;
+			}
+
+			width = (finish - start);
+			halfway = totalLength + width/2;
+			if (halfway == 0)
+				halfway = 1;
+			sweep = (halfway - 1.0) / halfway;
+			totalLength += width;
+			deltaA = iterA->value - meanA;
+			deltaB = iterB->value - meanB;
+			sum_sq_A += deltaA * deltaA * sweep;
+			sum_sq_B += deltaB * deltaB * sweep;
+			sum_AB += deltaA * deltaB * sweep;
+			meanA += deltaA / totalLength;
+			meanB += deltaB / totalLength;
+
+			if (iterA->finish == finish)
+				pop(iterA);
+			if (iterB->finish == finish)
+				pop(iterB);
+		}
+	}
+
+	return sum_AB / (sqrt(sum_sq_A) * sqrt(sum_sq_B));
 }
 
 //////////////////////////////////////////////////////

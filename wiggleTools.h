@@ -72,6 +72,7 @@ WiggleIterator * MedianWiggleReducer (WiggleIterator** iters, int count);
 void toFile (WiggleIterator *, char *);
 void toStdout (WiggleIterator *);
 double AUC (WiggleIterator *);
+double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB);
 
 // Cleaning up
 void destroyWiggleIterator (WiggleIterator *);
