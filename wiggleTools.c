@@ -148,12 +148,15 @@ int main(int argc, char ** argv) {
 		toStdout(UnitWiggleIterator(WigOrBigWigReader(argv[2])));
 	else if (strcmp(argv[1], "abs") == 0) 
 		toStdout(AbsWiggleIterator(WigOrBigWigReader(argv[2])));
+	else if (strcmp(argv[1], "--help") == 0) 
+		printHelp();
 	else {
 		printf("Unrecognized keyword: %s\n", argv[1]);
 		puts("");
 		printHelp();
+		return 1;
 	}
 
-	return 1;
+	return 0;
 }
 
