@@ -26,7 +26,7 @@ Parameters:
 	wiggletools exp file
 	wiggletools log file
 
-	// Operators between a signal a scalar
+	// Operators between a signal and a scalar
 	wiggletools scale file factor
 	wiggletools pow file exponent
 	wiggletools exp file radix

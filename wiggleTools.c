@@ -50,7 +50,7 @@ static void printHelp() {
 	puts("\twiggletools exp file");
 	puts("\twiggletools log file");
 	puts("\t");
-	puts("\t// Operators between a signal a scalar");
+	puts("\t// Operators between a signal and a scalar");
 	puts("\twiggletools scale file factor");
 	puts("\twiggletools pow file exponent");
 	puts("\twiggletools exp file radix");
