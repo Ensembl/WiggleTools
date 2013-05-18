@@ -3,7 +3,7 @@ WiggleTools
 Copyright Daniel Zerbino, 2013.
 zerbino@ebi.ac.uk
 
-This library parses wiggle files and executes various operations on them streaming through lazy evaluators. Currently more a skeleton of a library, just type make for compilation.
+This library parses wiggle files and executes various operations on them streaming through lazy evaluators.
 
 Installation:
 	- Install Jim Kent's source code
