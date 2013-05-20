@@ -29,7 +29,8 @@
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "stdio.h"
+#include <stdio.h>
+#include <pthread.h>
 
 // Local header
 #include "wiggleIterators.h"
@@ -46,12 +47,29 @@
 // Compressed File Reader
 //////////////////////////////////////////////////////
 
+typedef struct blockData_st {
+	// Args to unzipper
+	char *blockBuf;
+	struct fileOffsetSize * block;
+	char *uncompressBuf;
+	struct bbiFile* bwf;
+	char *blockEnd;
+	boolean done;
+
+	// Other
+	pthread_t threadID;
+	pthread_mutex_t proceed;
+	int * count;
+	pthread_mutex_t * count_mutex;
+	pthread_cond_t * count_threshold_cv;
+	struct blockData_st * next;
+} BlockData;
+
 typedef struct bigWiggleReaderData_st {
 	// File level variables
 	struct bbiFile* bwf;
 	struct udcFile *udc;
-	boolean isSwapped;
-	char *uncompressBuf;
+	boolean isSwapped, uncompress;
 	struct bbiChromInfo *chromList;
 
 	// Chromosome within file
@@ -70,15 +88,116 @@ typedef struct bigWiggleReaderData_st {
 	// Items within block
 	char *blockPt;
 	bits16 i;
+
+	// For multi-threading storage...
+	BlockData * blockData;
+	pthread_barrier_t proceed;
 } BigWiggleReaderData;
 
+#define THREADS 5
+
+void * unzipBlockData(void * args) {
+	BlockData * data = (BlockData *) args;
+	data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
+	int uncSize = zUncompress(data->blockBuf, data->block->size, data->uncompressBuf, data->bwf->uncompressBufSize);
+	data->blockEnd = data->uncompressBuf + uncSize;
+	data->done = true;
+
+	// Communicate that the slot is free
+	pthread_mutex_lock(data->count_mutex);
+	(*(data->count))++;
+	pthread_cond_signal(data->count_threshold_cv);
+	pthread_mutex_unlock(data->count_mutex);
+
+	return NULL;
+}
+
+static BlockData * createBlockData(BigWiggleReaderData * data, struct fileOffsetSize * block, pthread_mutex_t * count_mutex, pthread_cond_t * count_threshold_cv, int * count) {
+	BlockData * new = (BlockData * ) calloc(1, sizeof(BlockData));
+	new->blockBuf = data->blockBuf;
+	new->block = block;
+	new->bwf = data->bwf;
+	new->blockEnd = NULL;
+	new->done = false;
+	new->count_mutex = count_mutex;
+	new->count_threshold_cv = count_threshold_cv;
+	new->count = count;
+	pthread_mutex_init(&(new->proceed), NULL);
+
+	// Launch thread...
+	pthread_create(&(new->threadID), NULL, &unzipBlockData, new);
+	return new;
+}
+
+static int findFreeThreadSlot(BlockData ** blockDatas) {
+	int i;
+	for (i = 0; i < THREADS; i++)
+		if (!blockDatas[i] || blockDatas[i]->done)
+			return i;
+
+	exit(1);
+}
+
+static void waitForSlot(pthread_mutex_t * count_mutex, pthread_cond_t * count_threshold_cv, int * count) {
+	pthread_mutex_lock(count_mutex);
+	if (*count <= 0)
+		pthread_cond_wait(count_threshold_cv, count_mutex);
+	(*count)--;
+	pthread_mutex_unlock(count_mutex);
+}
+
+static int getNextSlot(pthread_mutex_t * count_mutex, pthread_cond_t * count_threshold_cv, int * count, BlockData ** blockDatas) {
+	waitForSlot(count_mutex, count_threshold_cv, count);
+	return findFreeThreadSlot(blockDatas);
+}
+
+static void * createBlockDataList(void * args) {
+	BigWiggleReaderData * data = (BigWiggleReaderData *) args;
+	struct fileOffsetSize * block;
+	BlockData * last = NULL;
+	BlockData * blockDatas[THREADS];
+	int i;
+	int count = THREADS;
+	pthread_mutex_t count_mutex;
+	pthread_cond_t count_threshold_cv;
+
+	// Initialize mutexes
+	pthread_mutex_init(&count_mutex, NULL);
+	pthread_cond_init (&count_threshold_cv, NULL);
+	
+	// Initialize pointers to block data structs
+	for (i = 0; i < THREADS; i++)
+		blockDatas[i] = NULL;
+
+	// Go through run of blocks
+	for (block = data->block; block != data->afterGap; block = block->next) {
+		i = getNextSlot(&count_mutex, &count_threshold_cv, &count, blockDatas);
+		BlockData * new = blockDatas[i] = createBlockData(data, block, &count_mutex, &count_threshold_cv, &count);
+
+		// Signal to reading thread that it is allowed to follow in list:
+		pthread_mutex_lock(&(new->proceed));
+		if (last) {
+			last->next = new;
+			pthread_mutex_unlock(&(last->proceed));
+		} else { 
+			data->blockData = new;
+			pthread_barrier_wait(&(data->proceed));
+		}
+
+		// Move on
+		last = new;
+	}
+
+	return NULL;
+}
+
 static void BigWiggleReaderEnterBlock(BigWiggleReaderData * data) {
-	/* Uncompress if necessary. */
-	if (data->uncompressBuf)
+	if (data->uncompress)
 	    {
-	    data->blockPt = data->uncompressBuf;
-	    int uncSize = zUncompress(data->blockBuf, data->block->size, data->uncompressBuf, data->bwf->uncompressBufSize);
-	    data->blockEnd = data->blockPt + uncSize;
+	    // Make sure data was unzipped
+	    pthread_join(data->blockData->threadID, NULL);
+	    data->blockPt = data->blockData->uncompressBuf;
+	    data->blockEnd = data->blockData->blockEnd;
 	    }
 	else
 	    {
@@ -93,16 +212,25 @@ static void BigWiggleReaderEnterBlock(BigWiggleReaderData * data) {
 }
 
 static void BigWiggleReaderEnterRunOfBlocks(BigWiggleReaderData * data) {
-       /* Find contigious blocks and read them into mergedBuf. */
-       struct fileOffsetSize *beforeGap;
-       bits64 mergedSize;
-       fileOffsetSizeFindGap(data->block, &beforeGap, &(data->afterGap));
-       mergedSize = beforeGap->offset + beforeGap->size - data->block->offset;
-       udcSeek(data->udc, data->block->offset);
-       data->mergedBuf = (char *) needLargeMem(mergedSize);
-       udcMustRead(data->udc, data->mergedBuf, mergedSize);
-       data->blockBuf = data->mergedBuf;
-       BigWiggleReaderEnterBlock(data); 
+	/* Read contiguous blocks into mergedBuf. */
+	struct fileOffsetSize *beforeGap;
+	bits64 mergedSize;
+	fileOffsetSizeFindGap(data->block, &beforeGap, &(data->afterGap));
+	mergedSize = beforeGap->offset + beforeGap->size - data->block->offset;
+	udcSeek(data->udc, data->block->offset);
+	data->mergedBuf = (char *) needLargeMem(mergedSize);
+	udcMustRead(data->udc, data->mergedBuf, mergedSize);
+	data->blockBuf = data->mergedBuf;
+	// If need to unzip, launch threads ahead of reader
+	if (data->uncompress) {
+		pthread_t threadID;
+
+		pthread_barrier_init(&(data->proceed), NULL, 2);
+		pthread_create(&threadID, NULL, &createBlockDataList, data);
+		pthread_barrier_wait(&(data->proceed));
+		pthread_barrier_destroy(&(data->proceed));
+	}
+	BigWiggleReaderEnterBlock(data); 
 }
 
 static void BigWiggleReaderEnterChromosome(BigWiggleReaderData * data) {
@@ -116,12 +244,7 @@ static void BigWiggleReaderOpenFile(BigWiggleReaderData * data, char * f) {
 	data->isSwapped = data->bwf->isSwapped;
 	bbiAttachUnzoomedCir(data->bwf);
 	data->udc = data->bwf->udc;
-
-	/* Set up for uncompression optionally. */
-	if (data->bwf->uncompressBufSize > 0)
-		data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
-	else
-		data->uncompressBuf = NULL;
+	data->uncompress = (data->bwf->uncompressBufSize > 0);
 
 	data->chrom = data->chromList = bbiChromList(data->bwf);
 	BigWiggleReaderEnterChromosome(data);
@@ -131,7 +254,6 @@ static void BigWiggleReaderCloseFile(BigWiggleReaderData * data) {
 	// Because strings are passed by reference instead of pointers deallocating
 	// this linked list would mess up objects for iterators downstream
 	//bbiChromInfoFreeList(&(data->chromList));
-	freeMem(data->uncompressBuf);
 	bbiFileClose(&(data->bwf));
 }
 
@@ -155,8 +277,17 @@ static void BigWiggleReaderGoToNextBlock(BigWiggleReaderData * data) {
 	data->blockBuf += data->block->size;
 	if ((data->block = data->block->next) == data->afterGap)
 		BigWiggleReaderGoToNextRunOfBlocks(data);
-	else 
+	else {
+		if (data->uncompress) {
+			BlockData * blockData = data->blockData;
+			pthread_mutex_lock(&(blockData->proceed));
+			data->blockData = blockData->next;
+			freeMem(blockData->uncompressBuf);
+			pthread_mutex_destroy(&(blockData->proceed));
+			free(blockData);
+		}
 		BigWiggleReaderEnterBlock(data);
+	}
 }
 
 void BigWiggleReaderPop(WiggleIterator * wi) {
