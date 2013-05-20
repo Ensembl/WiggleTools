@@ -32,7 +32,6 @@
 #include "stdio.h"
 
 // Local header
-#include "wiggleTools.h"
 #include "wiggleIterators.h"
 
 // Kent library headers
@@ -48,30 +47,32 @@
 //////////////////////////////////////////////////////
 
 typedef struct bigWiggleReaderData_st {
-	/* File variables */
+	// File level variables
 	struct bbiFile* bwf;
-	boolean isSwapped;
-
-	// Internal loop variables:
-	// Chromosomes
-	struct bbiChromInfo *chrom, *chromList;
-
-	// Sets of blocks within chromosome
-	struct fileOffsetSize *blockList, *block, *beforeGap, *afterGap;
 	struct udcFile *udc;
+	boolean isSwapped;
 	char *uncompressBuf;
+	struct bbiChromInfo *chromList;
 
-	// Blocks within set of blocks
-        bits64 mergedOffset, mergedSize;
-        char *mergedBuf, *blockBuf;
-	char *blockPt, *blockEnd;
+	// Chromosome within file
+	struct bbiChromInfo *chrom;
+	struct fileOffsetSize *blockList;
+
+	// Contiguous runs of blocks within chromosome
+	struct fileOffsetSize *afterGap;
+	char * mergedBuf;
+
+	// Blocks within run of blocks
+	struct fileOffsetSize * block;
+        char *blockBuf, *blockEnd;
 	struct bwgSectionHead head;
 
 	// Items within block
+	char *blockPt;
 	bits16 i;
 } BigWiggleReaderData;
 
-void BigWiggleReaderEnterBlock(BigWiggleReaderData * data) {
+static void BigWiggleReaderEnterBlock(BigWiggleReaderData * data) {
 	/* Uncompress if necessary. */
 	if (data->uncompressBuf)
 	    {
@@ -91,24 +92,25 @@ void BigWiggleReaderEnterBlock(BigWiggleReaderData * data) {
 	data->i = 0;
 }
 
-void BigWiggleReaderEnterSetOfBlocks(BigWiggleReaderData * data) {
+static void BigWiggleReaderEnterRunOfBlocks(BigWiggleReaderData * data) {
        /* Find contigious blocks and read them into mergedBuf. */
-       fileOffsetSizeFindGap(data->block, &(data->beforeGap), &(data->afterGap));
-       data->mergedOffset = data->block->offset;
-       data->mergedSize = data->beforeGap->offset + data->beforeGap->size - data->mergedOffset;
-       udcSeek(data->udc, data->mergedOffset);
-       data->mergedBuf = (char *) needLargeMem(data->mergedSize);
-       udcMustRead(data->udc, data->mergedBuf, data->mergedSize);
+       struct fileOffsetSize *beforeGap;
+       bits64 mergedSize;
+       fileOffsetSizeFindGap(data->block, &beforeGap, &(data->afterGap));
+       mergedSize = beforeGap->offset + beforeGap->size - data->block->offset;
+       udcSeek(data->udc, data->block->offset);
+       data->mergedBuf = (char *) needLargeMem(mergedSize);
+       udcMustRead(data->udc, data->mergedBuf, mergedSize);
        data->blockBuf = data->mergedBuf;
        BigWiggleReaderEnterBlock(data); 
 }
 
-void BigWiggleReaderEnterChromosome(BigWiggleReaderData * data) {
+static void BigWiggleReaderEnterChromosome(BigWiggleReaderData * data) {
 	data->block = data->blockList = bbiOverlappingBlocks(data->bwf, data->bwf->unzoomedCir, data->chrom->name, 0, data->chrom->size, NULL);
-	BigWiggleReaderEnterSetOfBlocks(data);
+	BigWiggleReaderEnterRunOfBlocks(data);
 }
 
-void BigWiggleReaderOpenFile(BigWiggleReaderData * data, char * f) {
+static void BigWiggleReaderOpenFile(BigWiggleReaderData * data, char * f) {
 	/* Opening up BigWig file */
 	data->bwf = bigWigFileOpen(f);
 	data->isSwapped = data->bwf->isSwapped;
@@ -117,37 +119,43 @@ void BigWiggleReaderOpenFile(BigWiggleReaderData * data, char * f) {
 
 	/* Set up for uncompression optionally. */
 	if (data->bwf->uncompressBufSize > 0)
-	    data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
+		data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
 	else
-	    data->uncompressBuf = NULL;
+		data->uncompressBuf = NULL;
 
 	data->chrom = data->chromList = bbiChromList(data->bwf);
 	BigWiggleReaderEnterChromosome(data);
 }
 
-void BigWiggleReaderGoToNextChromosome(BigWiggleReaderData * data) {
-	data->chrom = data->chrom->next;
-	if (!data->chrom) {
-	    bbiFileClose(&(data->bwf));
-	} else 
-	    BigWiggleReaderEnterChromosome(data);
+static void BigWiggleReaderCloseFile(BigWiggleReaderData * data) {
+	// Because strings are passed by reference instead of pointers deallocating
+	// this linked list would mess up objects for iterators downstream
+	//bbiChromInfoFreeList(&(data->chromList));
+	freeMem(data->uncompressBuf);
+	bbiFileClose(&(data->bwf));
 }
 
-void BigWiggleReaderGoToNextSetOfBlocks(BigWiggleReaderData * data) {
-	if (data->block == NULL) {
-		freeMem(data->uncompressBuf);
+static void BigWiggleReaderGoToNextChromosome(BigWiggleReaderData * data) {
+	slFreeList(&(data->blockList));
+	if ((data->chrom = data->chrom->next))
+		BigWiggleReaderEnterChromosome(data);
+	else 
+		BigWiggleReaderCloseFile(data);
+}
+
+static void BigWiggleReaderGoToNextRunOfBlocks(BigWiggleReaderData * data) {
+	freeMem(data->mergedBuf);
+	if (data->block)
+		BigWiggleReaderEnterRunOfBlocks(data);
+	else 
 		BigWiggleReaderGoToNextChromosome(data);
-	} else 
-		BigWiggleReaderEnterSetOfBlocks(data);
 }
 
-void BigWiggleReaderGoToNextBlock(BigWiggleReaderData * data) {
+static void BigWiggleReaderGoToNextBlock(BigWiggleReaderData * data) {
 	data->blockBuf += data->block->size;
-	data->block = data->block->next;
-	if (data->block == data->afterGap) {
-		freeMem(data->mergedBuf);
-		BigWiggleReaderGoToNextSetOfBlocks(data);
-	} else 
+	if ((data->block = data->block->next) == data->afterGap)
+		BigWiggleReaderGoToNextRunOfBlocks(data);
+	else 
 		BigWiggleReaderEnterBlock(data);
 }
 
@@ -160,9 +168,9 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 	data = (BigWiggleReaderData*) wi->data;
 
 	if (!data->chrom) {
-		// Because strings are passed by reference instead of pointers deallocating
-		// These objects would mess up objects for iterators downstream
-		//bbiChromInfoFreeList(&(data->chromList));
+		// Passive agressive indicator that the iterator should be closed
+		// (avoids passing the WiggleIterator reference needlessly across 
+		// all functions).
 		wi->done = true;
 		return;
 	} else {

@@ -47,10 +47,5 @@ typedef struct multiplexer_st {
 
 void popMultiplexer(Multiplexer * multi);
 Multiplexer * newMultiplexer(WiggleIterator ** iters, int count);
-WiggleIterator * SumReduction(Multiplexer * multi);
-WiggleIterator * ProductReduction(Multiplexer * multi);
-WiggleIterator * MeanReduction(Multiplexer * multi);
-WiggleIterator * VarianceReduction(Multiplexer * multi);
-WiggleIterator * StdDevReduction(Multiplexer * multi);
 
 #endif
