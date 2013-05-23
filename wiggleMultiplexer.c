@@ -81,7 +81,7 @@ void popMultiplexer(Multiplexer * multi) {
 		} else if (i < first) {
 			multi->inplay[i] = false;
 		} else if (start < lastFinish) {
-			if (!found || start < multi->start) {
+			if (!found || lastFinish < multi->start) {
 				multi->start = lastFinish;
 				first = i;
 				found = true;
