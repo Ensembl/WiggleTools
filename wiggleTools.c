@@ -38,7 +38,9 @@
 
 static void printHelp() {
 	puts("Inputs:");
-	puts("\tThe program takes in Wig and BigWig files, which are distinguished thanks to their suffix (.wig or .bw respectively).");
+	puts("\tThe program takes in Wig, BigWig, BedGraph, Bed and BigBed files, which are distinguished thanks to their suffix (.wig, .bw, bg, .bed, and .bb respectively).");
+	puts("\tNote that Bed and BigBed files are treated as a binary {0,1} signal that indicates the union of regions defined in the bed.");
+	puts("\tAlso note that wig, bed and bg files have to be sorted (bw and bb are already sorted)");
 	puts("");
 	puts("Outputs:");
 	puts("\tThe program outputs a bedGraph flat file in stdout.");

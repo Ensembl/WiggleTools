@@ -29,74 +29,14 @@
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include <stdio.h>
-#include <pthread.h>
-
 // Local header
-#include "wiggleIterators.h"
-
-// Kent library headers
-#include "common.h"
-#include "zlibFace.h"
-#include "bbiFile.h"
-#include "bigWig.h"
-#include "udc.h"
-#include "bwgInternal.h"
+#include "bigWiggleReader.h"
 
 //////////////////////////////////////////////////////
 // Compressed File Reader
 //////////////////////////////////////////////////////
 
-typedef struct blockData_st {
-	// Args to unzipper
-	char *blockBuf;
-	struct fileOffsetSize * block;
-	char *uncompressBuf;
-	struct bbiFile* bwf;
-	char *blockEnd;
-	boolean done;
-
-	// Other
-	pthread_t threadID;
-	pthread_mutex_t proceed;
-	int * count;
-	pthread_mutex_t * count_mutex;
-	pthread_cond_t * count_threshold_cv;
-	struct blockData_st * next;
-} BlockData;
-
-typedef struct bigWiggleReaderData_st {
-	// File level variables
-	struct bbiFile* bwf;
-	struct udcFile *udc;
-	boolean isSwapped, uncompress;
-	struct bbiChromInfo *chromList;
-
-	// Chromosome within file
-	struct bbiChromInfo *chrom;
-	struct fileOffsetSize *blockList;
-
-	// Contiguous runs of blocks within chromosome
-	struct fileOffsetSize *afterGap;
-	char * mergedBuf;
-
-	// Blocks within run of blocks
-	struct fileOffsetSize * block;
-        char *blockBuf, *blockEnd;
-	struct bwgSectionHead head;
-
-	// Items within block
-	char *blockPt;
-	bits16 i;
-
-	// For multi-threading storage...
-	BlockData * blockData;
-	pthread_barrier_t proceed;
-} BigWiggleReaderData;
-
-#define THREADS 5
-
-void * unzipBlockData(void * args) {
+static void * unzipBlockData(void * args) {
 	BlockData * data = (BlockData *) args;
 	data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
 	int uncSize = zUncompress(data->blockBuf, data->block->size, data->uncompressBuf, data->bwf->uncompressBufSize);
@@ -233,7 +173,7 @@ static void BigWiggleReaderEnterRunOfBlocks(BigWiggleReaderData * data) {
 	BigWiggleReaderEnterBlock(data); 
 }
 
-static void BigWiggleReaderEnterChromosome(BigWiggleReaderData * data) {
+void BigWiggleReaderEnterChromosome(BigWiggleReaderData * data) {
 	data->block = data->blockList = bbiOverlappingBlocks(data->bwf, data->bwf->unzoomedCir, data->chrom->name, 0, data->chrom->size, NULL);
 	BigWiggleReaderEnterRunOfBlocks(data);
 }
@@ -273,7 +213,7 @@ static void BigWiggleReaderGoToNextRunOfBlocks(BigWiggleReaderData * data) {
 		BigWiggleReaderGoToNextChromosome(data);
 }
 
-static void BigWiggleReaderGoToNextBlock(BigWiggleReaderData * data) {
+void BigWiggleReaderGoToNextBlock(BigWiggleReaderData * data) {
 	data->blockBuf += data->block->size;
 	if ((data->block = data->block->next) == data->afterGap)
 		BigWiggleReaderGoToNextRunOfBlocks(data);

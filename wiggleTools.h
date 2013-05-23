@@ -80,5 +80,7 @@ void destroyWiggleIterator (WiggleIterator *);
 // Secondar creators (to force file format recognition)
 WiggleIterator * WiggleReader (char *);
 WiggleIterator * BigWiggleReader (char *);
+WiggleIterator * BedReader (char *);
+WiggleIterator * BigBedReader (char *);
 
 #endif

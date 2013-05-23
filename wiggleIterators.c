@@ -641,6 +641,10 @@ WiggleIterator * WigOrBigWigReader(char * filename) {
 		return WiggleReader(filename);
 	else if (!strcmp(filename + length - 4, ".wig"))
 		return WiggleReader(filename);
+	else if (!strcmp(filename + length - 4, ".bed"))
+		return BedReader(filename);
+	else if (!strcmp(filename + length - 3, ".bb"))
+		return BigBedReader(filename);
 	else if (!strcmp(filename, "-"))
 		return WiggleReader(filename);
 	else {

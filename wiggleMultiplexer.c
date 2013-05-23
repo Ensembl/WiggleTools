@@ -37,12 +37,15 @@
 
 void popMultiplexer(Multiplexer * multi) {
 	int i, first = 0;
-	int lastStart = multi->start;
+	int lastFinish = multi->finish;
+	char * lastChrom = multi->chrom;
 	bool found = false;
 	int finishedIters = 0;
 
 	if (multi->done)
 		return;
+
+	multi->chrom = NULL;
 
 	// Choose chromosome:
 	for (i = 0; i < multi->count; i++) {
@@ -52,7 +55,6 @@ void popMultiplexer(Multiplexer * multi) {
 		} else if (!multi->chrom || strcmp(multi->iters[i]->chrom, multi->chrom) < 0) {
 			multi->chrom = multi->iters[i]->chrom;
 			multi->inplay[i] = true;
-			lastStart = -1;
 			first = i;
 		} else if (strcmp(multi->iters[i]->chrom, multi->chrom) > 0){
 			multi->inplay[i] = false;
@@ -67,28 +69,39 @@ void popMultiplexer(Multiplexer * multi) {
 		return;
 	}
 
+	// Reset last start if you change chromosome
+	if (lastChrom && strcmp(multi->chrom, lastChrom) > 0)
+		lastFinish = -1;
+
 	// Choose start:
 	for (i = 0; i < multi->count; i++) {
+		int start = multi->iters[i]->start;
 		if (!multi->inplay[i]) {
 			continue;
 		} else if (i < first) {
 			multi->inplay[i] = false;
-		} else if (multi->iters[i]->start <= lastStart) {
-			continue;
+		} else if (multi->iters[i]->start < lastFinish) {
+			if (!found) {
+				multi->start = lastFinish;
+				first = i;
+				found = true;
+			}
 		} else if (multi->iters[i]->start < multi->start || !found) {
 			multi->start = multi->iters[i]->start;
 			first = i;
 			found = true;
-		} 
+		} else if (start > multi->start) {
+			multi->inplay = false;
+		}
 	}
 
 	// Choose finish:
 	for (i = 0; i < multi->count; i++) {
 		if (!multi->inplay[i]) 
 			continue;
-		else if (i < first)
+		else if (i < first) {
 			multi->inplay[i] = false;
-		else if (multi->iters[i]->finish < multi->finish || i == first)
+		} else if (multi->iters[i]->finish < multi->finish || i == first)
 			multi->finish = multi->iters[i]->finish;
 	}
 
@@ -96,8 +109,9 @@ void popMultiplexer(Multiplexer * multi) {
 	for (i = 0; i < multi->count; i++) {
 		if (multi->inplay[i]) {
 			multi->values[i] = multi->iters[i]->value;
-			if (multi->iters[i]->finish == multi->finish)
+			if (multi->iters[i]->finish == multi->finish) {
 				pop(multi->iters[i]);
+			}
 		}
 	}
 
