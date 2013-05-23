@@ -91,7 +91,7 @@ void popMultiplexer(Multiplexer * multi) {
 			first = i;
 			found = true;
 		} else if (start > multi->start) {
-			multi->inplay = false;
+			multi->inplay[i] = false;
 		}
 	}
 
