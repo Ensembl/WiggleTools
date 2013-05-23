@@ -86,8 +86,8 @@ void popMultiplexer(Multiplexer * multi) {
 				first = i;
 				found = true;
 			}
-		} else if (multi->iters[i]->start < multi->start || !found) {
-			multi->start = multi->iters[i]->start;
+		} else if (start < multi->start || !found) {
+			multi->start = start;
 			first = i;
 			found = true;
 		} else if (start > multi->start) {
