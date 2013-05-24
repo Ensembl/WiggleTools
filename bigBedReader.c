@@ -131,7 +131,7 @@ static void * createBlockDataList(void * args) {
 	return NULL;
 }
 
-static void BigWiggleReaderEnterBlock(BigWiggleReaderData * data) {
+static void BigBedReaderEnterBlock(BigWiggleReaderData * data) {
 	if (data->uncompress)
 	    {
 	    // Make sure data was unzipped
@@ -146,12 +146,10 @@ static void BigWiggleReaderEnterBlock(BigWiggleReaderData * data) {
 	    }
 
 	/* Deal with insides of block. */
-	bwgSectionHeadFromMem(&(data->blockPt), &(data->head), data->isSwapped);
-
 	data->i = 0;
 }
 
-static void BigWiggleReaderEnterRunOfBlocks(BigWiggleReaderData * data) {
+static void BigBedReaderEnterRunOfBlocks(BigWiggleReaderData * data) {
 	/* Read contiguous blocks into mergedBuf. */
 	struct fileOffsetSize *beforeGap;
 	bits64 mergedSize;
@@ -170,53 +168,41 @@ static void BigWiggleReaderEnterRunOfBlocks(BigWiggleReaderData * data) {
 		pthread_barrier_wait(&(data->proceed));
 		pthread_barrier_destroy(&(data->proceed));
 	}
-	BigWiggleReaderEnterBlock(data); 
+	BigBedReaderEnterBlock(data); 
 }
 
-void BigWiggleReaderEnterChromosome(BigWiggleReaderData * data) {
+void BigBedReaderEnterChromosome(BigWiggleReaderData * data) {
 	data->block = data->blockList = bbiOverlappingBlocks(data->bwf, data->bwf->unzoomedCir, data->chrom->name, 0, data->chrom->size, NULL);
-	BigWiggleReaderEnterRunOfBlocks(data);
+	BigBedReaderEnterRunOfBlocks(data);
 }
 
-static void BigWiggleReaderOpenFile(BigWiggleReaderData * data, char * f) {
-	/* Opening up BigWig file */
-	data->bwf = bigWigFileOpen(f);
-	data->isSwapped = data->bwf->isSwapped;
-	bbiAttachUnzoomedCir(data->bwf);
-	data->udc = data->bwf->udc;
-	data->uncompress = (data->bwf->uncompressBufSize > 0);
-
-	data->chrom = data->chromList = bbiChromList(data->bwf);
-	BigWiggleReaderEnterChromosome(data);
-}
-
-static void BigWiggleReaderCloseFile(BigWiggleReaderData * data) {
+static void BigBedReaderCloseFile(BigWiggleReaderData * data) {
 	// Because strings are passed by reference instead of pointers deallocating
 	// this linked list would mess up objects for iterators downstream
 	//bbiChromInfoFreeList(&(data->chromList));
 	bbiFileClose(&(data->bwf));
 }
 
-static void BigWiggleReaderGoToNextChromosome(BigWiggleReaderData * data) {
+static void BigBedReaderGoToNextChromosome(BigWiggleReaderData * data) {
 	slFreeList(&(data->blockList));
 	if ((data->chrom = data->chrom->next))
-		BigWiggleReaderEnterChromosome(data);
+		BigBedReaderEnterChromosome(data);
 	else 
-		BigWiggleReaderCloseFile(data);
+		BigBedReaderCloseFile(data);
 }
 
-static void BigWiggleReaderGoToNextRunOfBlocks(BigWiggleReaderData * data) {
+static void BigBedReaderGoToNextRunOfBlocks(BigWiggleReaderData * data) {
 	freeMem(data->mergedBuf);
 	if (data->block)
-		BigWiggleReaderEnterRunOfBlocks(data);
-	else if (data->chrom)
-		BigWiggleReaderGoToNextChromosome(data);
+		BigBedReaderEnterRunOfBlocks(data);
+	else if (data->chrom) 
+		BigBedReaderGoToNextChromosome(data);
 }
 
-void BigWiggleReaderGoToNextBlock(BigWiggleReaderData * data) {
+void BigBedReaderGoToNextBlock(BigWiggleReaderData * data) {
 	data->blockBuf += data->block->size;
 	if ((data->block = data->block->next) == data->afterGap)
-		BigWiggleReaderGoToNextRunOfBlocks(data);
+		BigBedReaderGoToNextRunOfBlocks(data);
 	else {
 		if (data->uncompress) {
 			BlockData * blockData = data->blockData;
@@ -226,11 +212,11 @@ void BigWiggleReaderGoToNextBlock(BigWiggleReaderData * data) {
 			pthread_mutex_destroy(&(blockData->proceed));
 			free(blockData);
 		}
-		BigWiggleReaderEnterBlock(data);
+		BigBedReaderEnterBlock(data);
 	}
 }
 
-void BigWiggleReaderPop(WiggleIterator * wi) {
+static void BigBedReaderPop2(WiggleIterator * wi) {
 	BigWiggleReaderData * data;
 
 	if (wi->done)
@@ -248,66 +234,63 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 		wi->chrom = data->chrom->name;
 	}
 
-	switch (data->head.type)
-	    {
-	    case bwgTypeBedGraph:
-		{
-		// +1 because BigWig coords are 0-based...
-		wi->start = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
-		wi->finish = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
-		wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
-		break;
-		}
-	    case bwgTypeVariableStep:
-		{
-		// +1 because BigWig coords are 0-based...
-		wi->start = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
-		wi->finish = wi->start + data->head.itemSpan;
-		wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
-		break;
-		}
-	    case bwgTypeFixedStep:
-		{
-		if (data->i==0) 
-		    {
-	 	    // +1 because BigWig coords are 0-based...
-		    wi->start = data->head.start + 1;
-		    wi->finish = wi->start + data->head.itemSpan;
-		    wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
-		    }
-		else
-		    {
-		    wi->start += data->head.itemStep;
-		    wi->finish += data->head.itemStep;
-		    wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
-		    }
-		break;
-		}
-	    default:
-		{
-		fprintf(stderr, "Unrecognized head type in Wiggle file\n");
-		exit(1);
-		break;
-		}
-	    }
-        if (++(data->i) == data->head.itemCount)
-	    {
-	    assert(data->blockPt == data->blockEnd);
-	    BigWiggleReaderGoToNextBlock(data);
-	    }
+	/* Read next record into local variables. */
+	memReadBits32(&data->blockPt, data->isSwapped);	// Read and discard chromId
+	wi->start = memReadBits32(&data->blockPt, data->isSwapped);
+	wi->finish = memReadBits32(&data->blockPt, data->isSwapped) + 1;
+	// Skip boring stuff...
+	for (;;)
+		if (*(data->blockPt++) <= 0)
+			break;
 
+        if (data->blockPt == data->blockEnd)
+	    BigBedReaderGoToNextBlock(data);
 }
 
-void BigWiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+void BigBedReaderPop(WiggleIterator * wi) {
+	int finish = wi->finish;
+	char chrom[1000];
+
+	strcpy(chrom, wi->chrom);
+
+	while (wi->chrom && !wi->done) {
+		BigBedReaderPop2(wi);
+		if (chrom[0] == '\0' || strcmp(chrom, wi->chrom) < 0) 
+			finish = -1;
+
+		if (wi->finish <= finish)
+			continue;
+		else if (wi->start < finish) 
+			wi->start = finish;
+
+		return;
+	}
+
+	wi->done = true;
+}
+
+static void BedFileReaderOpenFile(BigWiggleReaderData * data, char * f) {
+	data->bwf = bigBedFileOpen(f);
+	data->isSwapped = data->bwf->isSwapped;
+	bbiAttachUnzoomedCir(data->bwf);
+	data->udc = data->bwf->udc;
+	data->uncompress = (data->bwf->uncompressBufSize > 0);
+
+	data->chrom = data->chromList = bbiChromList(data->bwf);
+	BigBedReaderEnterChromosome(data);
+}
+
+void BigBedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	BigWiggleReaderData * data = (BigWiggleReaderData*) wi->data;
 	data->block = data->blockList = bbiOverlappingBlocks(data->bwf, data->bwf->unzoomedCir, chrom, start, finish, NULL);
 	data->chrom = NULL;
-	BigWiggleReaderEnterRunOfBlocks(data);
+	BigBedReaderEnterRunOfBlocks(data);
 }
 
-WiggleIterator * BigWiggleReader(char * f) {
+WiggleIterator * BigBedReader(char * f) {
 	BigWiggleReaderData * data = (BigWiggleReaderData *) calloc(1, sizeof(BigWiggleReaderData));
-	BigWiggleReaderOpenFile(data, f);
-	WiggleIterator * new = newWiggleIterator(data, &BigWiggleReaderPop, &BigWiggleReaderSeek);
+	BedFileReaderOpenFile(data, f);
+	WiggleIterator * new = newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek);
+	new->value = 1;
 	return new;
 }	

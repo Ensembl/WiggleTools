@@ -38,10 +38,11 @@
 #include "wiggleTools.h"
 #include "wiggleIterators.h"
 
-WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *)) {
+WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int)) {
 	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
 	new->data = data;
 	new->pop = pop;
+	new->seek = seek;
 	new->chrom = calloc(1000,1);
 	pop(new);
 	return new;
@@ -55,6 +56,11 @@ void destroyWiggleIterator(WiggleIterator * wi) {
 
 void pop(WiggleIterator * wi) {
 	(*(wi->pop))(wi);
+}
+
+void seek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	(*(wi->seek))(wi, chrom, start, finish);
+	pop(wi);
 }
 
 FILE * openOrFail(char * filename, char * description, char * mode) {
@@ -132,10 +138,15 @@ void UnitWiggleIteratorPop(WiggleIterator * wi) {
 	}
 }
 
+void UnitWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) wi->data;
+	seek(data->iter, chrom, start, finish);
+}
+
 WiggleIterator * UnitWiggleIterator(WiggleIterator * i) {
 	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) calloc(1, sizeof(UnitWiggleIteratorData));
 	data->iter = i;
-	return newWiggleIterator(data, &UnitWiggleIteratorPop);
+	return newWiggleIterator(data, &UnitWiggleIteratorPop, &UnitWiggleIteratorSeek);
 }
 
 //////////////////////////////////////////////////////
@@ -161,11 +172,16 @@ void ScaleWiggleIteratorPop(WiggleIterator * wi) {
 	}
 }
 
+void ScaleWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) wi->data;
+	seek(data->iter, chrom, start, finish);
+}
+
 WiggleIterator * ScaleWiggleIterator(WiggleIterator * i, double s) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) calloc(1, sizeof(ScaleWiggleIteratorData));
 	data->iter = i;
 	data->scalar = s;
-	return newWiggleIterator(data, &ScaleWiggleIteratorPop);
+	return newWiggleIterator(data, &ScaleWiggleIteratorPop, &ScaleWiggleIteratorSeek);
 }
 
 //////////////////////////////////////////////////////
@@ -194,12 +210,17 @@ void LogWiggleIteratorPop(WiggleIterator * wi) {
 	}
 }
 
+void LogWiggleIteratorSeek(WiggleIterator * wi, const char  * chrom, int start, int finish) {
+	LogWiggleIteratorData * data = (LogWiggleIteratorData *) wi->data;
+	seek(data->iter, chrom, start, finish);
+}
+
 WiggleIterator * NaturalLogWiggleIterator(WiggleIterator * i) {
 	LogWiggleIteratorData * data = (LogWiggleIteratorData *) calloc(1, sizeof(LogWiggleIteratorData));
 	data->iter = i;
 	data->base = E;
 	data->baseLog = 1;
-	return newWiggleIterator(data, &LogWiggleIteratorPop);
+	return newWiggleIterator(data, &LogWiggleIteratorPop, &LogWiggleIteratorSeek);
 }
 
 WiggleIterator * LogWiggleIterator(WiggleIterator * i, double s) {
@@ -207,7 +228,7 @@ WiggleIterator * LogWiggleIterator(WiggleIterator * i, double s) {
 	data->iter = i;
 	data->base = s;
 	data->baseLog = log(s);
-	return newWiggleIterator(data, &LogWiggleIteratorPop);
+	return newWiggleIterator(data, &LogWiggleIteratorPop, &LogWiggleIteratorSeek);
 }
 
 //////////////////////////////////////////////////////
@@ -234,12 +255,17 @@ void ExpWiggleIteratorPop(WiggleIterator * wi) {
 	}
 }
 
+void ExpWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	ExpWiggleIteratorData * data = (ExpWiggleIteratorData *) wi->data;
+	seek(data->iter, chrom, start, finish);
+}
+
 WiggleIterator * ExpWiggleIterator(WiggleIterator * i, double s) {
 	ExpWiggleIteratorData * data = (ExpWiggleIteratorData *) calloc(1, sizeof(ExpWiggleIteratorData));
 	data->iter = i;
 	data->radix = s;
 	data->radixLog = log(data->radix);
-	return newWiggleIterator(data, &ExpWiggleIteratorPop);
+	return newWiggleIterator(data, &ExpWiggleIteratorPop, &ExpWiggleIteratorSeek);
 }
 
 WiggleIterator * NaturalExpWiggleIterator(WiggleIterator * i) {
@@ -247,7 +273,7 @@ WiggleIterator * NaturalExpWiggleIterator(WiggleIterator * i) {
 	data->iter = i;
 	data->radix = E;
 	data->radixLog = 1;
-	return newWiggleIterator(data, &ExpWiggleIteratorPop);
+	return newWiggleIterator(data, &ExpWiggleIteratorPop, &ExpWiggleIteratorSeek);
 }
 
 //////////////////////////////////////////////////////
@@ -272,7 +298,7 @@ WiggleIterator * PowerWiggleIterator(WiggleIterator * i, double s) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) calloc(1, sizeof(ScaleWiggleIteratorData));
 	data->iter = i;
 	data->scalar = s;
-	return newWiggleIterator(data, &PowerWiggleIteratorPop);
+	return newWiggleIterator(data, &PowerWiggleIteratorPop, &ScaleWiggleIteratorSeek);
 }
 
 //////////////////////////////////////////////////////
@@ -296,7 +322,7 @@ static void AbsWiggleIteratorPop(WiggleIterator * wi) {
 WiggleIterator * AbsWiggleIterator(WiggleIterator * i) {
 	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) calloc(1, sizeof(UnitWiggleIteratorData));
 	data->iter = i;
-	return newWiggleIterator(data, &AbsWiggleIteratorPop);
+	return newWiggleIterator(data, &AbsWiggleIteratorPop, &UnitWiggleIteratorSeek);
 }
 
 //////////////////////////////////////////////////////
@@ -386,11 +412,17 @@ void SumWiggleIteratorPop(WiggleIterator * wi) {
 	}
 }
 
+void BinaryWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	BinaryWiggleIteratorData * data = (BinaryWiggleIteratorData *) wi->data;
+	seek(data->iterA, chrom, start, finish);
+	seek(data->iterB, chrom, start, finish);
+
+}
 WiggleIterator * SumWiggleIterator(WiggleIterator * a, WiggleIterator * b) {
 	BinaryWiggleIteratorData * data = (BinaryWiggleIteratorData *) calloc(1, sizeof(BinaryWiggleIteratorData));
 	data->iterA = a;
 	data->iterB = b;
-	return newWiggleIterator(data, &SumWiggleIteratorPop);
+	return newWiggleIterator(data, &SumWiggleIteratorPop, &BinaryWiggleIteratorSeek);
 }
 
 //////////////////////////////////////////////////////
@@ -459,7 +491,7 @@ WiggleIterator * ProductWiggleIterator(WiggleIterator * a, WiggleIterator * b) {
 	BinaryWiggleIteratorData * data = (BinaryWiggleIteratorData *) calloc(1, sizeof(BinaryWiggleIteratorData));
 	data->iterA = a;
 	data->iterB = b;
-	return newWiggleIterator(data, &ProductWiggleIteratorPop);
+	return newWiggleIterator(data, &ProductWiggleIteratorPop, &BinaryWiggleIteratorSeek);
 }
 
 //////////////////////////////////////////////////////

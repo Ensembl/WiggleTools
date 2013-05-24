@@ -117,6 +117,12 @@ void popMultiplexer(Multiplexer * multi) {
 
 }
 
+void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
+	int i;
+	for (i=0; i<multi->count; i++)
+		seek(multi->iters[i], chrom, start, finish);
+}
+
 Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
 	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
 	new->count = count;

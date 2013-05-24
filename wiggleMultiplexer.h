@@ -46,6 +46,7 @@ typedef struct multiplexer_st {
 } Multiplexer;
 
 void popMultiplexer(Multiplexer * multi);
+void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish);
 Multiplexer * newMultiplexer(WiggleIterator ** iters, int count);
 
 #endif

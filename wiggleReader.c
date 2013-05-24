@@ -43,11 +43,13 @@
 enum readingMode {FIXED_STEP, VARIABLE_STEP, BED_GRAPH};
 
 typedef struct wiggleReaderData_st {
+	char * filename;
 	FILE * infile;
 	enum readingMode readingMode;
 	int step;
 	int span;
 	char words[5];
+	int stop;
 } WiggleReaderData;
 
 
@@ -187,6 +189,9 @@ static void WiggleReaderPop(WiggleIterator * wi) {
 
 		}
 
+		if (wi->start > data->stop)
+			wi->done = true;
+
 		return;
 
 	}
@@ -194,12 +199,27 @@ static void WiggleReaderPop(WiggleIterator * wi) {
 	wi->done = true;
 }
 
+void WiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	WiggleReaderData * data = (WiggleReaderData*) wi->data;
+	if (strcmp(chrom, wi->chrom) < 0 || start < wi->start) {
+		fclose(data->infile);
+		data->infile = openOrFail(data->filename, "input file", "r");
+	}
+
+	while (wi->finish < finish || strcmp(chrom, wi->chrom) < 0)
+		WiggleReaderPop(wi);
+
+	data->stop = finish;
+}
+
 WiggleIterator * WiggleReader(char * f) {
 	WiggleReaderData * data = (WiggleReaderData *) calloc(1, sizeof(WiggleReaderData));
+	data->filename = f;
 	if (strcmp(f, "-"))
 		data->infile = openOrFail(f, "input file", "r");
 	else
 		data->infile = stdin;
 	data->readingMode = BED_GRAPH;
-	return newWiggleIterator(data, &WiggleReaderPop);
+	data->stop = -1;
+	return newWiggleIterator(data, &WiggleReaderPop, &WiggleReaderSeek);
 }	

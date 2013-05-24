@@ -38,6 +38,10 @@ typedef struct wiggleReducerData_st {
 	Multiplexer * multi;
 } WiggleReducerData;
 
+void WiggleReducerSeek(WiggleIterator * iter, const char * chrom, int start, int finish) {
+	WiggleReducerData * data = (WiggleReducerData* ) iter->data;
+	seekMultiplexer(data->multi, chrom, start, finish);
+}
 
 ////////////////////////////////////////////////////////
 // Max
@@ -80,7 +84,7 @@ void MaxReductionPop(WiggleIterator * wi) {
 WiggleIterator * MaxReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &MaxReductionPop);
+	return newWiggleIterator(data, &MaxReductionPop, &WiggleReducerSeek);
 }
 
 WiggleIterator * MaxWiggleReducer(WiggleIterator** iters, int count) {
@@ -128,7 +132,7 @@ void MinReductionPop(WiggleIterator * wi) {
 static WiggleIterator * MinReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &MinReductionPop);
+	return newWiggleIterator(data, &MinReductionPop, &WiggleReducerSeek);
 }
 
 WiggleIterator * MinWiggleReducer(WiggleIterator** iters, int count) {
@@ -166,7 +170,7 @@ void SumReductionPop(WiggleIterator * wi) {
 static WiggleIterator * SumReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &SumReductionPop);
+	return newWiggleIterator(data, &SumReductionPop, &WiggleReducerSeek);
 }
 
 WiggleIterator * SumWiggleReducer(WiggleIterator** iters, int count) {
@@ -209,7 +213,7 @@ void ProductReductionPop(WiggleIterator * wi) {
 static WiggleIterator * ProductReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &ProductReductionPop);
+	return newWiggleIterator(data, &ProductReductionPop, &WiggleReducerSeek);
 }
 
 WiggleIterator * ProductWiggleReducer(WiggleIterator** iters, int count) {
@@ -248,7 +252,7 @@ void MeanReductionPop(WiggleIterator * wi) {
 static WiggleIterator * MeanReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &MeanReductionPop);
+	return newWiggleIterator(data, &MeanReductionPop, &WiggleReducerSeek);
 }
 
 WiggleIterator * MeanWiggleReducer(WiggleIterator** iters, int count) {
@@ -301,7 +305,7 @@ void VarianceReductionPop(WiggleIterator * wi) {
 static WiggleIterator * VarianceReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &VarianceReductionPop);
+	return newWiggleIterator(data, &VarianceReductionPop, &WiggleReducerSeek);
 }
 
 WiggleIterator * VarianceWiggleReducer(WiggleIterator** iters, int count) {
@@ -354,7 +358,7 @@ void StdDevReductionPop(WiggleIterator * wi) {
 static WiggleIterator * StdDevReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &StdDevReductionPop);
+	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek);
 }
 
 WiggleIterator * StdDevWiggleReducer(WiggleIterator** iters, int count) {
@@ -369,6 +373,11 @@ typedef struct medianMiggleReducerData_st {
 	Multiplexer * multi;
 	double * vals;
 } MedianWiggleReducerData;
+
+void MedianWiggleReducerSeek(WiggleIterator * iter, const char * chrom, int start, int finish) {
+	MedianWiggleReducerData * data = (MedianWiggleReducerData* ) iter->data;
+	seekMultiplexer(data->multi, chrom, start, finish);
+}
 
 static int compDoubles(const void * A, const void * B) {
 	double * a = (double *) A;
@@ -414,7 +423,7 @@ static WiggleIterator * MedianReduction(Multiplexer * multi) {
 	MedianWiggleReducerData * data = (MedianWiggleReducerData *) calloc(1, sizeof(MedianWiggleReducerData));
 	data->multi = multi;
 	data->vals = (double *) calloc(data->multi->count, sizeof(double));
-	return newWiggleIterator(data, &MedianReductionPop);
+	return newWiggleIterator(data, &MedianReductionPop, &MedianWiggleReducerSeek);
 }
 
 WiggleIterator * MedianWiggleReducer(WiggleIterator** iters, int count) {

@@ -28,27 +28,73 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//
-#ifndef _WIGGLETOOLS_PRIV_
-#define _WIGGLETOOLS_PRIV_
+
+#ifndef _BIG_WIGGLE_READER_H_
+#define _BIG_WIGGLE_READER_H_
 
 #include <stdio.h>
-#include "wiggleTools.h"
+#include <pthread.h>
 
-struct wiggleIterator_st {
-	char * chrom;
-	int start;
-	int finish;
-	double value;
-	bool done;
-	void * data;
-	void (*pop)(WiggleIterator *);
-	void (*seek)(WiggleIterator *, const char *, int, int);
-};
+#include "wiggleIterators.h"
 
-FILE * openOrFail(char * filename, char * description, char * mode);
-WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int));
-void pop(WiggleIterator *);
-void seek(WiggleIterator *, const char *, int, int);
+// Kent library headers
+#include "common.h"
+#include "bigBed.h"
+#include "bbiFile.h"
+#include "zlibFace.h"
+#include "bbiFile.h"
+#include "bigWig.h"
+#include "udc.h"
+#include "bwgInternal.h"
+
+#define THREADS 5
+
+
+typedef struct blockData_st {
+	// Args to unzipper
+	char *blockBuf;
+	struct fileOffsetSize * block;
+	char *uncompressBuf;
+	struct bbiFile* bwf;
+	char *blockEnd;
+	boolean done;
+
+	// Other
+	pthread_t threadID;
+	pthread_mutex_t proceed;
+	int * count;
+	pthread_mutex_t * count_mutex;
+	pthread_cond_t * count_threshold_cv;
+	struct blockData_st * next;
+} BlockData;
+
+typedef struct bigWiggleReaderData_st {
+	// File level variables
+	struct bbiFile* bwf;
+	struct udcFile *udc;
+	boolean isSwapped, uncompress;
+	struct bbiChromInfo *chromList;
+
+	// Chromosome within file
+	struct bbiChromInfo *chrom;
+	struct fileOffsetSize *blockList;
+
+	// Contiguous runs of blocks within chromosome
+	struct fileOffsetSize *afterGap;
+	char * mergedBuf;
+
+	// Blocks within run of blocks
+	struct fileOffsetSize * block;
+        char *blockBuf, *blockEnd;
+	struct bwgSectionHead head;
+
+	// Items within block
+	char *blockPt;
+	bits16 i;
+
+	// For multi-threading storage...
+	BlockData * blockData;
+	pthread_barrier_t proceed;
+} BigWiggleReaderData;
 
 #endif
