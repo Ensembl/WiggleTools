@@ -189,7 +189,7 @@ static void WiggleReaderPop(WiggleIterator * wi) {
 
 		}
 
-		if (wi->start > data->stop)
+		if (data->stop > 0 && wi->start > data->stop)
 			wi->done = true;
 
 		return;

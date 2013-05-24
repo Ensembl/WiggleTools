@@ -65,7 +65,7 @@ void BedReaderPop(WiggleIterator * wi) {
 			wi->start = start;
 		wi->finish = finish;
 
-		if (wi->start > data->stop)
+		if (data->stop > 0 && wi->start > data->stop)
 			wi->done = true;
 
 		return;
