@@ -46,7 +46,7 @@ WiggleIterator * WigOrBigWigReader (char *);
 // Algebraic operations
 	// Unary
 WiggleIterator * UnitWiggleIterator (WiggleIterator *);
-WiggleIterator * AbsWiggleIterator (WiggleIterator * i);
+WiggleIterator * AbsWiggleIterator (WiggleIterator * );
 WiggleIterator * NaturalLogWiggleIterator (WiggleIterator *);
 WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
 	// Scalar operations
@@ -59,20 +59,26 @@ WiggleIterator * SumWiggleIterator (WiggleIterator *, WiggleIterator *);
 WiggleIterator * ProductWiggleIterator (WiggleIterator * , WiggleIterator * );
 
 // Reduction operators
-WiggleIterator * MaxWiggleReducer (WiggleIterator** iters, int count);
-WiggleIterator * MinWiggleReducer (WiggleIterator** iters, int count);
-WiggleIterator * SumWiggleReducer (WiggleIterator** iters, int count);
-WiggleIterator * ProductWiggleReducer (WiggleIterator** iters, int count);
-WiggleIterator * MeanWiggleReducer (WiggleIterator** iters, int count);
-WiggleIterator * VarianceWiggleReducer (WiggleIterator** iters, int count);
-WiggleIterator * StdDevWiggleReducer (WiggleIterator** iters, int count);
-WiggleIterator * MedianWiggleReducer (WiggleIterator** iters, int count);
+WiggleIterator * MaxWiggleReducer (WiggleIterator** , int );
+WiggleIterator * MinWiggleReducer (WiggleIterator** , int );
+WiggleIterator * SumWiggleReducer (WiggleIterator** , int );
+WiggleIterator * ProductWiggleReducer (WiggleIterator** , int );
+WiggleIterator * MeanWiggleReducer (WiggleIterator** , int );
+WiggleIterator * VarianceWiggleReducer (WiggleIterator** , int );
+WiggleIterator * StdDevWiggleReducer (WiggleIterator** , int );
+WiggleIterator * MedianWiggleReducer (WiggleIterator** , int );
 
 // Output
 void toFile (WiggleIterator *, char *);
 void toStdout (WiggleIterator *);
+
+// Statistics
 double AUC (WiggleIterator *);
-double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB);
+double pearsonCorrelation(WiggleIterator * , WiggleIterator * );
+
+// Regional statistics
+// I wonder what the algebraic classification of this thing is...?
+WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * data);
 
 // Cleaning up
 void destroyWiggleIterator (WiggleIterator *);
