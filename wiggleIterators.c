@@ -111,6 +111,41 @@ double span(WiggleIterator * wi) {
 	return total;
 }
 
+double mean(WiggleIterator * wi) {
+	double total = 0;
+	double span = 0;
+	for(;!wi->done; pop(wi)) {
+		span += (wi->finish - wi->start);
+		total += (wi->finish - wi->start) * wi->value;
+	}
+	return total / span;
+}
+
+double variance(WiggleIterator * wi) {
+	// Online algorithm copied from 
+	// http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Two-pass_algorithm
+	double sumWeight = 0;
+	double mean = 0;
+	double M2 = 0;
+	double count = 0;
+
+	for(;!wi->done; pop(wi)) {
+		double weight = wi->finish - wi->start;
+		double temp = sumWeight + weight;
+		double delta = wi->value - mean;
+		double R = delta * weight / temp;
+		mean += R;
+		M2 += sumWeight * delta * R;
+		sumWeight = temp;
+		count++;
+	}
+	return (M2 * count) / (sumWeight * (count - 1));
+}
+
+double stddev(WiggleIterator * wi) {
+	return sqrt(variance(wi));
+}
+
 //////////////////////////////////////////////////////
 // Unit operator
 //////////////////////////////////////////////////////
