@@ -219,7 +219,7 @@ void BigBedReaderGoToNextBlock(BigWiggleReaderData * data) {
 static void BigBedReaderPop2(WiggleIterator * wi) {
 	BigWiggleReaderData * data;
 
-	if (wi->done)
+	if (wi->nextDone)
 		return;
 
 	data = (BigWiggleReaderData*) wi->data;
@@ -228,16 +228,16 @@ static void BigBedReaderPop2(WiggleIterator * wi) {
 		// Passive agressive indicator that the iterator should be closed
 		// (avoids passing the WiggleIterator reference needlessly across 
 		// all functions).
-		wi->done = true;
+		wi->nextDone = true;
 		return;
 	} else {
-		wi->chrom = data->chrom->name;
+		wi->nextChrom = data->chrom->name;
 	}
 
 	/* Read next record into local variables. */
 	memReadBits32(&data->blockPt, data->isSwapped);	// Read and discard chromId
-	wi->start = memReadBits32(&data->blockPt, data->isSwapped);
-	wi->finish = memReadBits32(&data->blockPt, data->isSwapped) + 1;
+	wi->nextStart = memReadBits32(&data->blockPt, data->isSwapped);
+	wi->nextFinish = memReadBits32(&data->blockPt, data->isSwapped) + 1;
 	// Skip boring stuff...
 	for (;;)
 		if (*(data->blockPt++) <= 0)
@@ -248,25 +248,25 @@ static void BigBedReaderPop2(WiggleIterator * wi) {
 }
 
 void BigBedReaderPop(WiggleIterator * wi) {
-	int finish = wi->finish;
+	int finish = wi->nextFinish;
 	char chrom[1000];
 
-	strcpy(chrom, wi->chrom);
+	strcpy(chrom, wi->nextChrom);
 
-	while (wi->chrom && !wi->done) {
+	while (wi->nextChrom && !wi->nextDone) {
 		BigBedReaderPop2(wi);
-		if (chrom[0] == '\0' || strcmp(chrom, wi->chrom) < 0) 
+		if (chrom[0] == '\0' || strcmp(chrom, wi->nextChrom) < 0) 
 			finish = -1;
 
-		if (wi->finish <= finish)
+		if (wi->nextFinish <= finish)
 			continue;
-		else if (wi->start < finish) 
-			wi->start = finish;
+		else if (wi->nextStart < finish) 
+			wi->nextStart = finish;
 
 		return;
 	}
 
-	wi->done = true;
+	wi->nextDone = true;
 }
 
 static void BedFileReaderOpenFile(BigWiggleReaderData * data, char * f) {
@@ -290,7 +290,5 @@ void BigBedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int fi
 WiggleIterator * BigBedReader(char * f) {
 	BigWiggleReaderData * data = (BigWiggleReaderData *) calloc(1, sizeof(BigWiggleReaderData));
 	BedFileReaderOpenFile(data, f);
-	WiggleIterator * new = newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek);
-	new->value = 1;
-	return new;
+	return newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek);
 }	

@@ -40,7 +40,12 @@ struct wiggleIterator_st {
 	int start;
 	int finish;
 	double value;
+	char * nextChrom;
+	int nextStart;
+	int nextFinish;
+	double nextValue;
 	bool done;
+	bool nextDone;
 	void * data;
 	void (*pop)(WiggleIterator *);
 	void (*seek)(WiggleIterator *, const char *, int, int);

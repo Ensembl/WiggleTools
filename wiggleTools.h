@@ -74,13 +74,15 @@ void toStdout (WiggleIterator *);
 
 // Statistics
 double AUC (WiggleIterator *);
-double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 double mean (WiggleIterator *);
 double variance (WiggleIterator *);
 
 // Regional statistics
 // I wonder what the algebraic classification of this thing is...?
 WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * data);
+
+// Comparison
+double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 
 // Cleaning up
 void destroyWiggleIterator (WiggleIterator *);

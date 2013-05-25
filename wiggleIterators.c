@@ -38,12 +38,47 @@
 #include "wiggleTools.h"
 #include "wiggleIterators.h"
 
-WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int)) {
+void goToNextNonZeroValue(WiggleIterator *  wi) {
+	while (!wi->nextDone) {
+		(*(wi->pop))(wi);
+		if (wi->nextValue)
+			break;
+	}
+}
+
+void oneStep(WiggleIterator * wi) {
+	wi->chrom = wi->nextChrom;	
+	wi->start = wi->nextStart;
+	wi->finish = wi->nextFinish;
+	wi->value = wi->nextValue;
+	wi->done = wi->nextDone;
+}
+
+void pop(WiggleIterator * wi) {
+	// Safety check
+	if (wi->done)
+		return;
+
+	// Update
+	oneStep(wi);
+	goToNextNonZeroValue(wi);
+
+	// Compress any consecutive blocks
+	while (!wi->nextDone && (!strcmp(wi->chrom, wi->nextChrom) && wi->finish == wi->nextStart && wi->value == wi->nextValue)) {
+		wi->finish = wi->nextFinish;
+		goToNextNonZeroValue(wi);
+	}
+}
+
+WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int)) {
 	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
 	new->data = data;
-	new->pop = pop;
+	new->pop = popFunction;
 	new->seek = seek;
 	new->chrom = calloc(1000,1);
+	new->nextChrom = calloc(1000,1);
+	new->nextValue = 1; // Default value for non-valued bed tracks;
+	pop(new);
 	pop(new);
 	return new;
 }
@@ -52,10 +87,6 @@ void destroyWiggleIterator(WiggleIterator * wi) {
 	free(wi->data);
 	free(wi->chrom);
 	free(wi);
-}
-
-void pop(WiggleIterator * wi) {
-	(*(wi->pop))(wi);
 }
 
 void seek(WiggleIterator * wi, const char * chrom, int start, int finish) {
@@ -158,18 +189,18 @@ void UnitWiggleIteratorPop(WiggleIterator * wi) {
 	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!data->iter->done) {
-		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = iter->finish;
+		wi->nextChrom = iter->chrom;
+		wi->nextStart = iter->start;
+		wi->nextFinish = iter->finish;
 		if (iter->value > 0)
-			wi->value = 1;
+			wi->nextValue = 1;
 		else if (iter->value < 0)
-			wi->value = -1;
+			wi->nextValue = -1;
 		else
-			wi->value = 0;
-		pop(data->iter);
+			wi->nextValue = 0;
+		pop(iter);
 	} else {
-		wi->done = true;
+		wi->nextDone = true;
 	}
 }
 
@@ -197,13 +228,13 @@ void ScaleWiggleIteratorPop(WiggleIterator * wi) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!data->iter->done) {
-		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = iter->finish;
-		wi->value = data->scalar * iter->value;
+		wi->nextChrom = iter->chrom;
+		wi->nextStart = iter->start;
+		wi->nextFinish = iter->finish;
+		wi->nextValue = data->scalar * iter->value;
 		pop(data->iter);
 	} else {
-		wi->done = true;
+		wi->nextDone = true;
 	}
 }
 
@@ -235,13 +266,13 @@ void LogWiggleIteratorPop(WiggleIterator * wi) {
 	LogWiggleIteratorData * data = (LogWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!data->iter->done) {
-		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = iter->finish;
-		wi->value = log(iter->value) / data->baseLog;
+		wi->nextChrom = iter->chrom;
+		wi->nextStart = iter->start;
+		wi->nextFinish = iter->finish;
+		wi->nextValue = log(iter->value) / data->baseLog;
 		pop(data->iter);
 	} else {
-		wi->done = true;
+		wi->nextDone = true;
 	}
 }
 
@@ -280,13 +311,13 @@ void ExpWiggleIteratorPop(WiggleIterator * wi) {
 	ExpWiggleIteratorData * data = (ExpWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!iter->done) {
-		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = iter->finish;
-		wi->value = exp(iter->value * data->radixLog);
+		wi->nextChrom = iter->chrom;
+		wi->nextStart = iter->start;
+		wi->nextFinish = iter->finish;
+		wi->nextValue = exp(iter->value * data->radixLog);
 		pop(iter);
 	} else {
-		wi->done = true;
+		wi->nextDone = true;
 	}
 }
 
@@ -319,13 +350,13 @@ static void PowerWiggleIteratorPop(WiggleIterator * wi) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!iter->done) {
-		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = iter->finish;
-		wi->value = pow(iter->value, data->scalar);
+		wi->nextChrom = iter->chrom;
+		wi->nextStart = iter->start;
+		wi->nextFinish = iter->finish;
+		wi->nextValue = pow(iter->value, data->scalar);
 		pop(iter);
 	} else {
-		wi->done = true;
+		wi->nextDone = true;
 	}
 }
 
@@ -344,13 +375,13 @@ static void AbsWiggleIteratorPop(WiggleIterator * wi) {
 	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!iter->done) {
-		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = iter->finish;
-		wi->value = abs(iter->value);
+		wi->nextChrom = iter->chrom;
+		wi->nextStart = iter->start;
+		wi->nextFinish = iter->finish;
+		wi->nextValue = abs(iter->value);
 		pop(iter);
 	} else {
-		wi->done = true;
+		wi->nextDone = true;
 	}
 }
 
@@ -371,12 +402,12 @@ typedef struct BinaryWiggleIteratorData_st {
 
 static void copyInterval(WiggleIterator * wi, WiggleIterator * iter) {
 	if (!wi->chrom || strcmp(wi->chrom, iter->chrom) < 0) {
-		wi->chrom = iter->chrom;
-		wi->finish = -1;
+		wi->nextChrom = iter->chrom;
+		wi->nextFinish = -1;
 	}
-	wi->start = iter->start > wi->finish? iter->start: wi->finish;
-	wi->finish = iter->finish;
-	wi->value = iter->value;
+	wi->nextStart = iter->start > wi->nextFinish? iter->start: wi->nextFinish;
+	wi->nextFinish = iter->finish;
+	wi->nextValue = iter->value;
 	pop(iter);
 }
 
@@ -386,7 +417,7 @@ void SumWiggleIteratorPop(WiggleIterator * wi) {
 	WiggleIterator * iterB = data->iterB;
 	if (iterA->done && iterB->done) 
 		// All done
-		wi->done = true;
+		wi->nextDone = true;
 	else if (iterA->done)
 		// A expired
 		copyInterval(wi, iterB);
@@ -403,42 +434,42 @@ void SumWiggleIteratorPop(WiggleIterator * wi) {
 			// B on previous chromosome
 			copyInterval(wi, iterB);
 		else {
-			// Both iterators on the same wi->chromosome:	
-			if (!wi->chrom || strcmp(wi->chrom, iterA->chrom) < 0) {
-				wi->chrom = iterA->chrom;
-				wi->finish = -1;
+			// Both iterators on the same wi->nextChromosome:	
+			if (!wi->nextChrom || strcmp(wi->nextChrom, iterA->chrom) < 0) {
+				wi->nextChrom = iterA->chrom;
+				wi->nextFinish = -1;
 			}
 			if (iterA->start < iterB->start) {
-				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
+				wi->nextStart = iterA->start > wi->nextFinish? iterA->start: wi->nextFinish;	
 				if (iterA->finish <= iterB->start) {
-					wi->finish = iterA->finish;
-					wi->value = iterA->value;
+					wi->nextFinish = iterA->finish;
+					wi->nextValue = iterA->value;
 					pop(iterA);
 				} else {
-					wi->finish = iterB->start - 1;
-					wi->value = iterA->value;
+					wi->nextFinish = iterB->start - 1;
+					wi->nextValue = iterA->value;
 				}
 			} else if (iterB->start < iterA->start) {
-				wi->start = iterB->start > wi->finish? iterB->start: wi->finish;	
+				wi->nextStart = iterB->start > wi->nextFinish? iterB->start: wi->nextFinish;	
 				if (iterB->finish <= iterA->start) {
-					wi->finish = iterB->finish;
-					wi->value = iterB->value;
+					wi->nextFinish = iterB->finish;
+					wi->nextValue = iterB->value;
 					pop(iterB);
 				} else {
-					wi->finish = iterA->start - 1;
-					wi->value = iterB->value;
+					wi->nextFinish = iterA->start - 1;
+					wi->nextValue = iterB->value;
 				}
 			} else {
-				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
-				wi->value = iterA->value + iterB->value;
+				wi->nextStart = iterA->start > wi->nextFinish? iterA->start: wi->nextFinish;	
+				wi->nextValue = iterA->value + iterB->value;
 				if (iterA->finish < iterB->finish) {
-					wi->finish = iterA->finish;
+					wi->nextFinish = iterA->finish;
 					pop(iterA);
 				} else if (iterB->finish < iterA->finish) {
-					wi->finish = iterB->finish;
+					wi->nextFinish = iterB->finish;
 					pop(iterB);
 				} else {
-					wi->finish = iterA->finish;
+					wi->nextFinish = iterA->finish;
 					pop(iterA);
 					pop(iterB);
 				}
@@ -470,7 +501,7 @@ void ProductWiggleIteratorPop(WiggleIterator * wi) {
 	WiggleIterator * iterB = data->iterB;
 
 	if (iterA->done || iterB->done)
-		wi->done = true;
+		wi->nextDone = true;
 	else {	
 		int chromDiff = strcmp(iterA->chrom, iterB->chrom);
 		if (chromDiff < 0) 
@@ -479,41 +510,41 @@ void ProductWiggleIteratorPop(WiggleIterator * wi) {
 			pop(iterB);
 		else {
 			// Both iterators on the same chromosome:	
-			if (!wi->chrom || strcmp(wi->chrom, iterA->chrom) < 0) {
-				wi->chrom = iterA->chrom;
-				wi->finish = -1;
+			if (!wi->nextChrom || strcmp(wi->nextChrom, iterA->chrom) < 0) {
+				wi->nextChrom = iterA->chrom;
+				wi->nextFinish = -1;
 			}
 			if (iterA->start < iterB->start) {
-				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
+				wi->nextStart = iterA->start > wi->nextFinish? iterA->start: wi->nextFinish;	
 				if (iterA->finish <= iterB->start) {
-					wi->finish = iterA->finish;
-					wi->value = 0;
+					wi->nextFinish = iterA->finish;
+					wi->nextValue = 0;
 					pop(iterA);
 				} else {
-					wi->finish = iterB->start - 1;
-					wi->value = 0;
+					wi->nextFinish = iterB->start - 1;
+					wi->nextValue = 0;
 				}
 			} else if (iterB->start < iterA->start) {
-				wi->start = iterB->start > wi->finish? iterB->start: wi->finish;	
+				wi->nextStart = iterB->start > wi->nextFinish? iterB->start: wi->nextFinish;	
 				if (iterB->finish <= iterA->start) {
-					wi->finish = iterB->finish;
-					wi->value = 0;
+					wi->nextFinish = iterB->finish;
+					wi->nextValue = 0;
 					pop(iterB);
 				} else {
-					wi->finish = iterA->start - 1;
-					wi->value = 0;
+					wi->nextFinish = iterA->start - 1;
+					wi->nextValue = 0;
 				}
 			} else {
-				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
-				wi->value = iterA->value * iterB->value;
+				wi->nextStart = iterA->start > wi->nextFinish? iterA->start: wi->nextFinish;	
+				wi->nextValue = iterA->value * iterB->value;
 				if (iterA->finish < iterB->finish) {
-					wi->finish = iterA->finish;
+					wi->nextFinish = iterA->finish;
 					pop(iterA);
 				} else if (iterB->finish < iterA->finish) {
-					wi->finish = iterB->finish;
+					wi->nextFinish = iterB->finish;
 					pop(iterB);
 				} else {
-					wi->finish = iterA->finish;
+					wi->nextFinish = iterA->finish;
 					pop(iterA);
 					pop(iterB);
 				}

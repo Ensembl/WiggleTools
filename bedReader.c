@@ -51,37 +51,37 @@ void BedReaderPop(WiggleIterator * wi) {
 		// I like my finishes to be non inclusive...
 		finish++;
 
-		if (wi->chrom[0] == '\0' || strcmp(wi->chrom, chrom) < 0) {
-			wi->chrom = (char *) calloc(strlen(chrom), sizeof(char));
-			strcpy(wi->chrom, chrom);
-			wi->finish = -1;
+		if (wi->nextChrom[0] == '\0' || strcmp(wi->nextChrom, chrom) < 0) {
+			wi->nextChrom = (char *) calloc(strlen(chrom), sizeof(char));
+			strcpy(wi->nextChrom, chrom);
+			wi->nextFinish = -1;
 		}
 
-		if (finish <= wi->finish)
+		if (finish <= wi->nextFinish)
 			continue;
-		else if (start < wi->finish)
-			wi->start = wi->finish;
+		else if (start < wi->nextFinish)
+			wi->nextStart = wi->nextFinish;
 		else
-			wi->start = start;
-		wi->finish = finish;
+			wi->nextStart = start;
+		wi->nextFinish = finish;
 
-		if (data->stop > 0 && wi->start > data->stop)
-			wi->done = true;
+		if (data->stop > 0 && wi->nextStart > data->stop)
+			wi->nextDone = true;
 
 		return;
 	}
 
-	wi->done = true;
+	wi->nextDone = true;
 }
 
 void BedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	BedReaderData * data = (BedReaderData*) wi->data;
-	if (strcmp(chrom, wi->chrom) < 0 || start < wi->start) {
+	if (strcmp(chrom, wi->nextChrom) < 0 || start < wi->nextStart) {
 		fclose(data->file);
 		data->file = openOrFail(data->filename, "input file", "r");
 	}
 
-	while (wi->finish < finish || strcmp(chrom, wi->chrom) < 0)
+	while (wi->nextFinish < finish || strcmp(chrom, wi->nextChrom) < 0)
 		BedReaderPop(wi);
 
 	data->stop = finish;
@@ -93,7 +93,5 @@ WiggleIterator * BedReader(char * filename) {
 	data->filename = filename;
 	data->stop = -1;
 	data->file = openOrFail(filename, "Bed file", "r");
-	WiggleIterator * new = newWiggleIterator(data, &BedReaderPop, &BedReaderSeek);
-	new->value = 1;
-	return new;
+	return newWiggleIterator(data, &BedReaderPop, &BedReaderSeek);
 }

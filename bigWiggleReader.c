@@ -233,7 +233,7 @@ void BigWiggleReaderGoToNextBlock(BigWiggleReaderData * data) {
 void BigWiggleReaderPop(WiggleIterator * wi) {
 	BigWiggleReaderData * data;
 
-	if (wi->done)
+	if (wi->nextDone)
 		return;
 
 	data = (BigWiggleReaderData*) wi->data;
@@ -242,10 +242,10 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 		// Passive agressive indicator that the iterator should be closed
 		// (avoids passing the WiggleIterator reference needlessly across 
 		// all functions).
-		wi->done = true;
+		wi->nextDone = true;
 		return;
 	} else {
-		wi->chrom = data->chrom->name;
+		wi->nextChrom = data->chrom->name;
 	}
 
 	switch (data->head.type)
@@ -253,17 +253,17 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 	    case bwgTypeBedGraph:
 		{
 		// +1 because BigWig coords are 0-based...
-		wi->start = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
-		wi->finish = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
-		wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
+		wi->nextStart = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
+		wi->nextFinish = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
+		wi->nextValue = memReadFloat(&(data->blockPt), data->isSwapped);
 		break;
 		}
 	    case bwgTypeVariableStep:
 		{
 		// +1 because BigWig coords are 0-based...
-		wi->start = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
-		wi->finish = wi->start + data->head.itemSpan;
-		wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
+		wi->nextStart = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
+		wi->nextFinish = wi->nextStart + data->head.itemSpan;
+		wi->nextValue = memReadFloat(&(data->blockPt), data->isSwapped);
 		break;
 		}
 	    case bwgTypeFixedStep:
@@ -271,15 +271,15 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 		if (data->i==0) 
 		    {
 	 	    // +1 because BigWig coords are 0-based...
-		    wi->start = data->head.start + 1;
-		    wi->finish = wi->start + data->head.itemSpan;
-		    wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
+		    wi->nextStart = data->head.start + 1;
+		    wi->nextFinish = wi->nextStart + data->head.itemSpan;
+		    wi->nextValue = memReadFloat(&(data->blockPt), data->isSwapped);
 		    }
 		else
 		    {
-		    wi->start += data->head.itemStep;
-		    wi->finish += data->head.itemStep;
-		    wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
+		    wi->nextStart += data->head.itemStep;
+		    wi->nextFinish += data->head.itemStep;
+		    wi->nextValue = memReadFloat(&(data->blockPt), data->isSwapped);
 		    }
 		break;
 		}
