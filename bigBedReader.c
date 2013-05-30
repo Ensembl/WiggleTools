@@ -120,8 +120,10 @@ static void * createBlockDataList(void * args) {
 			last->next = new;
 			pthread_mutex_unlock(&(last->proceed));
 		} else { 
+			pthread_mutex_lock(&data->proceed_mutex);
 			data->blockData = new;
-			pthread_barrier_wait(&(data->proceed));
+			pthread_cond_signal(&data->proceed);
+			pthread_mutex_unlock(&data->proceed_mutex);
 		}
 
 		// Move on
@@ -163,10 +165,18 @@ static void BigBedReaderEnterRunOfBlocks(BigWiggleReaderData * data) {
 	if (data->uncompress) {
 		pthread_t threadID;
 
-		pthread_barrier_init(&(data->proceed), NULL, 2);
+		// Initialize mutexes
+		pthread_mutex_init(&data->proceed_mutex, NULL);
+		pthread_cond_init (&data->proceed, NULL);
 		pthread_create(&threadID, NULL, &createBlockDataList, data);
-		pthread_barrier_wait(&(data->proceed));
-		pthread_barrier_destroy(&(data->proceed));
+
+		pthread_mutex_lock(&data->proceed_mutex);
+		if (!data->blockData);
+			pthread_cond_wait(&data->proceed, &data->proceed_mutex);
+		pthread_mutex_unlock(&data->proceed_mutex);
+
+		pthread_mutex_destroy(&(data->proceed_mutex));
+		pthread_cond_destroy(&(data->proceed));
 	}
 	BigBedReaderEnterBlock(data); 
 }

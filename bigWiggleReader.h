@@ -94,7 +94,8 @@ typedef struct bigWiggleReaderData_st {
 
 	// For multi-threading storage...
 	BlockData * blockData;
-	pthread_barrier_t proceed;
+	pthread_mutex_t proceed_mutex;
+	pthread_cond_t proceed;
 } BigWiggleReaderData;
 
 #endif

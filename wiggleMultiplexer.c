@@ -36,6 +36,10 @@
 #include "wiggleMultiplexer.h"
 
 void popMultiplexer(Multiplexer * multi) {
+	(*(multi->pop))(multi);
+}
+
+void popListMultiplexer(Multiplexer * multi) {
 	int i, first = 0;
 	int lastFinish = multi->finish;
 	char * lastChrom = multi->chrom;
@@ -125,6 +129,7 @@ void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int fin
 
 Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
 	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
+	new->pop = popListMultiplexer;
 	new->count = count;
 	new->iters = iters;
 	new->inplay = (bool *) calloc(count, sizeof(bool));
