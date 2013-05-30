@@ -43,7 +43,7 @@ typedef struct multiplexer_st {
 	bool *inplay;
 	WiggleIterator ** iters;
 	bool done;
-	void (*pop)(WiggleIterator *);
+	void (*pop)(struct multiplexer_st *);
 } Multiplexer;
 
 void popMultiplexer(Multiplexer * multi);
