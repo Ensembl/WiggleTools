@@ -92,5 +92,6 @@ WiggleIterator * WiggleReader (char *);
 WiggleIterator * BigWiggleReader (char *);
 WiggleIterator * BedReader (char *);
 WiggleIterator * BigBedReader (char *);
+WiggleIterator * BamReader (char *);
 
 #endif

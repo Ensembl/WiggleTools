@@ -1,5 +1,36 @@
-#include "bam_plcmd.c"
+#include <string.h>
+#include "sam.h"
+#include "faidx.h"
 #include "wiggleIterators.h"
+
+#define MPLP_NO_ORPHAN 0x40
+#define MPLP_REALN   0x80
+
+extern int mplp_func(void *data, bam1_t *b);
+
+typedef struct {
+	int max_mq, min_mq, flag, min_baseQ, capQ_thres, max_depth, max_indel_depth, fmt_flag;
+	int openQ, extQ, tandemQ, min_support; // for indels
+	double min_frac; // for indels
+	char *reg, *pl_list;
+	faidx_t *fai;
+	void *bed, *rghash;
+} mplp_conf_t;
+
+typedef struct {
+	bamFile fp;
+	bam_iter_t iter;
+	bam_header_t *h;
+	int ref_id;
+	char *ref;
+	const mplp_conf_t *conf;
+} mplp_aux_t;
+
+typedef struct {
+	int n;
+	int *n_plp, *m_plp;
+	bam_pileup1_t **plp;
+} mplp_pileup_t;
 
 typedef struct bamReaderData_st {
 	mplp_conf_t * conf;
@@ -11,7 +42,7 @@ typedef struct bamReaderData_st {
 
 void setSamtoolsDefaultConf(BamReaderData * data) {
 	data->conf = (mplp_conf_t *) calloc(1, sizeof(mplp_conf_t));
-	memset(&data->conf, 0, sizeof(mplp_conf_t));
+	memset(data->conf, 0, sizeof(mplp_conf_t));
 	data->conf->max_mq = 60;
 	data->conf->min_baseQ = 13;
 	data->conf->capQ_thres = 0;
@@ -42,7 +73,7 @@ void seekRegion(BamReaderData * data) {
 	}
 
 	// Create pileup iterator	
-	data->iter = bam_mplp_init(1, mplp_func, (void**)data->data);
+	data->iter = bam_mplp_init(1, mplp_func, (void**) &data->data);
 
 	// Set max depth
 	max_depth = data->conf->max_depth;
@@ -53,9 +84,13 @@ void seekRegion(BamReaderData * data) {
 		fprintf(stderr, "<%s> Set max per-file depth to %d\n", __func__, max_depth);
 	}
 	bam_mplp_set_maxcnt(data->iter, max_depth);
+
 }
 
 void OpenBamFile(BamReaderData * data, char * filename) {
+	// Allocate space
+	data->data = (mplp_aux_t *) calloc(1, sizeof(mplp_aux_t));
+
 	// read the header and initialize data
 	if (strcmp(filename, "-"))
 		data->data->fp = bam_open(filename, "r");
@@ -72,13 +107,14 @@ void OpenBamFile(BamReaderData * data, char * filename) {
 	}
 
 	// Start reading
+	data->ref_tid = -1;
 	seekRegion(data);
 }
 
 void closeBamFile(BamReaderData * data) {
 	// Seriously, does samtools not provide any convience destructors!??
 	bam_mplp_destroy(data->iter);
-	bam_header_destroy(data->data->h);
+	//bam_header_destroy(data->data->h);
 	bam_close(data->data->fp);
 	if (data->data->iter) 
 		bam_iter_destroy(data->data->iter);
@@ -96,9 +132,10 @@ void BamReaderPop(WiggleIterator * wi)
 		return;
 
 	if (bam_mplp_auto(data->iter, &tid, &pos, &n_plp, &plp) > 0) {
+		// TODO Check you are in bounds
 		// If a new chrom. was entered:
 		if (tid != data->ref_tid) {
-			wi->nextChrom = NULL;
+			wi->nextChrom = data->data->h->target_name[tid];
 			data->ref_tid = tid;
 		}
 
@@ -118,7 +155,7 @@ void BamReaderPop(WiggleIterator * wi)
 		wi->nextValue = cnt;
 	} else {
 		closeBamFile(data);
-		wi->done = true;
+		wi->nextDone = true;
 	}
 }
 
