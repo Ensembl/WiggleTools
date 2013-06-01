@@ -39,6 +39,7 @@ typedef int bool;
 #endif
 
 typedef struct wiggleIterator_st WiggleIterator;
+typedef struct multiplexer_st Multiplexer;
 
 // Creators
 WiggleIterator * WigOrBigWigReader (char *);
@@ -59,7 +60,12 @@ WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
 WiggleIterator * SumWiggleIterator (WiggleIterator *, WiggleIterator *);
 WiggleIterator * ProductWiggleIterator (WiggleIterator * , WiggleIterator * );
 
+// Mapping operations
+Multiplexer * newMultiplexer(WiggleIterator **, int);
+Multiplexer * newIteratorMultiplexer(WiggleIterator *, int, int);
+
 // Reduction operators
+WiggleIterator * SelectReduction(Multiplexer *, int);
 WiggleIterator * MaxWiggleReducer (WiggleIterator** , int );
 WiggleIterator * MinWiggleReducer (WiggleIterator** , int );
 WiggleIterator * SumWiggleReducer (WiggleIterator** , int );
@@ -72,6 +78,8 @@ WiggleIterator * MedianWiggleReducer (WiggleIterator** , int );
 // Output
 void toFile (WiggleIterator *, char *);
 void toStdout (WiggleIterator *);
+void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, int count);
+void streamMultiplexer(FILE * dest, Multiplexer * multi);
 
 // Statistics
 double AUC (WiggleIterator *);
@@ -94,5 +102,6 @@ WiggleIterator * BigWiggleReader (char *);
 WiggleIterator * BedReader (char *);
 WiggleIterator * BigBedReader (char *);
 WiggleIterator * BamReader (char *);
+Multiplexer * newStreamingMultiplexer(FILE * input);
 
 #endif

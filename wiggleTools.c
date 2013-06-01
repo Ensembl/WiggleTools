@@ -160,7 +160,16 @@ int main(int argc, char ** argv) {
 		printf("%f\n", pearsonCorrelation(WigOrBigWigReader(argv[2]), WigOrBigWigReader(argv[3])));
 	else if (strcmp(argv[1], "AUC") == 0) 
 		printf("%f\n", AUC(WigOrBigWigReader(argv[2])));
-	else {
+	else if (strcmp(argv[1], "stream") == 0) {
+		int i;
+		int count = argc - 2;
+		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+		for (i = 0; i < count; i++)
+			iters[i] = WigOrBigWigReader(argv[i + 2]);
+		streamMultiplexer(stdout, newMultiplexer(iters, count));
+	} else if (strcmp(argv[1], "catch") == 0) {
+		streamMultiplexer(stdout, newStreamingMultiplexer(stdin));
+	} else {
 		printf("Unrecognized keyword: %s\n", argv[1]);
 		puts("");
 		printHelp();

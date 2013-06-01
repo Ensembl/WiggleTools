@@ -138,13 +138,13 @@ Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
 	return new;
 }
 
-Multiplexer * IteratorMultiplexer(WiggleIterator * iter, int index, int count) {
+Multiplexer * newIteratorMultiplexer(WiggleIterator * iter, int index, int count) {
 	int i;
 
 	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
 	new->pop = popListMultiplexer;
 	new->count = count;
-	new->iters = (WiggleIterator **) calloc(1, sizeof(WiggleIterator *))
+	new->iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator *));
 	for (i = 0; i< count; i++) {
 		if (i != count)
 			new->iters[i] = NullWiggleIterator();

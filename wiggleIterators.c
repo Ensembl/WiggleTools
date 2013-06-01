@@ -190,10 +190,10 @@ void NullWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, 
 }
 
 WiggleIterator * NullWiggleIterator() {
-	WiggleIterator * new = newWiggleIterator(data, &NullWiggleIteratorPop, &NullWiggleIteratorSeek);
+	WiggleIterator * new = newWiggleIterator(NULL, &NullWiggleIteratorPop, &NullWiggleIteratorSeek);
 	new->done = true;
 	new->nextDone = true;
-	return;
+	return new;
 }
 
 //////////////////////////////////////////////////////

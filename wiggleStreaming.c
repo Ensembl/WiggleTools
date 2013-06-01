@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <string.h>
 #include "wiggleMultiplexer.h"
 
 #define MAXLINE 10000
@@ -5,12 +7,12 @@
 void printMultiplexer(FILE * dest, Multiplexer * multi) {
 	int i; 
 	fprintf(dest, "%s %i %i", multi->chrom, multi->start, multi->finish);
-	fprintf(dest, "\t%i", multi->values[0])
+	fprintf(dest, "\t%f", multi->values[0]);
 	for (i = 1; i < multi->count; i++) {	
 		if (multi->inplay[i])
-			fprintf(dest, " %i", multi->values[i])
+			fprintf(dest, " %lf", multi->values[i]);
 		else
-			fprintf(dest, " ")
+			fprintf(dest, " ");
 	}
 	fprintf(dest, "\n");
 }
@@ -21,10 +23,10 @@ void streamMultiplexer(FILE * dest, Multiplexer * multi) {
 }
 
 void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, int count) {
-	streamMultiplexer(file, IteratorMultiplexer(iter, index, count));
+	streamMultiplexer(dest, newIteratorMultiplexer(iter, index, count));
 }
 
-popStreamingMultiplexer(Multiplexer * multi) {
+void popStreamingMultiplexer(Multiplexer * multi) {
 	char line[MAXLINE];
 	char *ptr;
 	int counter = 0;
@@ -38,13 +40,14 @@ popStreamingMultiplexer(Multiplexer * multi) {
 	}
 	
 	ptr = strtok(line, "\t\n");
+	sscanf(ptr, "%s ", multi->chrom);
 	sscanf(ptr, "%s %i %i", multi->chrom, &(multi->start), &(multi->finish));
 	while ((ptr = strtok(NULL, " \n"))) {
 		if (ptr[0] == '\0') {
 			multi->inplay[counter] = false;
 		} else {
 			multi->inplay[counter] = true;
-			sscanf(ptr, "%i", &(multi->values[i]));
+			sscanf(ptr, "%lf", &(multi->values[counter]));
 		}
 		counter++;
 	}
@@ -63,14 +66,15 @@ Multiplexer * newStreamingMultiplexer(FILE * input) {
 	Multiplexer * new = (Multiplexer *) calloc(1, sizeof(Multiplexer));
 	new->pop = &popStreamingMultiplexer; 
 	new->file = input;
+	new->chrom = (char *) calloc(1000, sizeof(char));
 
-	if (!fgets(line, MAXLINE, multi->file)) {
-		multi->done = true;
-		return;
+	if (!fgets(line, MAXLINE, new->file)) {
+		new->done = true;
+		return new;
 	}
 	
 	ptr = strtok(line, "\t\n");
-	sscanf(ptr, "%s %i %i", multi->chrom, &(multi->start), &(multi->finish));
+	sscanf(ptr, "%s %i %i", new->chrom, &(new->start), &(new->finish));
 
 	if((ptr = strtok(NULL, " \n"))) { 
 		for (c = ptr; *c != '\0'; c++)
@@ -78,28 +82,28 @@ Multiplexer * newStreamingMultiplexer(FILE * input) {
 				counter++; 
 
 		new->count = counter + 1;
-		new->inplay = (bool *) calloc(count, sizeof(bool));
-		new->values = (double *) calloc(count, sizeof(double));
+		new->inplay = (bool *) calloc(new->count, sizeof(bool));
+		new->values = (double *) calloc(new->count, sizeof(double));
 
 		if (ptr[0] == '\0') {
-			multi->inplay[0] = false;
+			new->inplay[0] = false;
 		} else {
-			multi->inplay[0] = true;
-			sscanf(ptr, "%i", &(multi->values[i]));
+			new->inplay[0] = true;
+			sscanf(ptr, "%lf", &(new->values[0]));
 		}
 
 		counter = 1;
 		while ((ptr = strtok(NULL, " \n"))) {
 			if (ptr[0] == '\0') {
-				multi->inplay[counter] = false;
+				new->inplay[counter] = false;
 			} else {
-				multi->inplay[counter] = true;
-				sscanf(ptr, "%i", &(multi->values[i]));
+				new->inplay[counter] = true;
+				sscanf(ptr, "%lf", &(new->values[counter]));
 			}
 			counter++;
 		}
 	} else {
-		printf(stderr, "No columns in stream!");
+		fprintf(stderr, "No columns in stream!");
 		exit(1);
 	}	
 	return new;

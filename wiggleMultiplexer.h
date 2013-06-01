@@ -34,7 +34,7 @@
 
 #include "wiggleIterators.h"
 
-typedef struct multiplexer_st {
+struct multiplexer_st {
 	char * chrom;
 	int start;
 	int finish;
@@ -44,10 +44,11 @@ typedef struct multiplexer_st {
 	WiggleIterator ** iters;
 	bool done;
 	void (*pop)(struct multiplexer_st *);
-} Multiplexer;
+
+	FILE * file;
+};
 
 void popMultiplexer(Multiplexer * multi);
 void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish);
-Multiplexer * newMultiplexer(WiggleIterator ** iters, int count);
 
 #endif
