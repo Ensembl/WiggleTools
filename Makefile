@@ -1,5 +1,5 @@
 SAMTOOLS=../samtools/
-CFLAGS=-g -Wall
+CFLAGS=-g -Wall -O3
 
 default: libwiggletools.a wiggleTools.o
 	${CC} ${CFLAGS} -L. -L${KENT_SRC}/lib/${MACHTYPE} -L${SAMTOOLS} -L${SAMTOOLS}/bcftools wiggleTools.o ${SAMTOOLS}/bam_plcmd.o ${SAMTOOLS}/sample.o ${SAMTOOLS}/bam2bcf.o ${SAMTOOLS}/errmod.o ${SAMTOOLS}/bam2bcf_indel.o -static -lwiggletools -ljkweb -lbam -lbcf -lm -lz -lpthread -lssl -lcrypto -ldl -o wiggletools

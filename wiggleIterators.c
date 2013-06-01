@@ -746,43 +746,12 @@ double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
 	return sum_AB / (sqrt(sum_sq_A) * sqrt(sum_sq_B));
 }
 
-//////////////////////////////////////////////////////
-// Regional stat iterator:
-//////////////////////////////////////////////////////
-
-typedef struct applyWiggleIteratorData_st {
-	WiggleIterator * regions;
-	double (*statistic)(WiggleIterator *);
-	WiggleIterator * data;
-} ApplyWiggleIteratorData;
-
-void ApplyWiggleIteratorPop(WiggleIterator * wi) {
-	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) wi->data;
-	wi->chrom = data->regions->chrom;
-	wi->start = data->regions->start;
-	wi->finish = data->regions->finish;
-	seek(wi->data, wi->chrom, wi->start, wi->finish);
-	wi->value = (*(data->statistic))(data->data);
-}
-
-void ApplyWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) wi->data;
-	seek(data->regions, chrom, start, finish);
-}
-
-WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset) {
-	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) calloc(1, sizeof(ApplyWiggleIteratorData));
-	data->regions = regions;
-	data->statistic = statistic;
-	data->data = dataset;
-	return newWiggleIterator(data, &ApplyWiggleIteratorPop, &ApplyWiggleIteratorSeek);
-}
 
 //////////////////////////////////////////////////////
 // Convenience file reader
 //////////////////////////////////////////////////////
 
-WiggleIterator * WigOrBigWigReader(char * filename) {
+WiggleIterator * SmartReader(char * filename) {
 	size_t length = strlen(filename);
 	if (!strcmp(filename + length - 3, ".bw"))
 		return BigWiggleReader(filename);

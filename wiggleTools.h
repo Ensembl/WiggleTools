@@ -42,7 +42,14 @@ typedef struct wiggleIterator_st WiggleIterator;
 typedef struct multiplexer_st Multiplexer;
 
 // Creators
-WiggleIterator * WigOrBigWigReader (char *);
+WiggleIterator * SmartReader (char *);
+// Secondar creators (to force file format recognition)
+WiggleIterator * WiggleReader (char *);
+WiggleIterator * BigWiggleReader (char *);
+WiggleIterator * BedReader (char *);
+WiggleIterator * BigBedReader (char *);
+WiggleIterator * BamReader (char *);
+Multiplexer * newStreamingMultiplexer(FILE * input);
 
 // Algebraic operations
 	
@@ -95,13 +102,5 @@ double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 
 // Cleaning up
 void destroyWiggleIterator (WiggleIterator *);
-
-// Secondar creators (to force file format recognition)
-WiggleIterator * WiggleReader (char *);
-WiggleIterator * BigWiggleReader (char *);
-WiggleIterator * BedReader (char *);
-WiggleIterator * BigBedReader (char *);
-WiggleIterator * BamReader (char *);
-Multiplexer * newStreamingMultiplexer(FILE * input);
 
 #endif
