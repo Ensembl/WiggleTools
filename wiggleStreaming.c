@@ -20,6 +20,10 @@ void streamMultiplexer(FILE * dest, Multiplexer * multi) {
 		printMultiplexer(dest, multi);
 }
 
+void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, int count) {
+	streamMultiplexer(file, IteratorMultiplexer(iter, index, count));
+}
+
 popStreamingMultiplexer(Multiplexer * multi) {
 	char line[MAXLINE];
 	char *ptr;

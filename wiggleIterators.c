@@ -178,6 +178,25 @@ double stddev(WiggleIterator * wi) {
 }
 
 //////////////////////////////////////////////////////
+// Null operator
+//////////////////////////////////////////////////////
+
+void NullWiggleIteratorPop(WiggleIterator * wi) {
+	return;
+}
+
+void NullWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	return;
+}
+
+WiggleIterator * NullWiggleIterator() {
+	WiggleIterator * new = newWiggleIterator(data, &NullWiggleIteratorPop, &NullWiggleIteratorSeek);
+	new->done = true;
+	new->nextDone = true;
+	return;
+}
+
+//////////////////////////////////////////////////////
 // Unit operator
 //////////////////////////////////////////////////////
 

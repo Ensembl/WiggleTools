@@ -44,6 +44,54 @@ void WiggleReducerSeek(WiggleIterator * iter, const char * chrom, int start, int
 }
 
 ////////////////////////////////////////////////////////
+// Select
+////////////////////////////////////////////////////////
+
+typedef struct wiggleSelectData_st {
+	Multiplexer * multi;
+	int index;
+} WiggleSelectData;
+
+void SelectReductionPop(WiggleIterator * wi) {
+	if (wi->nextDone)
+		return;
+
+	WiggleSelectData * data = (WiggleSelectData *) wi->data;
+	Multiplexer * multi = data->multi;
+
+	if (multi->done) {
+		wi->nextDone = true;
+		return;
+	}
+
+	while (!multi->inplay[data->index]) {
+		popMultiplexer(multi);
+		if (multi->done) {
+			wi->nextDone = true;
+			return;
+		}
+	}
+
+	wi->nextValue = multi->iters[data->index]->value;
+	wi->nextChrom = multi->chrom;
+	wi->nextStart = multi->start;
+	wi->nextFinish = multi->finish;
+	popMultiplexer(multi);
+}
+
+WiggleIterator * SelectReduction(Multiplexer * multi, int index) {
+	WiggleSelectData * data = (WiggleSelectData *) calloc(1, sizeof(WiggleSelectData));
+	data->multi = multi;
+	data->index = index;
+	return newWiggleIterator(data, &SelectReductionPop, &WiggleReducerSeek);
+}
+
+WiggleIterator * SelectWiggleReducer(WiggleIterator** iters, int count, int index) {
+	return SelectReduction(newMultiplexer(iters, count), index);
+}
+
+
+////////////////////////////////////////////////////////
 // Max
 ////////////////////////////////////////////////////////
 

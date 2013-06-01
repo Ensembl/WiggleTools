@@ -44,6 +44,7 @@ typedef struct wiggleIterator_st WiggleIterator;
 WiggleIterator * WigOrBigWigReader (char *);
 
 // Algebraic operations
+	
 	// Unary
 WiggleIterator * UnitWiggleIterator (WiggleIterator *);
 WiggleIterator * AbsWiggleIterator (WiggleIterator * );
