@@ -11,12 +11,12 @@ Installation:
 	- Install the samtools library
 	- Define the environment variable SAMTOOLS to point to the /path/to/samtools/ directory
 	- In this directory type 'make'
-	- The binary file wiggletools should be produced in the same directory. You can add it to your PATH, or move it onto your PATH
+	- The binary file wiggletools should be produced in the ./bin directory. The underlying library and header files are in the ./lib and ./inc directories respectively.
 
 Running the executable:
  
 Inputs:
-	The program takes in Wig, BigWig, Bed, BigBed and Bam files, which are distinguished thanks to their suffix (.wig, .bw, .bed, .bb, .bam respectively).
+	The program takes in Wig, BigWig, BedGraph, Bed, BigBed and Bam files, which are distinguished thanks to their suffix (.wig, .bw, .bg, .bed, .bb, .bam respectively).
 	Note that wiggletools assumes that every bam file has an index .bai file next to it.
 
 Outputs:
