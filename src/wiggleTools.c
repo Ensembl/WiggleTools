@@ -85,87 +85,87 @@ int main(int argc, char ** argv) {
 		int count = argc - 2;
 		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
 		for (i = 0; i < count; i++)
-			iters[i] = WigOrBigWigReader(argv[i + 2]);
+			iters[i] = SmartReader(argv[i + 2]);
 		toStdout(SumWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "scale") == 0) {
-		toStdout(ScaleWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+		toStdout(ScaleWiggleIterator(SmartReader(argv[2]), atoi(argv[3])));
 	} else if (strcmp(argv[1], "mult") == 0) {
 		int i;
 		int count = argc - 2;
 		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
 		for (i = 0; i < count; i++)
-			iters[i] = WigOrBigWigReader(argv[i + 2]);
+			iters[i] = SmartReader(argv[i + 2]);
 		toStdout(ProductWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "min") == 0) {
 		int i;
 		int count = argc - 2;
 		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
 		for (i = 0; i < count; i++)
-			iters[i] = WigOrBigWigReader(argv[i + 2]);
+			iters[i] = SmartReader(argv[i + 2]);
 		toStdout(MinWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "max") == 0) {
 		int i;
 		int count = argc - 2;
 		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
 		for (i = 0; i < count; i++)
-			iters[i] = WigOrBigWigReader(argv[i + 2]);
+			iters[i] = SmartReader(argv[i + 2]);
 		toStdout(MaxWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "mean") == 0) {
 		int i;
 		int count = argc - 2;
 		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
 		for (i = 0; i < count; i++)
-			iters[i] = WigOrBigWigReader(argv[i + 2]);
+			iters[i] = SmartReader(argv[i + 2]);
 		toStdout(MeanWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "median") == 0) {
 		int i;
 		int count = argc - 2;
 		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
 		for (i = 0; i < count; i++)
-			iters[i] = WigOrBigWigReader(argv[i + 2]);
+			iters[i] = SmartReader(argv[i + 2]);
 		toStdout(MedianWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "stddev") == 0) {
 		int i;
 		int count = argc - 2;
 		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
 		for (i = 0; i < count; i++)
-			iters[i] = WigOrBigWigReader(argv[i + 2]);
+			iters[i] = SmartReader(argv[i + 2]);
 		toStdout(StdDevWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "var") == 0) {
 		int i;
 		int count = argc - 2;
 		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
 		for (i = 0; i < count; i++)
-			iters[i] = WigOrBigWigReader(argv[i + 2]);
+			iters[i] = SmartReader(argv[i + 2]);
 		toStdout(VarianceWiggleReducer(iters, count));
 	} else if (strcmp(argv[1], "pow") == 0) {
-		toStdout(PowerWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+		toStdout(PowerWiggleIterator(SmartReader(argv[2]), atoi(argv[3])));
 	} else if (strcmp(argv[1], "exp") == 0) {
 		if (argc == 4)
-			toStdout(ExpWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+			toStdout(ExpWiggleIterator(SmartReader(argv[2]), atoi(argv[3])));
 		else
-			toStdout(NaturalExpWiggleIterator(WigOrBigWigReader(argv[2])));
+			toStdout(NaturalExpWiggleIterator(SmartReader(argv[2])));
 	} else if (strcmp(argv[1], "log") == 0) {
 		if (argc == 4)
-			toStdout(LogWiggleIterator(WigOrBigWigReader(argv[2]), atoi(argv[3])));
+			toStdout(LogWiggleIterator(SmartReader(argv[2]), atoi(argv[3])));
 		else
-			toStdout(NaturalLogWiggleIterator(WigOrBigWigReader(argv[2])));
+			toStdout(NaturalLogWiggleIterator(SmartReader(argv[2])));
 	} else if (strcmp(argv[1], "unit") == 0) 
-		toStdout(UnitWiggleIterator(WigOrBigWigReader(argv[2])));
+		toStdout(UnitWiggleIterator(SmartReader(argv[2])));
 	else if (strcmp(argv[1], "abs") == 0) 
-		toStdout(AbsWiggleIterator(WigOrBigWigReader(argv[2])));
+		toStdout(AbsWiggleIterator(SmartReader(argv[2])));
 	else if (strcmp(argv[1], "--help") == 0) 
 		printHelp();
 	else if (strcmp(argv[1], "pearson") == 0)
-		printf("%f\n", pearsonCorrelation(WigOrBigWigReader(argv[2]), WigOrBigWigReader(argv[3])));
+		printf("%f\n", pearsonCorrelation(SmartReader(argv[2]), SmartReader(argv[3])));
 	else if (strcmp(argv[1], "AUC") == 0) 
-		printf("%f\n", AUC(WigOrBigWigReader(argv[2])));
+		printf("%f\n", AUC(SmartReader(argv[2])));
 	else if (strcmp(argv[1], "stream") == 0) {
 		int i;
 		int count = argc - 2;
 		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
 		for (i = 0; i < count; i++)
-			iters[i] = WigOrBigWigReader(argv[i + 2]);
+			iters[i] = SmartReader(argv[i + 2]);
 		streamMultiplexer(stdout, newMultiplexer(iters, count));
 	} else if (strcmp(argv[1], "catch") == 0) {
 		streamMultiplexer(stdout, newStreamingMultiplexer(stdin));
