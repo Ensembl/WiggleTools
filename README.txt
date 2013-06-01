@@ -8,13 +8,16 @@ This library parses wiggle files and executes various operations on them streami
 Installation:
 	- Install Jim Kent's source code
 	- Define the environment variable KENT_SRC to point to the /path/to/kent/src/ directory
+	- Install the samtools library
+	- Define the environment variable SAMTOOLS to point to the /path/to/samtools/ directory
 	- In this directory type 'make'
 	- The binary file wiggletools should be produced in the same directory. You can add it to your PATH, or move it onto your PATH
 
 Running the executable:
  
 Inputs:
-	The program takes in Wig and BigWig files, which are distinguished thanks to their suffix (.wig or .bw respectively).
+	The program takes in Wig, BigWig, Bed, BigBed and Bam files, which are distinguished thanks to their suffix (.wig, .bw, .bed, .bb, .bam respectively).
+	Note that wiggletools assumes that every bam file has an index .bai file next to it.
 
 Outputs:
 	The program outputs a bedGraph flat file in stdout.
