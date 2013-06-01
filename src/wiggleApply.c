@@ -56,8 +56,7 @@ void ApplyWiggleIteratorPop(WiggleIterator * wi) {
 }
 
 void ApplyWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	printf("Cannot seek on an apply iterator!\n");
-	exit(1);
+	seek(wi->regions, chrom, start, finish);
 }
 
 WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset) {
