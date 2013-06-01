@@ -26,6 +26,32 @@ void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, 
 	streamMultiplexer(dest, newIteratorMultiplexer(iter, index, count));
 }
 
+// xstrtok version that handles null fields
+char *xstrtok(char * line, char * delims)
+{
+	static char *saveline = NULL;
+	char *p;
+	int n;
+
+	if (line != NULL)
+		   saveline = line;
+
+	// See if we have reached the end of the line 
+	if (saveline == NULL || *saveline == '\0') 
+		   return NULL;
+
+	// return the number of characters that aren't delims 
+	n = strcspn(saveline, delims);
+	p = saveline; /*save start of this token*/
+
+	saveline += n; /*bump past the delim*/
+
+	if(*saveline != '\0') /*trash the delim if necessary*/
+		   *saveline++ = '\0';
+
+	return(p);
+}
+
 void popStreamingMultiplexer(Multiplexer * multi) {
 	char line[MAXLINE];
 	char *ptr;
@@ -38,11 +64,12 @@ void popStreamingMultiplexer(Multiplexer * multi) {
 		multi->done = true;
 		return;
 	}
-	
-	ptr = strtok(line, "\t\n");
-	sscanf(ptr, "%s ", multi->chrom);
+
+	line[strlen(line) - 1] = '\0';
+
+	ptr = xstrtok(line, "\t");
 	sscanf(ptr, "%s %i %i", multi->chrom, &(multi->start), &(multi->finish));
-	while ((ptr = strtok(NULL, " \n"))) {
+	while ((ptr = xstrtok(NULL, " "))) {
 		if (ptr[0] == '\0') {
 			multi->inplay[counter] = false;
 		} else {
@@ -53,7 +80,7 @@ void popStreamingMultiplexer(Multiplexer * multi) {
 	}
 
 	if (counter != multi->count) {
-		printf("Inconsistent number of columns in stream!");
+		printf("Inconsistent number of columns in stream! Counted %i instead of %i\n", counter, multi->count);
 		exit(1);
 	}
 }
@@ -73,10 +100,10 @@ Multiplexer * newStreamingMultiplexer(FILE * input) {
 		return new;
 	}
 	
-	ptr = strtok(line, "\t\n");
+	ptr = xstrtok(line, "\t\n");
 	sscanf(ptr, "%s %i %i", new->chrom, &(new->start), &(new->finish));
 
-	if((ptr = strtok(NULL, " \n"))) { 
+	if((ptr = xstrtok(NULL, ""))) { 
 		for (c = ptr; *c != '\0'; c++)
 			if (*c == ' ')
 				counter++; 
@@ -85,6 +112,7 @@ Multiplexer * newStreamingMultiplexer(FILE * input) {
 		new->inplay = (bool *) calloc(new->count, sizeof(bool));
 		new->values = (double *) calloc(new->count, sizeof(double));
 
+		ptr = xstrtok(ptr, " \n");
 		if (ptr[0] == '\0') {
 			new->inplay[0] = false;
 		} else {
@@ -93,7 +121,7 @@ Multiplexer * newStreamingMultiplexer(FILE * input) {
 		}
 
 		counter = 1;
-		while ((ptr = strtok(NULL, " \n"))) {
+		while ((ptr = xstrtok(NULL, " \n"))) {
 			if (ptr[0] == '\0') {
 				new->inplay[counter] = false;
 			} else {
