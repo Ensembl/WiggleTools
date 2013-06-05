@@ -1,2 +1,2 @@
-Efficient apply function
+Review all seek functions for stability
 Memory tracking & cleaning

@@ -40,12 +40,7 @@ struct wiggleIterator_st {
 	int start;
 	int finish;
 	double value;
-	char * nextChrom;
-	int nextStart;
-	int nextFinish;
-	double nextValue;
 	bool done;
-	bool nextDone;
 	void * data;
 	void (*pop)(WiggleIterator *);
 	void (*seek)(WiggleIterator *, const char *, int, int);
@@ -54,7 +49,7 @@ struct wiggleIterator_st {
 FILE * openOrFail(char * filename, char * description, char * mode);
 WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int));
 void pop(WiggleIterator *);
-void seek(WiggleIterator *, const char *, int, int);
 WiggleIterator * NullWiggleIterator ();
+WiggleIterator * CompressionWiggleIterator(WiggleIterator *);
 
 #endif

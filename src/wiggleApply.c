@@ -1,5 +1,5 @@
 // Copyright (c) 2013, Daniel Zerbino
-// All rights reserved.
+// All rights valueerved.
 // 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -30,39 +30,163 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 // Local header
+#include <stdlib.h>
+#include <string.h>
+
 #include "wiggleTools.h"
 #include "wiggleIterators.h"
 
-typedef struct applyWiggleIteratorTarget_st {
-	WiggleIterator * regions;
-	double (*statistic)(WiggleIterator *);
-	WiggleIterator * data;
-	struct applyWiggleIteratorTarget_st * next;
-} ApplyWiggleIteratorTarget;
+//////////////////////////////////////////////////////
+// Buffered wiggleIterator
+//////////////////////////////////////////////////////
+
+typedef struct bufferedWiggleIteratorData_st {
+	char * chrom;
+	int start;
+	int finish;
+	int index;
+	int length;
+	double * values;
+	struct bufferedWiggleIteratorData_st * next;
+} BufferedWiggleIteratorData;
+
+void destroyBufferedWiggleIteratorData(BufferedWiggleIteratorData * data) {
+	free(data->values);
+	free(data);
+}
+
+void BufferedWiggleIteratorPop(WiggleIterator * wi) {
+	BufferedWiggleIteratorData * data = (BufferedWiggleIteratorData *) wi->data;
+	if (data->index++ < data->length) {
+		wi->start = data->start + data->index;
+		wi->finish = wi->start + 1;
+		wi->value = data->values[data->index];
+	} else {
+		wi->done = true;
+	}
+}
+
+void BufferedWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	fprintf(stderr, "Cannot seek on buffered iterator!");
+	exit(1);
+}
+
+WiggleIterator * BufferedWiggleIterator(BufferedWiggleIteratorData * data) {
+	WiggleIterator * wi = newWiggleIterator(data, &BufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek);
+	wi->chrom = data->chrom;
+	return wi;
+}
+
+//////////////////////////////////////////////////////
+// Apply operator
+//////////////////////////////////////////////////////
 
 typedef struct applyWiggleIteratorData_st {
 	WiggleIterator * regions;
 	double (*statistic)(WiggleIterator *);
-	WiggleIterator * data;
+	WiggleIterator * input;
+	BufferedWiggleIteratorData * head;
+	BufferedWiggleIteratorData * tail;
 } ApplyWiggleIteratorData;
+
+static void createTarget(ApplyWiggleIteratorData * data) {
+	BufferedWiggleIteratorData * bufferedData = (BufferedWiggleIteratorData *) calloc(1, sizeof(BufferedWiggleIteratorData));
+	if (!bufferedData) {
+		fprintf(stderr, "Could not calloc %li bytes\n", sizeof(BufferedWiggleIteratorData));
+		abort();
+	}
+	bufferedData->chrom = data->regions->chrom;
+	bufferedData->start = data->regions->start;
+	bufferedData->finish = data->regions->finish;
+	bufferedData->index = 0;
+	bufferedData->length = data->regions->finish - data->regions->start;
+	bufferedData->values = (double *) calloc(bufferedData->length, sizeof(double));
+	if (!data->head)
+		data->head = bufferedData;
+	else
+		data->tail->next = bufferedData;
+	data->tail = bufferedData;
+}
+
+static void createTargets(ApplyWiggleIteratorData * data) {
+	while(!data->regions->done && (!data->head || (data->regions->start <= data->tail->finish && !strcmp(data->regions->chrom, data->tail->chrom)))) {
+		createTarget(data);
+		pop(data->regions);
+	}
+}
+
+static void pushDataOnPipe(ApplyWiggleIteratorData * data, BufferedWiggleIteratorData * bufferedData) {
+	int pos, start, finish;
+
+	if (bufferedData->start > data->input->start)
+		start = 0;
+	else
+		start = data->input->start - bufferedData->start;
+
+	if (bufferedData->finish < data->input->finish)
+		finish = bufferedData->length;
+	else
+		finish = data->input->finish - bufferedData->start;
+
+	for (pos = start; pos < finish; pos++)
+		bufferedData->values[pos] = data->input->value;
+
+}
+
+static void pushData(ApplyWiggleIteratorData * data) {
+	BufferedWiggleIteratorData * bufferedData;
+
+	for (bufferedData = data->head; bufferedData; bufferedData = bufferedData->next) {
+		if (bufferedData->start >= data->input->finish)
+			break;
+		else
+			pushDataOnPipe(data, bufferedData);
+	
+	}
+
+}
 
 void ApplyWiggleIteratorPop(WiggleIterator * wi) {
 	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) wi->data;
-	wi->chrom = data->regions->chrom;
-	wi->start = data->regions->start;
-	wi->finish = data->regions->finish;
-	seek(wi->data, wi->chrom, wi->start, wi->finish);
-	wi->value = (*(data->statistic))(data->data);
-}
 
-void ApplyWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	seek(wi->regions, chrom, start, finish);
+	// If no ongoing jobs, create some
+	if (data->head == NULL) {
+		createTargets(data);
+		if (data->head) {
+			seek(data->input, data->head->chrom, data->head->start, data->tail->finish);	
+		} else {
+			wi->done = true;
+			return;
+		}
+	}
+
+	// If ongoing jobs are running:
+	// Push enough data to finish the first job
+	while (!data->input->done && !strcmp(data->input->chrom, data->head->chrom) && data->input->start < data->head->finish) {
+		pushData(data);
+		pop(data->input);
+	}
+
+
+	// Return value
+	wi->chrom = data->head->chrom;
+	wi->start = data->head->start;
+	wi->finish = data->head->finish;
+	wi->value = data->statistic(BufferedWiggleIterator(data->head));
+
+	// Discard struct
+	BufferedWiggleIteratorData * bufferedData = data->head;
+	if (data->tail == data->head) 
+		data->tail = data->head = NULL;
+	else
+		data->head = data->head->next;
+	destroyBufferedWiggleIteratorData(bufferedData);
 }
 
 WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset) {
 	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) calloc(1, sizeof(ApplyWiggleIteratorData));
 	data->regions = regions;
 	data->statistic = statistic;
-	data->data = dataset;
-	return newWiggleIterator(data, &ApplyWiggleIteratorPop, &ApplyWiggleIteratorSeek);
+	data->input = dataset;
+	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL);
 }

@@ -166,7 +166,7 @@ void BamReaderPop(WiggleIterator * wi)
 		// TODO Check you are in bounds
 		// If a new chrom. was entered:
 		if (tid != data->ref_tid) {
-			wi->nextChrom = data->data->h->target_name[tid];
+			wi->chrom = data->data->h->target_name[tid];
 			data->ref_tid = tid;
 		}
 
@@ -181,12 +181,12 @@ void BamReaderPop(WiggleIterator * wi)
 
 		// Its a wrap:
 		// +1 to account for 0-based indexing in BAMs:
-		wi->nextStart = pos + 1;
-		wi->nextFinish = pos + 2;
-		wi->nextValue = cnt;
+		wi->start = pos + 1;
+		wi->finish = pos + 2;
+		wi->value = cnt;
 	} else {
 		closeBamFile(data);
-		wi->nextDone = true;
+		wi->done = true;
 	}
 }
 

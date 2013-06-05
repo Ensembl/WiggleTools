@@ -1,5 +1,5 @@
 SAMTOOLS=../../samtools/
-CFLAGS=-g -Wall -O3
+CFLAGS=-g -Wall
 LIBDIR=../lib
 BINDIR=../bin
 INC=-I${KENT_SRC}/inc/ -I${SAMTOOLS}
@@ -17,7 +17,7 @@ ${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggleTools.o
 
 lib: ${LIBDIR}/libwiggletools.a 
 
-${LIBDIR}/libwiggletools.a: wiggleIterators.o wiggleReader.o bigWiggleReader.o wiggleMultiplexer.o wiggleReducers.o bedReader.o bigBedReader.o bamReader.o wiggleStreaming.o
+${LIBDIR}/libwiggletools.a: wiggleIterators.o wiggleReader.o bigWiggleReader.o wiggleMultiplexer.o wiggleReducers.o bedReader.o bigBedReader.o bamReader.o wiggleStreaming.o wiggleApply.o
 	mkdir -p ${LIBDIR}
 	ar rcs ${LIBDIR}/libwiggletools.a *.o ${SAMTOOLS}/bam_plcmd.o ${SAMTOOLS}/sample.o ${SAMTOOLS}/bam2bcf.o ${SAMTOOLS}/errmod.o ${SAMTOOLS}/bam2bcf_indel.o
 

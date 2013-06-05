@@ -76,7 +76,9 @@ typedef struct bigWiggleReaderData_st {
 	struct bbiChromInfo *chromList;
 
 	// Chromosome within file
-	struct bbiChromInfo *chrom;
+	struct bbiChromInfo *chromListPtr;
+	char * chrom;
+	int stop;
 	struct fileOffsetSize *blockList;
 
 	// Contiguous runs of blocks within chromosome

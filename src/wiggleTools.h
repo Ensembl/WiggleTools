@@ -38,6 +38,8 @@ typedef int bool;
 #define false 0
 #endif
 
+#include <stdio.h>
+
 typedef struct wiggleIterator_st WiggleIterator;
 typedef struct multiplexer_st Multiplexer;
 
@@ -55,6 +57,7 @@ Multiplexer * newStreamingMultiplexer(FILE * input);
 	
 	// Unary
 WiggleIterator * UnitWiggleIterator (WiggleIterator *);
+WiggleIterator * UnionWiggleIterator (WiggleIterator *);
 WiggleIterator * AbsWiggleIterator (WiggleIterator * );
 WiggleIterator * NaturalLogWiggleIterator (WiggleIterator *);
 WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
@@ -96,6 +99,7 @@ double variance (WiggleIterator *);
 // Regional statistics
 // I wonder what the algebraic classification of this thing is...?
 WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * data);
+void seek(WiggleIterator *, const char *, int, int);
 
 // Comparison
 double pearsonCorrelation (WiggleIterator * , WiggleIterator * );

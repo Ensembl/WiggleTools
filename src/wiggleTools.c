@@ -73,6 +73,8 @@ static void printHelp() {
 	puts("\twiggletools AUC file");
 	puts("\twiggletools pearson file1 file2");
 	puts("");
+	puts("\t// Applied statistics");
+	puts("\twiggletools coverage regions data");
 	puts("\t// Other");
 	puts("\twiggletools --help");
 }
@@ -161,6 +163,8 @@ int main(int argc, char ** argv) {
 		printf("%f\n", pearsonCorrelation(SmartReader(argv[2]), SmartReader(argv[3])));
 	else if (strcmp(argv[1], "AUC") == 0) 
 		printf("%f\n", AUC(SmartReader(argv[2])));
+	else if (strcmp(argv[1], "coverage") == 0) 
+		toStdout(apply(SmartReader(argv[2]), AUC, SmartReader(argv[3])));
 	else if (strcmp(argv[1], "stream") == 0) {
 		int i;
 		int count = argc - 2;
@@ -170,6 +174,10 @@ int main(int argc, char ** argv) {
 		streamMultiplexer(stdout, newMultiplexer(iters, count));
 	} else if (strcmp(argv[1], "catch") == 0) {
 		streamMultiplexer(stdout, newStreamingMultiplexer(stdin));
+	} else if (strcmp(argv[1], "seek") == 0) {
+		WiggleIterator * wi = SmartReader(argv[2]);
+		seek(wi, argv[3], atoi(argv[4]), atoi(argv[5]));
+		toStdout(wi);
 	} else {
 		printf("Unrecognized keyword: %s\n", argv[1]);
 		puts("");

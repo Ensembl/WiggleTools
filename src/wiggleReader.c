@@ -44,7 +44,7 @@ enum readingMode {FIXED_STEP, VARIABLE_STEP, BED_GRAPH};
 
 typedef struct wiggleReaderData_st {
 	char * filename;
-	FILE * infile;
+	FILE * file;
 	enum readingMode readingMode;
 	int step;
 	int span;
@@ -70,19 +70,19 @@ static void WiggleReaderReadHeader(WiggleIterator * wi, WiggleReaderData * data,
 			chrom_b = false;
 			token = strtok(NULL, seps);
 			if (!token) {
-				fprintf(stderr, "Empty wi->nextChromosome name!\n");
+				fprintf(stderr, "Empty wi->chromosome name!\n");
 				exit(1);
 			}
-			strcpy(wi->nextChrom, token);
+			strcpy(wi->chrom, token);
 		}
 		if (!strcmp(token, "start")) {
 			start_b = false;
 			token = strtok(NULL, seps);
 			if (!token) {
-				fprintf(stderr, "Empty wi->nextStart position!\n");
+				fprintf(stderr, "Empty wi->start position!\n");
 				exit(1);
 			}
-			sscanf(token, "%i", &(wi->nextStart));
+			sscanf(token, "%i", &(wi->start));
 		}
 		if (!strcmp(token, "span")) {
 			token = strtok(NULL, seps);
@@ -116,24 +116,24 @@ static void WiggleReaderReadHeader(WiggleIterator * wi, WiggleReaderData * data,
 
 	// Backing off so as not to offset the first line
 	if (data->readingMode == FIXED_STEP)
-		wi->nextStart -= data->step;
+		wi->start -= data->step;
 }
 
 static void WiggleReaderReadFixedStepLine(WiggleIterator * wi, char * line, int step, int span) {
-	sscanf(line, "%lf", &(wi->nextValue));
-	wi->nextStart += step;
-	wi->nextFinish = wi->nextStart + span;
+	sscanf(line, "%lf", &(wi->value));
+	wi->start += step;
+	wi->finish = wi->start + span;
 }
 
 static void WiggleReaderReadVariableStepLine(WiggleIterator * wi, char * line, int span) {
-	sscanf(line, "%i\t%lf", &(wi->nextStart), &(wi->nextValue));
-	wi->nextFinish = wi->nextStart + span;
+	sscanf(line, "%i\t%lf", &(wi->start), &(wi->value));
+	wi->finish = wi->start + span;
 }
 
 static void WiggleReaderReadBedGraphLine(WiggleIterator * wi, char * line) {
-	sscanf(line, "%s\t%i\t%i\t%lf", wi->nextChrom, &(wi->nextStart), &(wi->nextFinish), &(wi->nextValue));
+	sscanf(line, "%s\t%i\t%i\t%lf", wi->chrom, &(wi->start), &(wi->finish), &(wi->value));
 	// I prefer to keep the finish excluded of the region, BedGraphs are inclusive...
-	wi->nextFinish++;
+	wi->finish++;
 }
 
 static int countWords(char * line) {
@@ -153,7 +153,11 @@ static int countWords(char * line) {
 static void WiggleReaderPop(WiggleIterator * wi) {
 	WiggleReaderData * data = (WiggleReaderData*) wi->data;
 	char line[5000];
-	while (fgets(line, 5000, data->infile)) {
+
+	if (wi->done)
+		return;
+
+	while (fgets(line, 5000, data->file)) {
 		if ( !strncmp("variableStep", line, 12)) {
 			data->readingMode = VARIABLE_STEP;
 			WiggleReaderReadHeader(wi, data, line);
@@ -189,36 +193,42 @@ static void WiggleReaderPop(WiggleIterator * wi) {
 
 		}
 
-		if (data->stop > 0 && wi->nextStart > data->stop)
-			wi->nextDone = true;
+		if (data->stop > 0 && wi->start > data->stop)
+			wi->done = true;
 
 		return;
 
 	}
-	fclose(data->infile);
-	wi->nextDone = true;
+	fclose(data->file);
+	data->file = NULL;
+	wi->done = true;
 }
 
 void WiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	WiggleReaderData * data = (WiggleReaderData*) wi->data;
-	if (strcmp(chrom, wi->nextChrom) < 0 || start < wi->nextStart) {
-		fclose(data->infile);
-		data->infile = openOrFail(data->filename, "input file", "r");
+
+	wi->chrom = chrom;
+	data->stop = finish;
+
+	if (strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
+		if (data->file)
+			fclose(data->file);
+		data->file = openOrFail(data->filename, "input file", "r");
+		WiggleReaderPop(wi);
 	}
 
-	while (wi->nextFinish < finish || strcmp(chrom, wi->nextChrom) < 0)
+	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) 
 		WiggleReaderPop(wi);
 
-	data->stop = finish;
 }
 
 WiggleIterator * WiggleReader(char * f) {
 	WiggleReaderData * data = (WiggleReaderData *) calloc(1, sizeof(WiggleReaderData));
 	data->filename = f;
 	if (strcmp(f, "-"))
-		data->infile = openOrFail(f, "input file", "r");
+		data->file = openOrFail(f, "input file", "r");
 	else
-		data->infile = stdin;
+		data->file = stdin;
 	data->readingMode = BED_GRAPH;
 	data->stop = -1;
 	return newWiggleIterator(data, &WiggleReaderPop, &WiggleReaderSeek);

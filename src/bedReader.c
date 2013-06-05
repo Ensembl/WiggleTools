@@ -37,6 +37,7 @@
 typedef struct bedReaderData_st {
 	char  *filename;
 	FILE * file;
+	char * chrom;
 	int stop;
 } BedReaderData;
 
@@ -45,53 +46,53 @@ void BedReaderPop(WiggleIterator * wi) {
 	char line[5000];
 	char chrom[1000];
 
-	while (fgets(line, 5000, data->file)) {
-		int start, finish;
-		sscanf(line, "%s\t%i\t%i", chrom, &start, &finish);
-		// I like my finishes to be non inclusive...
-		finish++;
+	if (wi->done)
+		return;
 
-		if (wi->nextChrom[0] == '\0' || strcmp(wi->nextChrom, chrom) < 0) {
-			wi->nextChrom = (char *) calloc(strlen(chrom), sizeof(char));
-			strcpy(wi->nextChrom, chrom);
-			wi->nextFinish = -1;
+	if (fgets(line, 5000, data->file)) {
+		sscanf(line, "%s\t%i\t%i", chrom, &wi->start, &wi->finish);
+		// I like my finishes to be non inclusive...
+		wi->finish++;
+
+		// The reason for creating a new string instead of simply 
+		// overwriting is that other functions may still be pointin
+		// at the old label
+		if (wi->chrom[0] == '\0' || strcmp(wi->chrom, chrom)) {
+			wi->chrom = (char *) calloc(strlen(chrom), sizeof(char));
+			strcpy(wi->chrom, chrom);
 		}
 
-		if (finish <= wi->nextFinish)
-			continue;
-		else if (start < wi->nextFinish)
-			wi->nextStart = wi->nextFinish;
-		else
-			wi->nextStart = start;
-		wi->nextFinish = finish;
-
-		if (data->stop > 0 && wi->nextStart > data->stop)
-			wi->nextDone = true;
-
-		return;
+		if (data->stop > 0 && (strcmp(wi->chrom, data->chrom) > 0 || (strcmp(data->chrom, wi->chrom) == 0 && wi->start > data->stop))) {
+			wi->done = true;
+		}
+	} else {
+		fclose(data->file);
+		data->file = NULL;
+		wi->done = true;
 	}
-
-	wi->nextDone = true;
 }
 
 void BedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	BedReaderData * data = (BedReaderData*) wi->data;
-	if (strcmp(chrom, wi->nextChrom) < 0 || start < wi->nextStart) {
-		fclose(data->file);
+
+	if (wi->done || strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
+		if (data->file)
+			fclose(data->file);
 		data->file = openOrFail(data->filename, "input file", "r");
+		pop(wi);
 	}
 
-	while (wi->nextFinish < finish || strcmp(chrom, wi->nextChrom) < 0)
-		BedReaderPop(wi);
-
+	data->chrom = chrom;
 	data->stop = finish;
+	wi->done = false;
+	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish < start))) 
+		pop(wi);
 }
-
 
 WiggleIterator * BedReader(char * filename) {
 	BedReaderData * data = (BedReaderData *) calloc(1, sizeof(BedReaderData));
 	data->filename = filename;
 	data->stop = -1;
 	data->file = openOrFail(filename, "Bed file", "r");
-	return newWiggleIterator(data, &BedReaderPop, &BedReaderSeek);
+	return UnionWiggleIterator(newWiggleIterator(data, &BedReaderPop, &BedReaderSeek));
 }

@@ -53,29 +53,29 @@ typedef struct wiggleSelectData_st {
 } WiggleSelectData;
 
 void SelectReductionPop(WiggleIterator * wi) {
-	if (wi->nextDone)
+	if (wi->done)
 		return;
 
 	WiggleSelectData * data = (WiggleSelectData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
-		wi->nextDone = true;
+		wi->done = true;
 		return;
 	}
 
 	while (!multi->inplay[data->index]) {
 		popMultiplexer(multi);
 		if (multi->done) {
-			wi->nextDone = true;
+			wi->done = true;
 			return;
 		}
 	}
 
-	wi->nextValue = multi->iters[data->index]->value;
-	wi->nextChrom = multi->chrom;
-	wi->nextStart = multi->start;
-	wi->nextFinish = multi->finish;
+	wi->value = multi->iters[data->index]->value;
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
 	popMultiplexer(multi);
 }
 
@@ -98,32 +98,32 @@ WiggleIterator * SelectWiggleReducer(WiggleIterator** iters, int count, int inde
 void MaxReductionPop(WiggleIterator * wi) {
 	int i;
 
-	if (wi->nextDone)
+	if (wi->done)
 		return;
 
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
-		wi->nextDone = true;
+		wi->done = true;
 		return;
 	}
 
-	wi->nextChrom = multi->chrom;
-	wi->nextStart = multi->start;
-	wi->nextFinish = multi->finish;
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
 	if (multi->inplay[0])
-		wi->nextValue = multi->iters[0]->value;
+		wi->value = multi->iters[0]->value;
 	else
-		wi->nextValue = 0;
+		wi->value = 0;
 
 	for (i = 1; i < multi->count; i++) {
 		if (multi->inplay[i]) {
-			if (wi->nextValue < multi->values[i])
-				wi->nextValue = multi->values[i];
+			if (wi->value < multi->values[i])
+				wi->value = multi->values[i];
 		} else {
-			if (wi->nextValue < 0)
-				wi->nextValue = 0;
+			if (wi->value < 0)
+				wi->value = 0;
 		}
 	}
 	popMultiplexer(multi);
@@ -146,32 +146,32 @@ WiggleIterator * MaxWiggleReducer(WiggleIterator** iters, int count) {
 void MinReductionPop(WiggleIterator * wi) {
 	int i;
 
-	if (wi->nextDone)
+	if (wi->done)
 		return;
 
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
-		wi->nextDone = true;
+		wi->done = true;
 		return;
 	}
 
-	wi->nextChrom = multi->chrom;
-	wi->nextStart = multi->start;
-	wi->nextFinish = multi->finish;
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
 	if (multi->inplay[0])
-		wi->nextValue = multi->iters[0]->value;
+		wi->value = multi->iters[0]->value;
 	else
-		wi->nextValue = 0;
+		wi->value = 0;
 
 	for (i = 1; i < multi->count; i++) {
 		if (multi->inplay[i]) {
-			if (wi->nextValue > multi->values[i])
-				wi->nextValue = multi->values[i];
+			if (wi->value > multi->values[i])
+				wi->value = multi->values[i];
 		} else {
-			if (wi->nextValue > 0)
-				wi->nextValue = 0;
+			if (wi->value > 0)
+				wi->value = 0;
 		}
 	}
 	popMultiplexer(multi);
@@ -194,24 +194,24 @@ WiggleIterator * MinWiggleReducer(WiggleIterator** iters, int count) {
 void SumReductionPop(WiggleIterator * wi) {
 	int i;
 
-	if (wi->nextDone)
+	if (wi->done)
 		return;
 
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
-		wi->nextDone = true;
+		wi->done = true;
 		return;
 	}
 
-	wi->nextChrom = multi->chrom;
-	wi->nextStart = multi->start;
-	wi->nextFinish = multi->finish;
-	wi->nextValue = 0;
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
+	wi->value = 0;
 	for (i = 0; i < multi->count; i++)
 		if (multi->inplay[i])
-			wi->nextValue += multi->values[i];
+			wi->value += multi->values[i];
 	popMultiplexer(multi);
 }
 
@@ -232,26 +232,26 @@ WiggleIterator * SumWiggleReducer(WiggleIterator** iters, int count) {
 void ProductReductionPop(WiggleIterator * wi) {
 	int i;
 
-	if (wi->nextDone)
+	if (wi->done)
 		return;
 
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
-		wi->nextDone = true;
+		wi->done = true;
 		return;
 	}
 
-	wi->nextChrom = multi->chrom;
-	wi->nextStart = multi->start;
-	wi->nextFinish = multi->finish;
-	wi->nextValue = 1;
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
+	wi->value = 1;
 	for (i = 0; i < multi->count; i++) {
 		if (multi->inplay[i])
-			wi->nextValue *= multi->values[i];
+			wi->value *= multi->values[i];
 		else {
-			wi->nextValue = 0;
+			wi->value = 0;
 			break;
 		}
 	}
@@ -275,25 +275,25 @@ WiggleIterator * ProductWiggleReducer(WiggleIterator** iters, int count) {
 void MeanReductionPop(WiggleIterator * wi) {
 	int i;
 
-	if (wi->nextDone)
+	if (wi->done)
 		return;
 
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
-		wi->nextDone = true;
+		wi->done = true;
 		return;
 	}
 
-	wi->nextChrom = multi->chrom;
-	wi->nextStart = multi->start;
-	wi->nextFinish = multi->finish;
-	wi->nextValue = 0;
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
+	wi->value = 0;
 	for (i = 0; i < multi->count; i++)
 		if (multi->inplay[i])
-			wi->nextValue += multi->values[i];
-	wi->nextValue /= multi->count;
+			wi->value += multi->values[i];
+	wi->value /= multi->count;
 	popMultiplexer(multi);
 }
 
@@ -316,36 +316,36 @@ void VarianceReductionPop(WiggleIterator * wi) {
 	int i;
 	double mean, diff;
 
-	if (wi->nextDone)
+	if (wi->done)
 		return;
 
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
-		wi->nextDone = true;
+		wi->done = true;
 		return;
 	}
 
-	wi->nextChrom = multi->chrom;
-	wi->nextStart = multi->start;
-	wi->nextFinish = multi->finish;
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
 	mean = 0;
 	for (i = 0; i < multi->count; i++)
 		if (multi->inplay[i])
 			mean += multi->values[i];
 	mean /= multi->count;
 	
-	wi->nextValue = 0;
+	wi->value = 0;
 	for (i = 0; i < multi->count; i++) {
 		if (multi->inplay[i]) {
 			diff = (mean - multi->values[i]);
-			wi->nextValue += diff * diff;
+			wi->value += diff * diff;
 		} else {
-			wi->nextValue += mean * mean;
+			wi->value += mean * mean;
 		}
 	}
-	wi->nextValue /= multi->count;
+	wi->value /= multi->count;
 	
 	popMultiplexer(multi);
 }
@@ -368,37 +368,37 @@ void StdDevReductionPop(WiggleIterator * wi) {
 	int i;
 	double mean, diff;
 
-	if (wi->nextDone)
+	if (wi->done)
 		return;
 
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
-		wi->nextDone = true;
+		wi->done = true;
 		return;
 	}
 
-	wi->nextChrom = multi->chrom;
-	wi->nextStart = multi->start;
-	wi->nextFinish = multi->finish;
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
 	mean = 0;
 	for (i = 0; i < multi->count; i++)
 		if (multi->inplay[i])
 			mean += multi->values[i];
 	mean /= multi->count;
 	
-	wi->nextValue = 0;
+	wi->value = 0;
 	for (i = 0; i < multi->count; i++) {
 		if (multi->inplay[i]) {
 			diff = (mean - multi->values[i]);
-			wi->nextValue += diff * diff;
+			wi->value += diff * diff;
 		} else {
-			wi->nextValue += mean * mean;
+			wi->value += mean * mean;
 		}
 	}
-	wi->nextValue /= multi->count;
-	wi->nextValue = sqrt(wi->nextValue);
+	wi->value /= multi->count;
+	wi->value = sqrt(wi->value);
 	
 	popMultiplexer(multi);
 }
@@ -441,20 +441,20 @@ static int compDoubles(const void * A, const void * B) {
 void MedianReductionPop(WiggleIterator * wi) {
 	int i;
 
-	if (wi->nextDone)
+	if (wi->done)
 		return;
 
 	MedianWiggleReducerData * data = (MedianWiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
-		wi->nextDone = true;
+		wi->done = true;
 		return;
 	}
 
-	wi->nextChrom = multi->chrom;
-	wi->nextStart = multi->start;
-	wi->nextFinish = multi->finish;
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
 	for (i = 0; i < multi->count; i++) {
 		if (multi->inplay[i])
 			data->vals[i] = multi->values[i];
@@ -462,7 +462,7 @@ void MedianReductionPop(WiggleIterator * wi) {
 			data->vals[i] = 0;
 	}
 	qsort(data->vals, multi->count, sizeof(double), &compDoubles);
-	wi->nextValue = data->vals[multi->count / 2];
+	wi->value = data->vals[multi->count / 2];
 	
 	popMultiplexer(multi);
 }
