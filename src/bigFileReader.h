@@ -47,57 +47,43 @@
 #include "udc.h"
 #include "bwgInternal.h"
 
-#define THREADS 5
-
-
 typedef struct blockData_st {
-	// Args to unzipper
-	char *blockBuf;
-	struct fileOffsetSize * block;
 	char *uncompressBuf;
-	struct bbiFile* bwf;
 	char *blockEnd;
-	boolean done;
-
-	// Other
-	pthread_t threadID;
 	pthread_mutex_t proceed;
-	int * count;
-	pthread_mutex_t * count_mutex;
-	pthread_cond_t * count_threshold_cv;
 	struct blockData_st * next;
+	boolean duplicate;
+	char *chrom;
 } BlockData;
 
-typedef struct bigWiggleReaderData_st {
-	// File level variables
+typedef struct bigFileReaderData_st {
+	// Arguments to downloader
+	char * filename;
+	char * chrom;
+	int start, stop;
+	pthread_t downloaderThreadID;
+
+	// Output of downloader
 	struct bbiFile* bwf;
 	struct udcFile *udc;
-	boolean isSwapped, uncompress;
-	struct bbiChromInfo *chromList;
-
-	// Chromosome within file
-	struct bbiChromInfo *chromListPtr;
-	char * chrom;
-	int stop;
-	struct fileOffsetSize *blockList;
-
-	// Contiguous runs of blocks within chromosome
-	struct fileOffsetSize *afterGap;
-	char * mergedBuf;
-
-	// Blocks within run of blocks
-	struct fileOffsetSize * block;
-        char *blockBuf, *blockEnd;
-	struct bwgSectionHead head;
+	BlockData * blockData;
+	pthread_mutex_t proceed_mutex;
+	pthread_cond_t proceed_cond;
+	pthread_mutex_t count_mutex;
+	pthread_cond_t count_cond;
+	int blockRuns;
 
 	// Items within block
+	struct bwgSectionHead head;
+	boolean isSwapped;
 	char *blockPt;
 	bits16 i;
 
-	// For multi-threading storage...
-	BlockData * blockData;
-	pthread_mutex_t proceed_mutex;
-	pthread_cond_t proceed;
-} BigWiggleReaderData;
+} BigFileReaderData;
 
+void launchDownloader(BigFileReaderData * data);
+void killDownloader(BigFileReaderData * data);
+void destroyBlockData(BlockData * data);
+void enterBlock(BigFileReaderData * data);
+void goToNextBlock(BigFileReaderData * data);
 #endif

@@ -48,30 +48,30 @@ static void printHelp() {
 	puts("");
 	puts("Parameters:");
 	puts("\t// Unary operators");
-	puts("\twiggletools unit file");
-	puts("\twiggletools abs file");
-	puts("\twiggletools exp file");
-	puts("\twiggletools log file");
+	puts("\twiggletools unit [options] file");
+	puts("\twiggletools abs [options] file");
+	puts("\twiggletools exp [options] file");
+	puts("\twiggletools log [options] file");
 	puts("\t");
 	puts("\t// Operators between a signal and a scalar");
-	puts("\twiggletools scale file factor");
-	puts("\twiggletools pow file exponent");
-	puts("\twiggletools exp file radix");
-	puts("\twiggletools log file base");
+	puts("\twiggletools scale [options] file factor");
+	puts("\twiggletools pow [options] file exponent");
+	puts("\twiggletools exp [options] file radix");
+	puts("\twiggletools log [options] file base");
 	puts("\t");
 	puts("\t// Reduction operators");
-	puts("\twiggletools add file1 file2 ... ");
-	puts("\twiggletools mult file1 file2 ...");
-	puts("\twiggletools min file1 file2 ...");
-	puts("\twiggletools max file1 file2 ...");
-	puts("\twiggletools mean file1 file2 ...");
-	puts("\twiggletools var file1 file2 ...");
-	puts("\twiggletools stddev file1 file2 ...");
-	puts("\twiggletools median file1 file2 ...");
+	puts("\twiggletools add [options] file1 file2 ... ");
+	puts("\twiggletools mult [options] file1 file2 ...");
+	puts("\twiggletools min [options] file1 file2 ...");
+	puts("\twiggletools max [options] file1 file2 ...");
+	puts("\twiggletools mean [options] file1 file2 ...");
+	puts("\twiggletools var [options] file1 file2 ...");
+	puts("\twiggletools stddev [options] file1 file2 ...");
+	puts("\twiggletools median [options] file1 file2 ...");
 	puts("\t");
 	puts("\t// Calculations");
-	puts("\twiggletools AUC file");
-	puts("\twiggletools pearson file1 file2");
+	puts("\twiggletools AUC [options] file");
+	puts("\twiggletools pearson [options] file1 file2");
 	puts("");
 	puts("\t// Applied statistics");
 	puts("\twiggletools coverage regions data");
@@ -79,17 +79,29 @@ static void printHelp() {
 	puts("\twiggletools --help");
 }
 
+//static int stripOptions(int argc, char ** argv) {
+//	int i;
+//
+//	for (i = 0; (i < argc) && (argv[i][0] == '-'); i++)
+//		parseOption(argv[i]);
+//
+//	return i;
+//}
+
+static WiggleIterator ** SmartReaders(char ** filenames, int count) {
+	int i;
+	WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
+	for (i = 0; i < count; i++)
+		iters[i] = SmartReader(filenames[i]);
+	return iters;
+}
+
 int main(int argc, char ** argv) {
 	if (argc < 2 || strcmp(argv[1], "help") == 0) {
 		printHelp();
 		return 0;
 	} else if (strcmp(argv[1], "add") == 0) {
-		int i;
-		int count = argc - 2;
-		WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
-		for (i = 0; i < count; i++)
-			iters[i] = SmartReader(argv[i + 2]);
-		toStdout(SumWiggleReducer(iters, count));
+		toStdout(SumWiggleReducer(SmartReaders(argv + 2, argc - 2), argc - 2));
 	} else if (strcmp(argv[1], "scale") == 0) {
 		toStdout(ScaleWiggleIterator(SmartReader(argv[2]), atoi(argv[3])));
 	} else if (strcmp(argv[1], "mult") == 0) {
