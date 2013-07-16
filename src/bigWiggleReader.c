@@ -129,13 +129,20 @@ void BigWiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int
 		BigWiggleReaderPop(wi);
 }
 
+static void openBigWigFile(BigFileReaderData * data) {
+	data->bwf = bigWigFileOpen(data->filename);
+	data->isSwapped = data->bwf->isSwapped;
+	bbiAttachUnzoomedCir(data->bwf);
+	data->udc = data->bwf->udc;
+}
+
 WiggleIterator * BigWiggleReader(char * f) {
 	BigFileReaderData * data = (BigFileReaderData *) calloc(1, sizeof(BigFileReaderData));
 	data->filename = f;
+	openBigWigFile(data);
 	launchDownloader(data);
 	if (data->blockData)
 		BigWiggleReaderEnterBlock(data);
 
-	WiggleIterator * new = newWiggleIterator(data, &BigWiggleReaderPop, &BigWiggleReaderSeek);
-	return new;
+	return newWiggleIterator(data, &BigWiggleReaderPop, &BigWiggleReaderSeek);
 }	

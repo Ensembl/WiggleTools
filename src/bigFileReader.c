@@ -71,6 +71,7 @@ void goToNextBlock(BigFileReaderData * data) {
 	// Check whether allowed to step forward
 	pthread_mutex_lock(&(data->blockData->proceed));
 	data->blockData = data->blockData->next;
+	pthread_mutex_destroy(&prevBlockData->proceed);
 	destroyBlockData(prevBlockData);
 
 	// Signal freed memory
@@ -88,9 +89,9 @@ static void waitForPermission(BigFileReaderData * data) {
 	pthread_mutex_unlock(&data->count_mutex);
 }
 
-static void freeLastBarrier(BlockData * last, BigFileReaderData * data) {
-	if (last) {
-		pthread_mutex_unlock(&(last->proceed));
+static void freeLastBarrier(BigFileReaderData * data) {
+	if (data->lastBlockData) {
+		pthread_mutex_unlock(&(data->lastBlockData->proceed));
 	} else { 
 		pthread_mutex_lock(&data->proceed_mutex);
 		pthread_cond_signal(&data->proceed_cond);
@@ -99,7 +100,6 @@ static void freeLastBarrier(BlockData * last, BigFileReaderData * data) {
 }
 
 static void * downloadBlockRun(BigFileReaderData * data, char * chrom, struct fileOffsetSize * firstBlock, struct fileOffsetSize * afterBlock, bits64 mergedSize) {
-	BlockData * last = NULL;
 	char * mergedBuf, *blockBuf;
 	struct fileOffsetSize * block;
 
@@ -110,19 +110,19 @@ static void * downloadBlockRun(BigFileReaderData * data, char * chrom, struct fi
 	for (block = firstBlock; block != afterBlock; block = block->next) {
 		waitForPermission(data);
 		BlockData * new = createBlockData(chrom, block, blockBuf, data->bwf->uncompressBufSize);
-		if (last)
-			last->next = new;
-		else
+		if (data->lastBlockData) {
+			data->lastBlockData->next = new;
+		} else {
 			data->blockData = new;
+		}
 
-		freeLastBarrier(last, data);
+		freeLastBarrier(data);
 
 		// Move on
-		last = new;
+		data->lastBlockData = new;
 		blockBuf += block->size;
 	}
 
-	freeLastBarrier(last, data);
 	freeMem(mergedBuf);
 	return NULL;
 }
@@ -165,27 +165,19 @@ static void downloadFullGenome(BigFileReaderData * data) {
 
 	for (chrom = chromList; chrom; chrom = chrom->next) 
 		downloadBigRegion(data, chrom->name, 0, chrom->size);
-	// TODO free chromList memory
+	// TODO free chromList memory... yes but labels lost! Need to be copied out first....
 
-}
-
-static void openBigFile(BigFileReaderData * data) {
-	data->bwf = bigWigFileOpen(data->filename);
-	data->isSwapped = data->bwf->isSwapped;
-	bbiAttachUnzoomedCir(data->bwf);
-	data->udc = data->bwf->udc;
 }
 
 static void * downloadBigFile(void * args) {
 	BigFileReaderData * data = (BigFileReaderData *) args;
-	if (!data->bwf) 
-		openBigFile(data);
 
 	if (!data->chrom)
 		downloadFullGenome(data);
 	else 
 		downloadBigRegion(data, data->chrom, data->start, data->stop);
 
+	freeLastBarrier(data);
 	return NULL;
 }
 
@@ -230,5 +222,6 @@ void killDownloader(BigFileReaderData * data) {
 		destroyBlockData(prevData);
 	}
 
+	data->lastBlockData = NULL;
 	data->blockRuns = 0;
 }

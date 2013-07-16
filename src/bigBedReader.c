@@ -31,19 +31,23 @@
 
 #include "bigFileReader.h"
 
+static void BigBedReaderEnterBlock(BigFileReaderData * data) {
+	if (!data->blockData)
+		abort();
+	enterBlock(data);
+}
+
 void BigBedReaderGoToNextBlock(BigFileReaderData * data) {
 	goToNextBlock(data);
-	if (data->blockData) 
-		enterBlock();
+	if (data->blockData)
+		BigBedReaderEnterBlock(data);
 }
 
 void BigBedReaderPop(WiggleIterator * wi) {
-	char chrom[1000];
-
 	if (wi->done)
 		return;
 
-	BigWiggleReaderData * data = (BigWiggleReaderData*) wi->data;
+	BigFileReaderData * data = (BigFileReaderData*) wi->data;
 
 	if (!data->blockData) {
 		wi->done = true;
@@ -66,11 +70,11 @@ void BigBedReaderPop(WiggleIterator * wi) {
 		return;
 	}
 
-	if (data->blockPt == data->bockData->blockEnd)
+	if (data->blockPt == data->blockData->blockEnd)
 		BigBedReaderGoToNextBlock(data);
 }
 
-void BigBedReaderSeek(BedIterator * wi, const char * chrom, int start, int finish) {
+void BigBedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	BigFileReaderData * data = (BigFileReaderData *) wi->data; 
 
 	killDownloader(data);
@@ -85,11 +89,18 @@ void BigBedReaderSeek(BedIterator * wi, const char * chrom, int start, int finis
 		BigBedReaderPop(wi);
 }
 
-BedIterator * BigBedReader(char * f) {
+static void openBigBedFile(BigFileReaderData * data) {
+	data->bwf = bigBedFileOpen(data->filename);
+	data->isSwapped = data->bwf->isSwapped;
+	bbiAttachUnzoomedCir(data->bwf);
+	data->udc = data->bwf->udc;
+}
+
+WiggleIterator * BigBedReader(char * f) {
 	BigFileReaderData * data = (BigFileReaderData *) calloc(1, sizeof(BigFileReaderData));
 	data->filename = f;
+	openBigBedFile(data);
 	launchDownloader(data);
-	enterBlock(data);
-	BedIterator * new = newBedIterator(data, &BigBedReaderPop, &BigBedReaderSeek);
-	return new;
+	BigBedReaderEnterBlock(data);
+	return UnionWiggleIterator(newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek));
 }	

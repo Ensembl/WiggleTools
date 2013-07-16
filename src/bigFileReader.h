@@ -66,7 +66,7 @@ typedef struct bigFileReaderData_st {
 	// Output of downloader
 	struct bbiFile* bwf;
 	struct udcFile *udc;
-	BlockData * blockData;
+	BlockData * blockData, *lastBlockData;
 	pthread_mutex_t proceed_mutex;
 	pthread_cond_t proceed_cond;
 	pthread_mutex_t count_mutex;
