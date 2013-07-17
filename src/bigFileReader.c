@@ -48,15 +48,12 @@ static BlockData * createBlockData(char * chrom, struct fileOffsetSize * block, 
 		new->uncompressBuf = blockBuf;
 		new->blockEnd = blockBuf + block->size;
 	}
-	pthread_mutex_init(&new->proceed, NULL);
-	pthread_mutex_lock(&new->proceed);
 	return new;
 }
 
 void destroyBlockData(BlockData * data) {
 	if (data->duplicate)
 		free(data->uncompressBuf);
-	pthread_mutex_destroy(&data->proceed);
 	free(data);
 }
 
@@ -68,35 +65,27 @@ void enterBlock(BigFileReaderData * data) {
 void goToNextBlock(BigFileReaderData * data) {
 	BlockData * prevBlockData = data->blockData;
 
-	// Check whether allowed to step forward
-	pthread_mutex_lock(&(data->blockData->proceed));
-	data->blockData = data->blockData->next;
-	pthread_mutex_destroy(&prevBlockData->proceed);
-	destroyBlockData(prevBlockData);
-
-	// Signal freed memory
 	pthread_mutex_lock(&data->count_mutex);
-	data->blockRuns--;
+	// Check whether allowed to step forward
+	if (data->blockCount == 0)
+		pthread_cond_wait(&data->count_cond, &data->count_mutex);
+	// Signal freed memory
+	data->blockCount--;
 	pthread_cond_signal(&data->count_cond);
 	pthread_mutex_unlock(&data->count_mutex);
+
+	data->blockData = data->blockData->next;
+	destroyBlockData(prevBlockData);
+
 }
 
-static void waitForPermission(BigFileReaderData * data) {
+static void declareNewBlock(BigFileReaderData * data) {
 	pthread_mutex_lock(&data->count_mutex);
-	if (data->blockRuns > MAX_HEAD_START)
+	if (data->blockCount > MAX_HEAD_START)
 		pthread_cond_wait(&data->count_cond, &data->count_mutex);
-	data->blockRuns++;
+	data->blockCount++;
+	pthread_cond_signal(&data->count_cond);
 	pthread_mutex_unlock(&data->count_mutex);
-}
-
-static void freeLastBarrier(BigFileReaderData * data) {
-	if (data->lastBlockData) {
-		pthread_mutex_unlock(&(data->lastBlockData->proceed));
-	} else { 
-		pthread_mutex_lock(&data->proceed_mutex);
-		pthread_cond_signal(&data->proceed_cond);
-		pthread_mutex_unlock(&data->proceed_mutex);
-	}
 }
 
 static void * downloadBlockRun(BigFileReaderData * data, char * chrom, struct fileOffsetSize * firstBlock, struct fileOffsetSize * afterBlock, bits64 mergedSize) {
@@ -108,15 +97,13 @@ static void * downloadBlockRun(BigFileReaderData * data, char * chrom, struct fi
 	udcMustRead(data->udc, mergedBuf, mergedSize);
 
 	for (block = firstBlock; block != afterBlock; block = block->next) {
-		waitForPermission(data);
 		BlockData * new = createBlockData(chrom, block, blockBuf, data->bwf->uncompressBufSize);
 		if (data->lastBlockData) {
 			data->lastBlockData->next = new;
 		} else {
 			data->blockData = new;
 		}
-
-		freeLastBarrier(data);
+		declareNewBlock(data);
 
 		// Move on
 		data->lastBlockData = new;
@@ -177,7 +164,8 @@ static void * downloadBigFile(void * args) {
 	else 
 		downloadBigRegion(data, data->chrom, data->start, data->stop);
 
-	freeLastBarrier(data);
+	// Signals to the reader that it can step into NULL block, hence marking the end of the download
+	declareNewBlock(data);
 	return NULL;
 }
 
@@ -187,8 +175,6 @@ void BigFileReaderCloseFile(BigFileReaderData * data) {
 }
 
 void launchDownloader(BigFileReaderData * data) {
-	pthread_mutex_init(&data->proceed_mutex, NULL);
-	pthread_cond_init(&data->proceed_cond, NULL);
 	pthread_mutex_init(&data->count_mutex, NULL);
 	pthread_cond_init(&data->count_cond, NULL);
 
@@ -201,18 +187,16 @@ void launchDownloader(BigFileReaderData * data) {
 	pthread_detach(data->downloaderThreadID);
 
 	// Wait for the first block to be available
-	pthread_mutex_lock(&data->proceed_mutex);
-	if (!data->blockData)
-		pthread_cond_wait(&data->proceed_cond, &data->proceed_mutex);
-	pthread_mutex_unlock(&data->proceed_mutex);
+	pthread_mutex_lock(&data->count_mutex);
+	if (data->blockCount == 0)
+		pthread_cond_wait(&data->count_cond, &data->count_mutex);
+	pthread_mutex_unlock(&data->count_mutex);
 }
 
 void killDownloader(BigFileReaderData * data) {
 	if (data->downloaderThreadID)
 		pthread_cancel(data->downloaderThreadID);
 
-	pthread_mutex_destroy(&data->proceed_mutex);
-	pthread_cond_destroy(&data->proceed_cond);
 	pthread_mutex_destroy(&data->count_mutex);
 	pthread_cond_destroy(&data->count_cond);
 
@@ -223,5 +207,13 @@ void killDownloader(BigFileReaderData * data) {
 	}
 
 	data->lastBlockData = NULL;
-	data->blockRuns = 0;
+	data->blockCount = 0;
+}
+
+void setMaxBlocks(int value) {
+	MAX_BLOCKS = value;
+}
+
+void setMaxHeadStart(int value) {
+	MAX_HEAD_START = value;
 }

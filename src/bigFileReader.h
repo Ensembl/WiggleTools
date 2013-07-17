@@ -50,7 +50,6 @@
 typedef struct blockData_st {
 	char *uncompressBuf;
 	char *blockEnd;
-	pthread_mutex_t proceed;
 	struct blockData_st * next;
 	boolean duplicate;
 	char *chrom;
@@ -67,11 +66,9 @@ typedef struct bigFileReaderData_st {
 	struct bbiFile* bwf;
 	struct udcFile *udc;
 	BlockData * blockData, *lastBlockData;
-	pthread_mutex_t proceed_mutex;
-	pthread_cond_t proceed_cond;
 	pthread_mutex_t count_mutex;
 	pthread_cond_t count_cond;
-	int blockRuns;
+	int blockCount;
 
 	// Items within block
 	struct bwgSectionHead head;
@@ -86,4 +83,7 @@ void killDownloader(BigFileReaderData * data);
 void destroyBlockData(BlockData * data);
 void enterBlock(BigFileReaderData * data);
 void goToNextBlock(BigFileReaderData * data);
+
+void setMaxBlocks(int value);
+void setHeadStart(int value);
 #endif

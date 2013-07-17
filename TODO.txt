@@ -1,2 +1,1 @@
-Review all seek functions for stability
 Memory tracking & cleaning
