@@ -120,8 +120,7 @@ void BigWiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int
 	data->chrom = chrom;
 	data->stop = finish;
 	launchDownloader(data);
-	if (data->blockData)
-		BigWiggleReaderEnterBlock(data);
+	BigWiggleReaderEnterBlock(data);
 	wi->done = false;
 	BigWiggleReaderPop(wi);
 
@@ -141,8 +140,7 @@ WiggleIterator * BigWiggleReader(char * f) {
 	data->filename = f;
 	openBigWigFile(data);
 	launchDownloader(data);
-	if (data->blockData)
-		BigWiggleReaderEnterBlock(data);
+	BigWiggleReaderEnterBlock(data);
 
 	return newWiggleIterator(data, &BigWiggleReaderPop, &BigWiggleReaderSeek);
 }	

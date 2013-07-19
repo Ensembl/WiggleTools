@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <zlib.h>
 
 // Local header
 #include "wiggleTools.h"
@@ -79,6 +80,19 @@ FILE * openOrFail(char * filename, char * description, char * mode) {;
 //////////////////////////////////////////////////////
 // Output
 //////////////////////////////////////////////////////
+
+static void gzprint(WiggleIterator * wi, gzFile out) {
+	while (!wi->done) {
+		gzprintf(out, "%s\t%i\t%i\t%f\n", wi->chrom, wi->start, wi->finish - 1, wi->value);
+		pop(wi);
+	}
+}
+
+void toZippedFile(WiggleIterator * wi, char * filename) {
+	gzFile file = gzopen(filename, "w");
+	gzprint(wi, file);
+	gzclose(file);
+}
 
 static void print(WiggleIterator * wi, FILE * out) {
 	while (!wi->done) {

@@ -62,27 +62,30 @@ void enterBlock(BigFileReaderData * data) {
 	data->chrom = data->blockData->chrom;
 }
 
-void goToNextBlock(BigFileReaderData * data) {
-	BlockData * prevBlockData = data->blockData;
-
+static void waitForNextBlock(BigFileReaderData * data) {
 	pthread_mutex_lock(&data->count_mutex);
 	// Check whether allowed to step forward
-	if (data->blockCount == 0)
+	if (data->blockCount == 0) {
 		pthread_cond_wait(&data->count_cond, &data->count_mutex);
+	}
 	// Signal freed memory
 	data->blockCount--;
 	pthread_cond_signal(&data->count_cond);
 	pthread_mutex_unlock(&data->count_mutex);
+}
 
+void goToNextBlock(BigFileReaderData * data) {
+	BlockData * prevBlockData = data->blockData;
+	waitForNextBlock(data);
 	data->blockData = data->blockData->next;
 	destroyBlockData(prevBlockData);
-
 }
 
 static void declareNewBlock(BigFileReaderData * data) {
 	pthread_mutex_lock(&data->count_mutex);
-	if (data->blockCount > MAX_HEAD_START)
+	if (data->blockCount > MAX_HEAD_START) {
 		pthread_cond_wait(&data->count_cond, &data->count_mutex);
+	}
 	data->blockCount++;
 	pthread_cond_signal(&data->count_cond);
 	pthread_mutex_unlock(&data->count_mutex);
@@ -121,7 +124,7 @@ static void downloadBigRegion(BigFileReaderData * data, char * chrom, int start,
 
 	blockList = bbiOverlappingBlocks(data->bwf, data->bwf->unzoomedCir, chrom, start, finish, NULL);
 
-	for (block = blockList; block; block=block->next) {
+	for (block = blockList; block; block=afterGap) {
 		/* Read contiguous blocks into mergedBuf. */
 		fileOffsetSizeFindGap(block, &beforeGap, &afterGap);
 
@@ -147,13 +150,13 @@ static void downloadBigRegion(BigFileReaderData * data, char * chrom, int start,
 }
 
 static void downloadFullGenome(BigFileReaderData * data) {
-	struct bbiChromInfo *chromList, *chrom;
-	chromList = bbiChromList(data->bwf);
+	struct bbiChromInfo *chromList = bbiChromList(data->bwf);
+	struct bbiChromInfo *chrom;
 
 	for (chrom = chromList; chrom; chrom = chrom->next) 
 		downloadBigRegion(data, chrom->name, 0, chrom->size);
 	// TODO free chromList memory... yes but labels lost! Need to be copied out first....
-
+	//bbiChromInfoFreeList(&(data->chromList));
 }
 
 static void * downloadBigFile(void * args) {
@@ -170,7 +173,6 @@ static void * downloadBigFile(void * args) {
 }
 
 void BigFileReaderCloseFile(BigFileReaderData * data) {
-	//bbiChromInfoFreeList(&(data->chromList));
 	bbiFileClose(&(data->bwf));
 }
 
@@ -178,7 +180,6 @@ void launchDownloader(BigFileReaderData * data) {
 	pthread_mutex_init(&data->count_mutex, NULL);
 	pthread_cond_init(&data->count_cond, NULL);
 
-	// Launch download thread
 	int err = pthread_create(&data->downloaderThreadID, NULL, &downloadBigFile, data);
 	if (err) {
 		printf("Could not create new thread %i\n", err);
@@ -186,11 +187,7 @@ void launchDownloader(BigFileReaderData * data) {
 	}
 	pthread_detach(data->downloaderThreadID);
 
-	// Wait for the first block to be available
-	pthread_mutex_lock(&data->count_mutex);
-	if (data->blockCount == 0)
-		pthread_cond_wait(&data->count_cond, &data->count_mutex);
-	pthread_mutex_unlock(&data->count_mutex);
+	waitForNextBlock(data);
 }
 
 void killDownloader(BigFileReaderData * data) {

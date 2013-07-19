@@ -39,85 +39,96 @@ void popMultiplexer(Multiplexer * multi) {
 	(*(multi->pop))(multi);
 }
 
-void popListMultiplexer(Multiplexer * multi) {
-	int i, first = 0;
-	int lastFinish = multi->finish;
+static void chooseCoords(Multiplexer * multi) {
+	int i; 
 	char * lastChrom = multi->chrom;
-	bool found = false;
-	int finishedIters = 0;
+	int lastFinish = multi->finish;
+	int clipping = -1;
+	int comparison;
+	int first = -1;
+	bool * inplayPtr = multi->inplay;
+	WiggleIterator ** wiPtr = multi->iters;
 
-	if (multi->done)
-		return;
-
-	multi->chrom = NULL;
-
-	// Choose chromosome:
 	for (i = 0; i < multi->count; i++) {
-		if (multi->iters[i]->done) {
-			multi->inplay[i] = false;
-			finishedIters++;
-		} else if (!multi->chrom || strcmp(multi->iters[i]->chrom, multi->chrom) < 0) {
-			multi->chrom = multi->iters[i]->chrom;
-			multi->inplay[i] = true;
+		if ((*wiPtr)->done) {
+			*inplayPtr = false;
+		} else if (first < 0 || (comparison = strcmp((*wiPtr)->chrom, multi->chrom)) < 0) {
+			multi->chrom = (*wiPtr)->chrom;
+
+			if (lastChrom && strcmp(multi->chrom, lastChrom) == 0)
+				clipping = lastFinish;
+
+			if ((*wiPtr)->start < clipping)
+				multi->start = clipping;
+			else
+				multi->start = (*wiPtr)->start;
+
+			multi->finish = (*wiPtr)->finish;
+			*inplayPtr = true;
 			first = i;
-		} else if (strcmp(multi->iters[i]->chrom, multi->chrom) > 0){
-			multi->inplay[i] = false;
+		} else if (comparison > 0){
+			*inplayPtr = false;
 		} else {
-			multi->inplay[i] = true;
+
+			int start = (*wiPtr)->start;
+			*inplayPtr = true;
+			if (multi->start > clipping && start < multi->start) {
+				if (start < clipping)
+					multi->start = clipping;
+				else
+					multi->start = start;
+				multi->finish = (*wiPtr)->finish;
+				first = i;
+			} else if (start > multi->start) {
+				*inplayPtr = false;
+			} else if ((*wiPtr)->finish < multi->finish) {
+				multi->finish = (*wiPtr)->finish;
+			}
 		}
+
+		inplayPtr++;
+		wiPtr++;
 	}
 
-	// Check for deaths
-	if (finishedIters == multi->count) {
+	if (first < 0) {
 		multi->done = true;
 		return;
 	}
 
-	// Reset last start if you change chromosome
-	if (lastChrom && strcmp(multi->chrom, lastChrom) > 0)
-		lastFinish = -1;
+	for (i = 0; i < first; i++) 
+		multi->inplay[i] = false;
 
-	// Choose start:
-	for (i = 0; i < multi->count; i++) {
-		int start = multi->iters[i]->start;
-		if (!multi->inplay[i]) {
-			continue;
-		} else if (i < first) {
-			multi->inplay[i] = false;
-		} else if (start < lastFinish) {
-			if (!found || lastFinish < multi->start) {
-				multi->start = lastFinish;
-				first = i;
-				found = true;
-			}
-		} else if (start < multi->start || !found) {
-			multi->start = start;
-			first = i;
-			found = true;
-		} else if (start > multi->start) {
-			multi->inplay[i] = false;
-		}
-	}
+}
 
-	// Choose finish:
-	for (i = 0; i < multi->count; i++) {
-		if (!multi->inplay[i]) 
-			continue;
-		else if (i < first) {
-			multi->inplay[i] = false;
-		} else if (multi->iters[i]->finish < multi->finish || i == first)
-			multi->finish = multi->iters[i]->finish;
-	}
+static void readValues(Multiplexer * multi) {
+	int i; 
+	bool * inplayPtr = multi->inplay;
+	WiggleIterator ** wiPtr = multi->iters;
+	double * valuePtr = multi->values;
 
-	// Record values, pop as appropriate:
-	for (i = 0; i < multi->count; i++) {
-		if (multi->inplay[i]) {
-			multi->values[i] = multi->iters[i]->value;
-			if (multi->iters[i]->finish == multi->finish) {
-				pop(multi->iters[i]);
+	for (i=0; i < multi->count; i++) {
+		if (*inplayPtr) {
+			*valuePtr = (*wiPtr)->value;
+			if ((*wiPtr)->finish == multi->finish) {
+				pop(*wiPtr);
 			}
 		}
+		valuePtr++;
+		inplayPtr++;
+		wiPtr++;
 	}
+}
+
+void popListMultiplexer(Multiplexer * multi) {
+	if (multi->done)
+		return;
+
+	chooseCoords(multi);
+
+	if (multi->done) 
+		return;
+
+	readValues(multi);
 
 }
 

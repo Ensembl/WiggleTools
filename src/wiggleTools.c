@@ -97,64 +97,82 @@ static WiggleIterator ** SmartReaders(char ** filenames, int count) {
 }
 
 int main(int argc, char ** argv) {
-	if (argc < 2 || strcmp(argv[1], "help") == 0) {
+	int i=0;
+	if (argc < 2 || strcmp(argv[i], "help") == 0) {
 		printHelp();
 		return 0;
-	} else if (strcmp(argv[1], "add") == 0) {
-		toStdout(SumWiggleReducer(SmartReaders(argv + 2, argc - 2), argc - 2));
-	} else if (strcmp(argv[1], "scale") == 0) {
-		toStdout(ScaleWiggleIterator(SmartReader(argv[2]), atoi(argv[3])));
-	} else if (strcmp(argv[1], "mult") == 0) {
-		toStdout(ProductWiggleReducer(SmartReaders(argv + 2, argc - 2), argc - 2));
-	} else if (strcmp(argv[1], "min") == 0) {
-		toStdout(MinWiggleReducer(SmartReaders(argv + 2, argc - 2), argc - 2));
-	} else if (strcmp(argv[1], "max") == 0) {
-		toStdout(MaxWiggleReducer(SmartReaders(argv + 2, argc - 2), argc - 2));
-	} else if (strcmp(argv[1], "mean") == 0) {
-		toStdout(MeanWiggleReducer(SmartReaders(argv + 2, argc - 2), argc - 2));
-	} else if (strcmp(argv[1], "median") == 0) {
-		toStdout(MedianWiggleReducer(SmartReaders(argv + 2, argc - 2), argc - 2));
-	} else if (strcmp(argv[1], "stddev") == 0) {
-		toStdout(StdDevWiggleReducer(SmartReaders(argv + 2, argc - 2), argc - 2));
-	} else if (strcmp(argv[1], "var") == 0) {
-		toStdout(VarianceWiggleReducer(SmartReaders(argv + 2, argc - 2), argc - 2));
-	} else if (strcmp(argv[1], "pow") == 0) {
-		toStdout(PowerWiggleIterator(SmartReader(argv[2]), atoi(argv[3])));
-	} else if (strcmp(argv[1], "exp") == 0) {
-		if (argc == 4)
-			toStdout(ExpWiggleIterator(SmartReader(argv[2]), atoi(argv[3])));
-		else
-			toStdout(NaturalExpWiggleIterator(SmartReader(argv[2])));
-	} else if (strcmp(argv[1], "log") == 0) {
-		if (argc == 4)
-			toStdout(LogWiggleIterator(SmartReader(argv[2]), atoi(argv[3])));
-		else
-			toStdout(NaturalLogWiggleIterator(SmartReader(argv[2])));
-	} else if (strcmp(argv[1], "unit") == 0) 
-		toStdout(UnitWiggleIterator(SmartReader(argv[2])));
-	else if (strcmp(argv[1], "abs") == 0) 
-		toStdout(AbsWiggleIterator(SmartReader(argv[2])));
-	else if (strcmp(argv[1], "--help") == 0) 
-		printHelp();
-	else if (strcmp(argv[1], "pearson") == 0)
-		printf("%f\n", pearsonCorrelation(SmartReader(argv[2]), SmartReader(argv[3])));
-	else if (strcmp(argv[1], "AUC") == 0) 
-		printf("%f\n", AUC(SmartReader(argv[2])));
-	else if (strcmp(argv[1], "coverage") == 0) 
-		toStdout(apply(SmartReader(argv[2]), AUC, SmartReader(argv[3])));
-	else if (strcmp(argv[1], "stream") == 0) {
-		streamMultiplexer(stdout, newMultiplexer(SmartReaders(argv + 2, argc - 2), argc - 2));
-	} else if (strcmp(argv[1], "catch") == 0) {
-		streamMultiplexer(stdout, newStreamingMultiplexer(stdin));
-	} else if (strcmp(argv[1], "seek") == 0) {
-		WiggleIterator * wi = SmartReader(argv[2]);
-		seek(wi, argv[3], atoi(argv[4]), atoi(argv[5]));
-		toStdout(wi);
-	} else {
-		printf("Unrecognized keyword: %s\n", argv[1]);
-		puts("");
-		printHelp();
-		return 1;
+	}
+
+	for (i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "-maxBlocks") == 0) {
+			i++;
+			int value;
+			sscanf(argv[i], "%i", &value);
+			setMaxBlocks(value);
+		} else if (strcmp(argv[i], "-maxHeadStart") == 0) {
+			i++;
+			int value;
+			sscanf(argv[i], "%i", &value);
+			setMaxHeadStart(value);
+		} else {
+			if (strcmp(argv[i], "add") == 0) {
+				toFile(SumWiggleReducer(SmartReaders(argv + i+1, argc - (i+2)), argc - (i+2)), argv[argc - 1]);
+			} else if (strcmp(argv[i], "scale") == 0) {
+				toStdout(ScaleWiggleIterator(SmartReader(argv[i+1]), atoi(argv[i+2])));
+			} else if (strcmp(argv[i], "mult") == 0) {
+				toStdout(ProductWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
+			} else if (strcmp(argv[i], "min") == 0) {
+				toStdout(MinWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
+			} else if (strcmp(argv[i], "max") == 0) {
+				toStdout(MaxWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
+			} else if (strcmp(argv[i], "mean") == 0) {
+				toStdout(MeanWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
+			} else if (strcmp(argv[i], "median") == 0) {
+				toStdout(MedianWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
+			} else if (strcmp(argv[i], "stddev") == 0) {
+				toStdout(StdDevWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
+			} else if (strcmp(argv[i], "var") == 0) {
+				toStdout(VarianceWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
+			} else if (strcmp(argv[i], "pow") == 0) {
+				toStdout(PowerWiggleIterator(SmartReader(argv[i+1]), atoi(argv[i+2])));
+			} else if (strcmp(argv[i], "exp") == 0) {
+				if (argc == i+3)
+					toStdout(ExpWiggleIterator(SmartReader(argv[i+1]), atoi(argv[i+2])));
+				else
+					toStdout(NaturalExpWiggleIterator(SmartReader(argv[i+1])));
+			} else if (strcmp(argv[i], "log") == 0) {
+				if (argc == i+3)
+					toStdout(LogWiggleIterator(SmartReader(argv[i+1]), atoi(argv[i+2])));
+				else
+					toStdout(NaturalLogWiggleIterator(SmartReader(argv[i+1])));
+			} else if (strcmp(argv[i], "unit") == 0) 
+				toStdout(UnitWiggleIterator(SmartReader(argv[i+1])));
+			else if (strcmp(argv[i], "abs") == 0) 
+				toStdout(AbsWiggleIterator(SmartReader(argv[i+1])));
+			else if (strcmp(argv[i], "--help") == 0) 
+				printHelp();
+			else if (strcmp(argv[i], "pearson") == 0)
+				printf("%f\n", pearsonCorrelation(SmartReader(argv[i+1]), SmartReader(argv[i+2])));
+			else if (strcmp(argv[i], "AUC") == 0) 
+				printf("%f\n", AUC(SmartReader(argv[i+1])));
+			else if (strcmp(argv[i], "coverage") == 0) 
+				toStdout(apply(SmartReader(argv[i+1]), AUC, SmartReader(argv[i+2])));
+			else if (strcmp(argv[i], "stream") == 0) {
+				streamMultiplexer(stdout, newMultiplexer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
+			} else if (strcmp(argv[i], "catch") == 0) {
+				streamMultiplexer(stdout, newStreamingMultiplexer(stdin));
+			} else if (strcmp(argv[i], "seek") == 0) {
+				WiggleIterator * wi = SmartReader(argv[i+1]);
+				seek(wi, argv[i+2], atoi(argv[i+3]), atoi(argv[i+4]));
+				toStdout(wi);
+			} else {
+				printf("Unrecognized keyword: %s\n", argv[i]);
+				puts("");
+				printHelp();
+				return 1;
+			}
+			break;
+		}
 	}
 
 	return 0;

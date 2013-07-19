@@ -87,6 +87,7 @@ WiggleIterator * MedianWiggleReducer (WiggleIterator** , int );
 
 // Output
 void toFile (WiggleIterator *, char *);
+void toZippedFile (WiggleIterator *, char *);
 void toStdout (WiggleIterator *);
 void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, int count);
 void streamMultiplexer(FILE * dest, Multiplexer * multi);
@@ -106,5 +107,9 @@ double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 
 // Cleaning up
 void destroyWiggleIterator (WiggleIterator *);
+
+// Big file small magic
+void setMaxBlocks(int value);
+void setMaxHeadStart(int value);
 
 #endif

@@ -83,7 +83,4 @@ void killDownloader(BigFileReaderData * data);
 void destroyBlockData(BlockData * data);
 void enterBlock(BigFileReaderData * data);
 void goToNextBlock(BigFileReaderData * data);
-
-void setMaxBlocks(int value);
-void setHeadStart(int value);
 #endif

@@ -13,7 +13,7 @@ bin: ${BINDIR}/wiggletools
 
 ${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggleTools.o
 	mkdir -p ${BINDIR}
-	${CC} ${CFLAGS} ${LIB_PATHS} wiggleTools.c -static ${LIBS} -o ${BINDIR}/wiggletools
+	${CC} ${CFLAGS} ${LIB_PATHS} wiggleTools.c -static ${LIBS} -o ${BINDIR}/wiggletools 
 
 lib: ${LIBDIR}/libwiggletools.a 
 
