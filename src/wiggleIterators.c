@@ -196,6 +196,7 @@ WiggleIterator * UnitWiggleIterator(WiggleIterator * i) {
 //////////////////////////////////////////////////////
 
 #define BLOCK_LENGTH 10000 
+#define MAX_OUT_BLOCKS 2
 
 typedef struct BlockData_st {
 	char * chroms[BLOCK_LENGTH];
@@ -212,6 +213,7 @@ typedef struct TeeWiggleIteratorData_st {
 	BlockData * finishedBlocks;
 	BlockData * lastBlock;
 	BlockData * fillingBlock;
+	int count;
 	pthread_t threadID;
 	pthread_mutex_t continue_mutex;
 	pthread_cond_t continue_cond;
@@ -219,12 +221,12 @@ typedef struct TeeWiggleIteratorData_st {
 } TeeWiggleIteratorData;
 
 static void appendFinishedBlock(TeeWiggleIteratorData * data) {
-	if (data->lastBlock) {
+	if (data->lastBlock)
 		data->lastBlock->next = data->fillingBlock;
-	} else {
+	else
 		data->finishedBlocks = data->fillingBlock;
-	}
 	data->lastBlock = data->fillingBlock;
+	data->count++;
 }
 
 static void printBlock(FILE * file, BlockData * block) {
@@ -243,6 +245,8 @@ static void goToNextBlock(TeeWiggleIteratorData * data) {
 	data->finishedBlocks = data->finishedBlocks->next;
 	if (!data->finishedBlocks) 
 		data->lastBlock = NULL;
+	data->count--;
+	pthread_cond_signal(&data->continue_cond);
 	pthread_mutex_unlock(&data->continue_mutex);
 
 	free(ptr);
@@ -253,9 +257,8 @@ static void * printToFile(void * args) {
 
 	// Wait for first block to arrive
 	pthread_mutex_lock(&data->continue_mutex);
-	if (!data->finishedBlocks && !data->done) {
+	if (!data->finishedBlocks && !data->done)
 		pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
-	}
 	pthread_mutex_unlock(&data->continue_mutex);
 
 	while(data->finishedBlocks) {
@@ -283,6 +286,8 @@ void TeeWiggleIteratorPop(WiggleIterator * wi) {
 			pthread_mutex_lock(&data->continue_mutex);
 			appendFinishedBlock(data);
 			pthread_cond_signal(&data->continue_cond);
+			if (data->count > MAX_OUT_BLOCKS)
+				pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
 			pthread_mutex_unlock(&data->continue_mutex);
 			data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
 		}
