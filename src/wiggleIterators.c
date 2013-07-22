@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <zlib.h>
+#include <pthread.h>
 
 // Local header
 #include "wiggleTools.h"
@@ -75,40 +76,6 @@ FILE * openOrFail(char * filename, char * description, char * mode) {;
 		printf("Could not open %s %s, exiting...\n", (char *) description, (char *) filename);
 	}
 	return file;
-}
-
-//////////////////////////////////////////////////////
-// Output
-//////////////////////////////////////////////////////
-
-static void gzprint(WiggleIterator * wi, gzFile out) {
-	while (!wi->done) {
-		gzprintf(out, "%s\t%i\t%i\t%f\n", wi->chrom, wi->start, wi->finish - 1, wi->value);
-		pop(wi);
-	}
-}
-
-void toZippedFile(WiggleIterator * wi, char * filename) {
-	gzFile file = gzopen(filename, "w");
-	gzprint(wi, file);
-	gzclose(file);
-}
-
-static void print(WiggleIterator * wi, FILE * out) {
-	while (!wi->done) {
-		fprintf(out, "%s\t%i\t%i\t%f\n", wi->chrom, wi->start, wi->finish - 1, wi->value);
-		pop(wi);
-	}
-}
-
-void toFile(WiggleIterator * wi, char * filename) {
-	FILE * file = openOrFail(filename, "output file", "w");
-	print(wi, file);
-	fclose(file);
-}
-
-void toStdout(WiggleIterator * wi) {
-	print(wi, stdout);
 }
 
 //////////////////////////////////////////////////////
@@ -222,6 +189,167 @@ WiggleIterator * UnitWiggleIterator(WiggleIterator * i) {
 	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) calloc(1, sizeof(UnitWiggleIteratorData));
 	data->iter = i;
 	return newWiggleIterator(data, &UnitWiggleIteratorPop, &UnitWiggleIteratorSeek);
+}
+
+//////////////////////////////////////////////////////
+// Tee operator
+//////////////////////////////////////////////////////
+
+#define BLOCK_LENGTH 10000 
+
+typedef struct BlockData_st {
+	char * chroms[BLOCK_LENGTH];
+	int starts[BLOCK_LENGTH];
+	int finishes[BLOCK_LENGTH];
+	double values[BLOCK_LENGTH];
+	int count;
+	struct BlockData_st * next;
+} BlockData;
+
+typedef struct TeeWiggleIteratorData_st {
+	FILE * file;
+	WiggleIterator * iter;
+	BlockData * finishedBlocks;
+	BlockData * lastBlock;
+	BlockData * fillingBlock;
+	pthread_t threadID;
+	pthread_mutex_t continue_mutex;
+	pthread_cond_t continue_cond;
+	bool done;
+} TeeWiggleIteratorData;
+
+static void appendFinishedBlock(TeeWiggleIteratorData * data) {
+	if (data->lastBlock) {
+		data->lastBlock->next = data->fillingBlock;
+	} else {
+		data->finishedBlocks = data->fillingBlock;
+	}
+	data->lastBlock = data->fillingBlock;
+}
+
+static void printBlock(FILE * file, BlockData * block) {
+	int i;
+
+	for (i = 0; i < block->count; i++)
+		fprintf(file, "%s\t%i\t%i\t%lf\n", block->chroms[i], block->starts[i], block->finishes[i], block->values[i]);
+}
+
+static void goToNextBlock(TeeWiggleIteratorData * data) {
+	BlockData * ptr = data->finishedBlocks;
+
+	pthread_mutex_lock(&data->continue_mutex);
+	if (!data->finishedBlocks->next && !data->done) 
+		pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
+	data->finishedBlocks = data->finishedBlocks->next;
+	if (!data->finishedBlocks) 
+		data->lastBlock = NULL;
+	pthread_mutex_unlock(&data->continue_mutex);
+
+	free(ptr);
+}
+
+static void * printToFile(void * args) {
+	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) args;
+
+	// Wait for first block to arrive
+	pthread_mutex_lock(&data->continue_mutex);
+	if (!data->finishedBlocks && !data->done) {
+		pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
+	}
+	pthread_mutex_unlock(&data->continue_mutex);
+
+	while(data->finishedBlocks) {
+		printBlock(data->file, data->finishedBlocks);
+		goToNextBlock(data);
+	}
+	return NULL;
+}
+
+void TeeWiggleIteratorPop(WiggleIterator * wi) {
+	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+	if (!data->iter->done) {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		wi->value = iter->value;
+
+		int index = data->fillingBlock->count;
+		data->fillingBlock->chroms[index] =  iter->chrom;
+		data->fillingBlock->starts[index] =  iter->start;
+		data->fillingBlock->finishes[index] =  iter->finish;
+		data->fillingBlock->values[index] =  iter->value;
+		if (++data->fillingBlock->count >= BLOCK_LENGTH) {
+			pthread_mutex_lock(&data->continue_mutex);
+			appendFinishedBlock(data);
+			pthread_cond_signal(&data->continue_cond);
+			pthread_mutex_unlock(&data->continue_mutex);
+			data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
+		}
+		pop(iter);
+	} else {
+		pthread_mutex_lock(&data->continue_mutex);
+		appendFinishedBlock(data);
+		data->done = true;
+		pthread_cond_signal(&data->continue_cond);
+		pthread_mutex_unlock(&data->continue_mutex);
+		wi->done = true;
+		pthread_join(data->threadID, NULL);
+	}
+}
+
+static void launchWriter(TeeWiggleIteratorData * data) {
+	pthread_cond_init(&data->continue_cond, NULL);
+	pthread_mutex_init(&data->continue_mutex, NULL);
+
+	int err = pthread_create(&data->threadID, NULL, &printToFile, data);
+	if (err) {
+		printf("Could not create new thread %i\n", err);
+		abort();
+	}
+}
+
+static void killWriter(TeeWiggleIteratorData * data) {
+	pthread_cancel(data->threadID);
+	pthread_cond_destroy(&data->continue_cond);
+	pthread_mutex_destroy(&data->continue_mutex);
+}
+
+void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) wi->data;
+	killWriter(data);
+	seek(data->iter, chrom, start, finish);
+	wi->done = false;
+	launchWriter(data);
+	pop(wi);
+}
+
+WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * file) {
+	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
+	data->iter = i;
+	data->file = file;
+	data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
+	launchWriter(data);
+
+	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
+}
+
+void runWiggleIterator(WiggleIterator * wi) {
+	while (!wi->done)
+		pop(wi);
+}
+
+void toFile(WiggleIterator * wi, char * filename) {
+	FILE * file = fopen(filename, "w");
+	if (!file) {
+		printf("Could not open file %s\n", filename);
+		exit(1);
+	}
+	runWiggleIterator(TeeWiggleIterator(wi, file));
+}
+
+void toStdout(WiggleIterator * wi) {
+	runWiggleIterator(TeeWiggleIterator(wi, stdout));
 }
 
 //////////////////////////////////////////////////////
