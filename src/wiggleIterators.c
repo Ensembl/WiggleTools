@@ -218,6 +218,7 @@ typedef struct TeeWiggleIteratorData_st {
 	pthread_mutex_t continue_mutex;
 	pthread_cond_t continue_cond;
 	bool done;
+	bool binary;
 } TeeWiggleIteratorData;
 
 static void appendFinishedBlock(TeeWiggleIteratorData * data) {
@@ -234,6 +235,34 @@ static void printBlock(FILE * file, BlockData * block) {
 
 	for (i = 0; i < block->count; i++)
 		fprintf(file, "%s\t%i\t%i\t%lf\n", block->chroms[i], block->starts[i], block->finishes[i], block->values[i]);
+}
+
+static void printBinaryBlock(FILE * file, BlockData * block) {
+	int i;
+	char ** chromPtr = block->chroms;
+	int * startPtr = block->starts;
+	int * finishPtr = block->finishes;
+	double * valuePtr = block->values;
+	char separator = '\0';
+	char * lastChrom = NULL;
+
+	for (i = 0; i < block->count; i++) {
+		if (*chromPtr != lastChrom) {
+			fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, file);
+		} else {
+			fwrite(&separator, sizeof(char), 1, file);
+		}
+		lastChrom = *chromPtr;
+
+		fwrite(startPtr, sizeof(*startPtr), 1, file);
+		fwrite(finishPtr, sizeof(*finishPtr), 1, file);
+		fwrite(valuePtr, sizeof(*valuePtr), 1, file);
+
+		chromPtr++;
+		startPtr++;
+		finishPtr++;
+		valuePtr++;
+	}
 }
 
 static void goToNextBlock(TeeWiggleIteratorData * data) {
@@ -262,7 +291,10 @@ static void * printToFile(void * args) {
 	pthread_mutex_unlock(&data->continue_mutex);
 
 	while(data->finishedBlocks) {
-		printBlock(data->file, data->finishedBlocks);
+		if (data->binary)
+			printBinaryBlock(data->file, data->finishedBlocks);
+		else
+			printBlock(data->file, data->finishedBlocks);
 		goToNextBlock(data);
 	}
 	return NULL;
@@ -329,6 +361,17 @@ void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, i
 	pop(wi);
 }
 
+WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator * i, FILE * file) {
+	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
+	data->iter = i;
+	data->file = file;
+	data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
+	data->binary = true;
+	launchWriter(data);
+
+	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
+}
+
 WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * file) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = i;
@@ -342,6 +385,15 @@ WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * file) {
 void runWiggleIterator(WiggleIterator * wi) {
 	while (!wi->done)
 		pop(wi);
+}
+
+void toBinaryFile(WiggleIterator * wi, char * filename) {
+	FILE * file = fopen(filename, "wb");
+	if (!file) {
+		printf("Could not open file %s\n", filename);
+		exit(1);
+	}
+	runWiggleIterator(BinaryTeeWiggleIterator(wi, file));
 }
 
 void toFile(WiggleIterator * wi, char * filename) {
@@ -956,6 +1008,8 @@ WiggleIterator * SmartReader(char * filename) {
 		return BigBedReader(filename);
 	else if (!strcmp(filename + length - 4, ".bam"))
 		return BamReader(filename);
+	else if (!strcmp(filename + length - 4, ".bin"))
+		return BinaryFileReader(filename);
 	else if (!strcmp(filename, "-"))
 		return WiggleReader(filename);
 	else {

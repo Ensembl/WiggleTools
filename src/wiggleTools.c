@@ -116,7 +116,7 @@ int main(int argc, char ** argv) {
 			setMaxHeadStart(value);
 		} else {
 			if (strcmp(argv[i], "add") == 0) {
-				toFile(SumWiggleReducer(SmartReaders(argv + i+1, argc - (i+2)), argc - (i+2)), argv[argc - 1]);
+				toBinaryFile(SumWiggleReducer(SmartReaders(argv + i+1, argc - (i+2)), argc - (i+2)), argv[argc - 1]);
 			} else if (strcmp(argv[i], "scale") == 0) {
 				toStdout(ScaleWiggleIterator(SmartReader(argv[i+1]), atoi(argv[i+2])));
 			} else if (strcmp(argv[i], "mult") == 0) {

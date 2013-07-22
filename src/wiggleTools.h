@@ -51,6 +51,7 @@ WiggleIterator * BigWiggleReader (char *);
 WiggleIterator * BedReader (char *);
 WiggleIterator * BigBedReader (char *);
 WiggleIterator * BamReader (char *);
+WiggleIterator * BinaryFileReader (char *);
 Multiplexer * newStreamingMultiplexer(FILE * input);
 
 // Algebraic operations
@@ -87,6 +88,7 @@ WiggleIterator * MedianWiggleReducer (WiggleIterator** , int );
 
 // Output
 void toFile (WiggleIterator *, char *);
+void toBinaryFile (WiggleIterator *, char *);
 void toZippedFile (WiggleIterator *, char *);
 void toStdout (WiggleIterator *);
 void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, int count);
