@@ -17,7 +17,7 @@ ${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggleTools.o
 
 lib: ${LIBDIR}/libwiggletools.a 
 
-${LIBDIR}/libwiggletools.a: wiggleIterators.o wiggleReader.o bigWiggleReader.o wiggleMultiplexer.o wiggleReducers.o bedReader.o bigBedReader.o bamReader.o wiggleStreaming.o wiggleApply.o bigFileReader.o binaryFileReader.o
+${LIBDIR}/libwiggletools.a: wiggleIterators.o wiggleReader.o bigWiggleReader.o wiggleMultiplexer.o wiggleReducers.o bedReader.o bigBedReader.o bamReader.o wiggleStreaming.o wiggleApply.o bigFileReader.o binaryFileReader.o commandParser.o
 	mkdir -p ${LIBDIR}
 	ar rcs ${LIBDIR}/libwiggletools.a *.o ${SAMTOOLS}/bam_plcmd.o ${SAMTOOLS}/sample.o ${SAMTOOLS}/bam2bcf.o ${SAMTOOLS}/errmod.o ${SAMTOOLS}/bam2bcf_indel.o
 

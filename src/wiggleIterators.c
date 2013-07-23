@@ -654,175 +654,6 @@ WiggleIterator * AbsWiggleIterator(WiggleIterator * i) {
 }
 
 //////////////////////////////////////////////////////
-// Binary Sum operator
-//////////////////////////////////////////////////////
-
-typedef struct BinaryWiggleIteratorData_st {
-	WiggleIterator * iterA;
-	WiggleIterator * iterB;
-} BinaryWiggleIteratorData;
-
-static void copyInterval(WiggleIterator * wi, WiggleIterator * iter) {
-	if (!wi->chrom || strcmp(wi->chrom, iter->chrom) < 0) {
-		wi->chrom = iter->chrom;
-		wi->finish = -1;
-	}
-	wi->start = iter->start > wi->finish? iter->start: wi->finish;
-	wi->finish = iter->finish;
-	wi->value = iter->value;
-	pop(iter);
-}
-
-void SumWiggleIteratorPop(WiggleIterator * wi) {
-	BinaryWiggleIteratorData * data = (BinaryWiggleIteratorData *) wi->data;
-	WiggleIterator * iterA = data->iterA;
-	WiggleIterator * iterB = data->iterB;
-	if (iterA->done && iterB->done) 
-		// All done
-		wi->done = true;
-	else if (iterA->done)
-		// A expired
-		copyInterval(wi, iterB);
-	else if (iterB->done)
-		// B expired
-		copyInterval(wi, iterA);
-	else {
-		int chromDiff = strcmp(iterA->chrom, iterB->chrom);
-
-		if (chromDiff < 0) 
-			// A on previous chromosome
-			copyInterval(wi, iterA);
-		else if (chromDiff > 0)
-			// B on previous chromosome
-			copyInterval(wi, iterB);
-		else {
-			// Both iterators on the same wi->chromosome:	
-			if (!wi->chrom || strcmp(wi->chrom, iterA->chrom) < 0) {
-				wi->chrom = iterA->chrom;
-				wi->finish = -1;
-			}
-			if (iterA->start < iterB->start) {
-				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
-				if (iterA->finish <= iterB->start) {
-					wi->finish = iterA->finish;
-					wi->value = iterA->value;
-					pop(iterA);
-				} else {
-					wi->finish = iterB->start - 1;
-					wi->value = iterA->value;
-				}
-			} else if (iterB->start < iterA->start) {
-				wi->start = iterB->start > wi->finish? iterB->start: wi->finish;	
-				if (iterB->finish <= iterA->start) {
-					wi->finish = iterB->finish;
-					wi->value = iterB->value;
-					pop(iterB);
-				} else {
-					wi->finish = iterA->start - 1;
-					wi->value = iterB->value;
-				}
-			} else {
-				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
-				wi->value = iterA->value + iterB->value;
-				if (iterA->finish < iterB->finish) {
-					wi->finish = iterA->finish;
-					pop(iterA);
-				} else if (iterB->finish < iterA->finish) {
-					wi->finish = iterB->finish;
-					pop(iterB);
-				} else {
-					wi->finish = iterA->finish;
-					pop(iterA);
-					pop(iterB);
-				}
-			}
-		}
-	}
-}
-
-void BinaryWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	BinaryWiggleIteratorData * data = (BinaryWiggleIteratorData *) wi->data;
-	seek(data->iterA, chrom, start, finish);
-	seek(data->iterB, chrom, start, finish);
-
-}
-WiggleIterator * SumWiggleIterator(WiggleIterator * a, WiggleIterator * b) {
-	BinaryWiggleIteratorData * data = (BinaryWiggleIteratorData *) calloc(1, sizeof(BinaryWiggleIteratorData));
-	data->iterA = a;
-	data->iterB = b;
-	return newWiggleIterator(data, &SumWiggleIteratorPop, &BinaryWiggleIteratorSeek);
-}
-
-//////////////////////////////////////////////////////
-// Binary Product operator
-//////////////////////////////////////////////////////
-
-void ProductWiggleIteratorPop(WiggleIterator * wi) {
-	BinaryWiggleIteratorData * data = (BinaryWiggleIteratorData *) wi->data;
-	WiggleIterator * iterA = data->iterA;
-	WiggleIterator * iterB = data->iterB;
-
-	if (iterA->done || iterB->done)
-		wi->done = true;
-	else {	
-		int chromDiff = strcmp(iterA->chrom, iterB->chrom);
-		if (chromDiff < 0) 
-			pop(iterA);
-		else if (chromDiff > 0)
-			pop(iterB);
-		else {
-			// Both iterators on the same chromosome:	
-			if (!wi->chrom || strcmp(wi->chrom, iterA->chrom) < 0) {
-				wi->chrom = iterA->chrom;
-				wi->finish = -1;
-			}
-			if (iterA->start < iterB->start) {
-				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
-				if (iterA->finish <= iterB->start) {
-					wi->finish = iterA->finish;
-					wi->value = 0;
-					pop(iterA);
-				} else {
-					wi->finish = iterB->start - 1;
-					wi->value = 0;
-				}
-			} else if (iterB->start < iterA->start) {
-				wi->start = iterB->start > wi->finish? iterB->start: wi->finish;	
-				if (iterB->finish <= iterA->start) {
-					wi->finish = iterB->finish;
-					wi->value = 0;
-					pop(iterB);
-				} else {
-					wi->finish = iterA->start - 1;
-					wi->value = 0;
-				}
-			} else {
-				wi->start = iterA->start > wi->finish? iterA->start: wi->finish;	
-				wi->value = iterA->value * iterB->value;
-				if (iterA->finish < iterB->finish) {
-					wi->finish = iterA->finish;
-					pop(iterA);
-				} else if (iterB->finish < iterA->finish) {
-					wi->finish = iterB->finish;
-					pop(iterB);
-				} else {
-					wi->finish = iterA->finish;
-					pop(iterA);
-					pop(iterB);
-				}
-			}
-		}
-	}
-}
-
-WiggleIterator * ProductWiggleIterator(WiggleIterator * a, WiggleIterator * b) {
-	BinaryWiggleIteratorData * data = (BinaryWiggleIteratorData *) calloc(1, sizeof(BinaryWiggleIteratorData));
-	data->iterA = a;
-	data->iterB = b;
-	return newWiggleIterator(data, &ProductWiggleIteratorPop, &BinaryWiggleIteratorSeek);
-}
-
-//////////////////////////////////////////////////////
 // Correlation function
 //////////////////////////////////////////////////////
 // Note: this is an approximate calculation of the Pearson calculation
@@ -1016,4 +847,47 @@ WiggleIterator * SmartReader(char * filename) {
 		printf("Could not recognize file format from suffix: %s\n", filename);
 		exit(1);
 	}
+}
+
+//////////////////////////////////////////////////////
+// Concatenation 
+//////////////////////////////////////////////////////
+
+typedef struct CatWiggleIteratorData_st {
+	char ** filenames;
+	int count;
+	int index;
+	WiggleIterator * iter;
+} CatWiggleIteratorData;
+
+void CatWiggleIteratorPop(WiggleIterator * wi) {
+	CatWiggleIteratorData * data = (CatWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+	if (!data->iter->done) {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		wi->value = iter->value;
+		pop(iter);
+	} else if (++data->index < data->count) {
+		data->iter = SmartReader(data->filenames[data->index]);
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		wi->value = iter->value;
+		pop(iter);
+	} else 
+		wi->done = true;
+}
+
+void CatWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	puts("Cannot apply seek to a concatenation of files!");
+}
+
+WiggleIterator * CatWiggleIterator(char ** filenames, int count) {
+	CatWiggleIteratorData * data = (CatWiggleIteratorData *) calloc(1, sizeof(CatWiggleIteratorData));
+	data->count = count;
+	data->filenames = filenames;
+	data->iter = SmartReader(data->filenames[0]);
+	return newWiggleIterator(data, &CatWiggleIteratorPop, &CatWiggleIteratorSeek);
 }

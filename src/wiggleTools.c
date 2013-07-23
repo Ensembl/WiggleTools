@@ -47,58 +47,36 @@ static void printHelp() {
 	puts("\tThe program outputs a bedGraph flat file in stdout.");
 	puts("");
 	puts("Parameters:");
-	puts("\t// Unary operators");
-	puts("\twiggletools unit [options] file");
-	puts("\twiggletools abs [options] file");
-	puts("\twiggletools exp [options] file");
-	puts("\twiggletools log [options] file");
-	puts("\t");
-	puts("\t// Operators between a signal and a scalar");
-	puts("\twiggletools scale [options] file factor");
-	puts("\twiggletools pow [options] file exponent");
-	puts("\twiggletools exp [options] file radix");
-	puts("\twiggletools log [options] file base");
-	puts("\t");
-	puts("\t// Reduction operators");
-	puts("\twiggletools add [options] file1 file2 ... ");
-	puts("\twiggletools mult [options] file1 file2 ...");
-	puts("\twiggletools min [options] file1 file2 ...");
-	puts("\twiggletools max [options] file1 file2 ...");
-	puts("\twiggletools mean [options] file1 file2 ...");
-	puts("\twiggletools var [options] file1 file2 ...");
-	puts("\twiggletools stddev [options] file1 file2 ...");
-	puts("\twiggletools median [options] file1 file2 ...");
-	puts("\t");
-	puts("\t// Calculations");
-	puts("\twiggletools AUC [options] file");
-	puts("\twiggletools pearson [options] file1 file2");
+	puts("wiggletools [opts] 'command'");
 	puts("");
-	puts("\t// Applied statistics");
-	puts("\twiggletools coverage regions data");
-	puts("\t// Other");
-	puts("\twiggletools --help");
-}
-
-//static int stripOptions(int argc, char ** argv) {
-//	int i;
-//
-//	for (i = 0; (i < argc) && (argv[i][0] == '-'); i++)
-//		parseOption(argv[i]);
-//
-//	return i;
-//}
-
-static WiggleIterator ** SmartReaders(char ** filenames, int count) {
-	int i;
-	WiggleIterator ** iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator*));
-	for (i = 0; i < count; i++)
-		iters[i] = SmartReader(filenames[i]);
-	return iters;
+	puts("Options:");
+	puts("\t-maxBlocks n\t: set the max number of blocks read at once in a BigFile reader");
+	puts("\t-maxHeadStart n\t: set the max number of decompressed blocks in a BigFile reader");
+	puts("\t--help");
+	puts("");
+	puts("Command grammar:");
+	puts("\tcommand:\t\titerator|statistic iterator|apply|comparison");
+	puts("\titerator:\t\tfilename|unary_operation|binary_operation|reduction|output_operation");
+	puts("\tunary_operation:\tunary_operator iterator");
+	puts("\tunary_operator:\t\t'unit'");
+	puts("\tbinary_operation:\tbinary_operator iterator");
+	puts("\tbinary_operator:\t'diff'");
+	puts("\treduction:\t\treduction_operator multiplexer");
+	puts("\treduction_operator:\t'cat'|'add'|'product'|'mean'|'variance'|'stddev'|'median'|'min'|'max'");
+	puts("\tmultiplexer:\t\tfilename_list|map");
+	puts("\tfilename list:\t\tfilename1 filename2 ... ; ");
+	puts("\tmap:\t\t\t'map' unary_operator multiplexer");
+	puts("\toutput_operation:\toutput_operator filename iterator");
+	puts("\toutput_operator:\t'write'|'writeb'|'print'");
+	puts("\tstatistic:\t\t'AUC'|'mean'");
+	puts("\tapply:\t\t\t'apply' statistic iterator iterator");
+	puts("\tcomparison:\t\tcomparator iterator iterator");
+	puts("\tcomparator:\t\t'pearson'");
 }
 
 int main(int argc, char ** argv) {
 	int i=0;
-	if (argc < 2 || strcmp(argv[i], "help") == 0) {
+	if (argc < 2 || strcmp(argv[1], "--help") == 0) {
 		printHelp();
 		return 0;
 	}
@@ -115,63 +93,7 @@ int main(int argc, char ** argv) {
 			sscanf(argv[i], "%i", &value);
 			setMaxHeadStart(value);
 		} else {
-			if (strcmp(argv[i], "add") == 0) {
-				toBinaryFile(SumWiggleReducer(SmartReaders(argv + i+1, argc - (i+2)), argc - (i+2)), argv[argc - 1]);
-			} else if (strcmp(argv[i], "scale") == 0) {
-				toStdout(ScaleWiggleIterator(SmartReader(argv[i+1]), atoi(argv[i+2])));
-			} else if (strcmp(argv[i], "mult") == 0) {
-				toStdout(ProductWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
-			} else if (strcmp(argv[i], "min") == 0) {
-				toStdout(MinWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
-			} else if (strcmp(argv[i], "max") == 0) {
-				toStdout(MaxWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
-			} else if (strcmp(argv[i], "mean") == 0) {
-				toStdout(MeanWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
-			} else if (strcmp(argv[i], "median") == 0) {
-				toStdout(MedianWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
-			} else if (strcmp(argv[i], "stddev") == 0) {
-				toStdout(StdDevWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
-			} else if (strcmp(argv[i], "var") == 0) {
-				toStdout(VarianceWiggleReducer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
-			} else if (strcmp(argv[i], "pow") == 0) {
-				toStdout(PowerWiggleIterator(SmartReader(argv[i+1]), atoi(argv[i+2])));
-			} else if (strcmp(argv[i], "exp") == 0) {
-				if (argc == i+3)
-					toStdout(ExpWiggleIterator(SmartReader(argv[i+1]), atoi(argv[i+2])));
-				else
-					toStdout(NaturalExpWiggleIterator(SmartReader(argv[i+1])));
-			} else if (strcmp(argv[i], "log") == 0) {
-				if (argc == i+3)
-					toStdout(LogWiggleIterator(SmartReader(argv[i+1]), atoi(argv[i+2])));
-				else
-					toStdout(NaturalLogWiggleIterator(SmartReader(argv[i+1])));
-			} else if (strcmp(argv[i], "unit") == 0) 
-				toStdout(UnitWiggleIterator(SmartReader(argv[i+1])));
-			else if (strcmp(argv[i], "abs") == 0) 
-				toStdout(AbsWiggleIterator(SmartReader(argv[i+1])));
-			else if (strcmp(argv[i], "--help") == 0) 
-				printHelp();
-			else if (strcmp(argv[i], "pearson") == 0)
-				printf("%f\n", pearsonCorrelation(SmartReader(argv[i+1]), SmartReader(argv[i+2])));
-			else if (strcmp(argv[i], "AUC") == 0) 
-				printf("%f\n", AUC(SmartReader(argv[i+1])));
-			else if (strcmp(argv[i], "coverage") == 0) 
-				toStdout(apply(SmartReader(argv[i+1]), AUC, SmartReader(argv[i+2])));
-			else if (strcmp(argv[i], "stream") == 0) {
-				streamMultiplexer(stdout, newMultiplexer(SmartReaders(argv + i+1, argc - (i+1)), argc - (i+1)));
-			} else if (strcmp(argv[i], "catch") == 0) {
-				streamMultiplexer(stdout, newStreamingMultiplexer(stdin));
-			} else if (strcmp(argv[i], "seek") == 0) {
-				WiggleIterator * wi = SmartReader(argv[i+1]);
-				seek(wi, argv[i+2], atoi(argv[i+3]), atoi(argv[i+4]));
-				toStdout(wi);
-			} else {
-				printf("Unrecognized keyword: %s\n", argv[i]);
-				puts("");
-				printHelp();
-				return 1;
-			}
-			break;
+			rollYourOwn(argv[i]);
 		}
 	}
 

@@ -75,6 +75,11 @@ static void waitForNextBlock(BigFileReaderData * data) {
 }
 
 void goToNextBlock(BigFileReaderData * data) {
+	// DEBUG
+	//static int i = 0;
+	//if (++i > 10000)
+	//	exit(0);
+	// END OF DEBUG
 	BlockData * prevBlockData = data->blockData;
 	waitForNextBlock(data);
 	data->blockData = data->blockData->next;

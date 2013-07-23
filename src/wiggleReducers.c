@@ -86,11 +86,6 @@ WiggleIterator * SelectReduction(Multiplexer * multi, int index) {
 	return newWiggleIterator(data, &SelectReductionPop, &WiggleReducerSeek);
 }
 
-WiggleIterator * SelectWiggleReducer(WiggleIterator** iters, int count, int index) {
-	return SelectReduction(newMultiplexer(iters, count), index);
-}
-
-
 ////////////////////////////////////////////////////////
 // Max
 ////////////////////////////////////////////////////////
@@ -135,10 +130,6 @@ WiggleIterator * MaxReduction(Multiplexer * multi) {
 	return newWiggleIterator(data, &MaxReductionPop, &WiggleReducerSeek);
 }
 
-WiggleIterator * MaxWiggleReducer(WiggleIterator** iters, int count) {
-	return MaxReduction(newMultiplexer(iters, count));
-}
-
 ////////////////////////////////////////////////////////
 // Min
 ////////////////////////////////////////////////////////
@@ -177,14 +168,10 @@ void MinReductionPop(WiggleIterator * wi) {
 	popMultiplexer(multi);
 }
 
-static WiggleIterator * MinReduction(Multiplexer * multi) {
+WiggleIterator * MinReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
 	return newWiggleIterator(data, &MinReductionPop, &WiggleReducerSeek);
-}
-
-WiggleIterator * MinWiggleReducer(WiggleIterator** iters, int count) {
-	return MinReduction(newMultiplexer(iters, count));
 }
 
 ////////////////////////////////////////////////////////
@@ -215,14 +202,10 @@ void SumReductionPop(WiggleIterator * wi) {
 	popMultiplexer(multi);
 }
 
-static WiggleIterator * SumReduction(Multiplexer * multi) {
+WiggleIterator * SumReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
 	return newWiggleIterator(data, &SumReductionPop, &WiggleReducerSeek);
-}
-
-WiggleIterator * SumWiggleReducer(WiggleIterator** iters, int count) {
-	return SumReduction(newMultiplexer(iters, count));
 }
 
 ////////////////////////////////////////////////////////
@@ -258,14 +241,10 @@ void ProductReductionPop(WiggleIterator * wi) {
 	popMultiplexer(multi);
 }
 
-static WiggleIterator * ProductReduction(Multiplexer * multi) {
+WiggleIterator * ProductReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
 	return newWiggleIterator(data, &ProductReductionPop, &WiggleReducerSeek);
-}
-
-WiggleIterator * ProductWiggleReducer(WiggleIterator** iters, int count) {
-	return ProductReduction(newMultiplexer(iters, count));
 }
 
 ////////////////////////////////////////////////////////
@@ -297,16 +276,11 @@ void MeanReductionPop(WiggleIterator * wi) {
 	popMultiplexer(multi);
 }
 
-static WiggleIterator * MeanReduction(Multiplexer * multi) {
+WiggleIterator * MeanReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
 	return newWiggleIterator(data, &MeanReductionPop, &WiggleReducerSeek);
 }
-
-WiggleIterator * MeanWiggleReducer(WiggleIterator** iters, int count) {
-	return MeanReduction(newMultiplexer(iters, count));
-}
-
 
 ////////////////////////////////////////////////////////
 // Variance
@@ -350,14 +324,10 @@ void VarianceReductionPop(WiggleIterator * wi) {
 	popMultiplexer(multi);
 }
 
-static WiggleIterator * VarianceReduction(Multiplexer * multi) {
+WiggleIterator * VarianceReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
 	return newWiggleIterator(data, &VarianceReductionPop, &WiggleReducerSeek);
-}
-
-WiggleIterator * VarianceWiggleReducer(WiggleIterator** iters, int count) {
-	return VarianceReduction(newMultiplexer(iters, count));
 }
 
 ////////////////////////////////////////////////////////
@@ -403,14 +373,10 @@ void StdDevReductionPop(WiggleIterator * wi) {
 	popMultiplexer(multi);
 }
 
-static WiggleIterator * StdDevReduction(Multiplexer * multi) {
+WiggleIterator * StdDevReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
 	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek);
-}
-
-WiggleIterator * StdDevWiggleReducer(WiggleIterator** iters, int count) {
-	return StdDevReduction(newMultiplexer(iters, count));
 }
 
 ////////////////////////////////////////////////////////
@@ -467,13 +433,9 @@ void MedianReductionPop(WiggleIterator * wi) {
 	popMultiplexer(multi);
 }
 
-static WiggleIterator * MedianReduction(Multiplexer * multi) {
+WiggleIterator * MedianReduction(Multiplexer * multi) {
 	MedianWiggleReducerData * data = (MedianWiggleReducerData *) calloc(1, sizeof(MedianWiggleReducerData));
 	data->multi = multi;
 	data->vals = (double *) calloc(data->multi->count, sizeof(double));
 	return newWiggleIterator(data, &MedianReductionPop, &MedianWiggleReducerSeek);
-}
-
-WiggleIterator * MedianWiggleReducer(WiggleIterator** iters, int count) {
-	return MedianReduction(newMultiplexer(iters, count));
 }

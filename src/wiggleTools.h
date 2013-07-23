@@ -45,6 +45,7 @@ typedef struct multiplexer_st Multiplexer;
 
 // Creators
 WiggleIterator * SmartReader (char *);
+WiggleIterator * CatWiggleIterator (char **, int);
 // Secondar creators (to force file format recognition)
 WiggleIterator * WiggleReader (char *);
 WiggleIterator * BigWiggleReader (char *);
@@ -54,7 +55,11 @@ WiggleIterator * BamReader (char *);
 WiggleIterator * BinaryFileReader (char *);
 Multiplexer * newStreamingMultiplexer(FILE * input);
 
-// Algebraic operations
+// Basic ops
+void seek(WiggleIterator *, const char *, int, int);
+void runWiggleIterator(WiggleIterator * wi);
+
+// Algebraic operations on iterators
 	
 	// Unary
 WiggleIterator * UnitWiggleIterator (WiggleIterator *);
@@ -67,32 +72,31 @@ WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
 WiggleIterator * PowerWiggleIterator (WiggleIterator *, double);
 WiggleIterator * LogWiggleIterator (WiggleIterator * , double);
 WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
-	// Binary
-WiggleIterator * SumWiggleIterator (WiggleIterator *, WiggleIterator *);
-WiggleIterator * ProductWiggleIterator (WiggleIterator * , WiggleIterator * );
 
 // Mapping operations
 Multiplexer * newMultiplexer(WiggleIterator **, int);
 Multiplexer * newIteratorMultiplexer(WiggleIterator *, int, int);
 
-// Reduction operators
+// Reduction operators on sets
+
 WiggleIterator * SelectReduction(Multiplexer *, int);
-WiggleIterator * MaxWiggleReducer (WiggleIterator** , int );
-WiggleIterator * MinWiggleReducer (WiggleIterator** , int );
-WiggleIterator * SumWiggleReducer (WiggleIterator** , int );
-WiggleIterator * ProductWiggleReducer (WiggleIterator** , int );
-WiggleIterator * MeanWiggleReducer (WiggleIterator** , int );
-WiggleIterator * VarianceWiggleReducer (WiggleIterator** , int );
-WiggleIterator * StdDevWiggleReducer (WiggleIterator** , int );
-WiggleIterator * MedianWiggleReducer (WiggleIterator** , int );
+WiggleIterator * MaxReduction ( Multiplexer * );
+WiggleIterator * MinReduction ( Multiplexer * );
+WiggleIterator * SumReduction ( Multiplexer * );
+WiggleIterator * ProductReduction ( Multiplexer * );
+WiggleIterator * MeanReduction ( Multiplexer * );
+WiggleIterator * VarianceReduction ( Multiplexer * );
+WiggleIterator * StdDevReduction ( Multiplexer * );
+WiggleIterator * MedianReduction ( Multiplexer * );
 
 // Output
 void toFile (WiggleIterator *, char *);
 void toBinaryFile (WiggleIterator *, char *);
-void toZippedFile (WiggleIterator *, char *);
 void toStdout (WiggleIterator *);
 void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, int count);
 void streamMultiplexer(FILE * dest, Multiplexer * multi);
+WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator *, FILE *);
+WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *);
 
 // Statistics
 double AUC (WiggleIterator *);
@@ -102,7 +106,6 @@ double variance (WiggleIterator *);
 // Regional statistics
 // I wonder what the algebraic classification of this thing is...?
 WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * data);
-void seek(WiggleIterator *, const char *, int, int);
 
 // Comparison
 double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
@@ -110,8 +113,9 @@ double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 // Cleaning up
 void destroyWiggleIterator (WiggleIterator *);
 
-// Big file small magic
+// Big file params
 void setMaxBlocks(int value);
 void setMaxHeadStart(int value);
 
+void rollYourOwn(char *);
 #endif
