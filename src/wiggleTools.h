@@ -53,7 +53,6 @@ WiggleIterator * BedReader (char *);
 WiggleIterator * BigBedReader (char *);
 WiggleIterator * BamReader (char *);
 WiggleIterator * BinaryFileReader (char *);
-Multiplexer * newStreamingMultiplexer(FILE * input);
 
 // Basic ops
 void seek(WiggleIterator *, const char *, int, int);
@@ -73,9 +72,8 @@ WiggleIterator * PowerWiggleIterator (WiggleIterator *, double);
 WiggleIterator * LogWiggleIterator (WiggleIterator * , double);
 WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
 
-// Mapping operations
+// Sets of iterators 
 Multiplexer * newMultiplexer(WiggleIterator **, int);
-Multiplexer * newIteratorMultiplexer(WiggleIterator *, int, int);
 
 // Reduction operators on sets
 
@@ -93,22 +91,19 @@ WiggleIterator * MedianReduction ( Multiplexer * );
 void toFile (WiggleIterator *, char *);
 void toBinaryFile (WiggleIterator *, char *);
 void toStdout (WiggleIterator *);
-void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, int count);
-void streamMultiplexer(FILE * dest, Multiplexer * multi);
 WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator *, FILE *);
 WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *);
 
 // Statistics
+// 	Unary
 double AUC (WiggleIterator *);
 double mean (WiggleIterator *);
 double variance (WiggleIterator *);
+//	Binary 
+double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 
 // Regional statistics
-// I wonder what the algebraic classification of this thing is...?
 WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * data);
-
-// Comparison
-double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 
 // Cleaning up
 void destroyWiggleIterator (WiggleIterator *);
@@ -116,6 +111,12 @@ void destroyWiggleIterator (WiggleIterator *);
 // Big file params
 void setMaxBlocks(int value);
 void setMaxHeadStart(int value);
+
+// Deprecated
+Multiplexer * newStreamingMultiplexer(FILE * input);
+Multiplexer * newIteratorMultiplexer(WiggleIterator *, int, int);
+void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, int count);
+void streamMultiplexer(FILE * dest, Multiplexer * multi);
 
 void rollYourOwn(char *);
 #endif
