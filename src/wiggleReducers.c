@@ -41,6 +41,7 @@ typedef struct wiggleReducerData_st {
 void WiggleReducerSeek(WiggleIterator * iter, const char * chrom, int start, int finish) {
 	WiggleReducerData * data = (WiggleReducerData* ) iter->data;
 	seekMultiplexer(data->multi, chrom, start, finish);
+	pop(iter);
 }
 
 ////////////////////////////////////////////////////////

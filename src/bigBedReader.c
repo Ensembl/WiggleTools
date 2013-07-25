@@ -50,6 +50,7 @@ void BigBedReaderPop(WiggleIterator * wi) {
 	BigFileReaderData * data = (BigFileReaderData*) wi->data;
 
 	if (!data->blockData) {
+		killDownloader(data);
 		wi->done = true;
 		return;
 	}
@@ -66,6 +67,7 @@ void BigBedReaderPop(WiggleIterator * wi) {
 			break;
 
 	if (data->stop > 0 && wi->start > data->stop) {
+		killDownloader(data);
 		wi->done = true;
 		return;
 	}

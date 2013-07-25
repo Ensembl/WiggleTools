@@ -54,6 +54,7 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 	data = (BigFileReaderData*) wi->data;
 
 	if (!data->blockData) {
+		killDownloader(data);
 		wi->done = true;
 		return;
 	}
@@ -104,6 +105,7 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 		}
 	    }
 	if (data->stop > 0 && (wi->start > data->stop)) {
+		killDownloader(data);
 		wi->done = true;
 		return;
 	}
@@ -124,8 +126,11 @@ void BigWiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int
 	wi->done = false;
 	BigWiggleReaderPop(wi);
 
-	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) 
+	int i =0;
+	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) {
+		i++;
 		BigWiggleReaderPop(wi);
+	}
 }
 
 static void openBigWigFile(BigFileReaderData * data) {

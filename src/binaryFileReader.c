@@ -64,18 +64,27 @@ typedef struct BinaryFileReaderData_st {
 	int index;
 } BinaryFileReaderData;
 
-static void appendNewBlock(BinaryFileReaderData * data, BlockData * block) {
+static bool appendNewBlock(BinaryFileReaderData * data, BlockData * block) {
 	pthread_mutex_lock(&data->count_mutex);
+	if (data->count < 0) {
+		// Kill signal received
+		pthread_mutex_unlock(&data->count_mutex);
+		return true;
+	}
+	// Add block to the end of the list
 	if (data->lastBlock) 
 		data->lastBlock->next = block;
 	else
 		data->blocks = block;
 	data->lastBlock = block;
-	pthread_cond_signal(&data->count_cond);
+	// Signal to reader
 	data->count++;
-	if (data->count > MAX_BLOCKS)
+	pthread_cond_signal(&data->count_cond);
+	// Pause if too many blocks were read
+	if (data->count > MAX_BLOCKS) 
 		pthread_cond_wait(&data->count_cond, &data->count_mutex);
 	pthread_mutex_unlock(&data->count_mutex);
+	return false;
 }
 
 static void mustRead(void * ptr, size_t size, size_t nelem, FILE * file) {
@@ -87,17 +96,19 @@ static void mustRead(void * ptr, size_t size, size_t nelem, FILE * file) {
 
 static bool readNextBlock(BinaryFileReaderData * data) {
 	BlockData * block = calloc(1, sizeof(BlockData));
-	int i;
 	char ** chromPtr = block->chroms;
 	int * startPtr = block->starts;
 	int * finishPtr = block->finishes;
 	double * valuePtr = block->values;
 	char c;
 
-	for (i = 0; i < BLOCK_LENGTH; i++) {
+	for (block->count = 0; block->count < BLOCK_LENGTH; block->count++) {
 		if (fread(&c, 1, 1, data->file) == 0) {
-			block->count = i;
 			appendNewBlock(data, block);
+			// Increment counter to push the reader into NULL block
+			pthread_mutex_lock(&data->count_mutex);
+			data->count++;
+			pthread_mutex_unlock(&data->count_mutex);
 			return true;
 		}
 
@@ -110,7 +121,7 @@ static bool readNextBlock(BinaryFileReaderData * data) {
 				mustRead(&c, 1, 1, data->file);
 				ptr++;
 			}
-			
+
 			while (c)
 				mustRead(&c, 1, 1, data->file);
 		} 
@@ -124,11 +135,8 @@ static bool readNextBlock(BinaryFileReaderData * data) {
 		finishPtr++;
 		valuePtr++;
 	}
-	block->count = i;
 	
-	appendNewBlock(data, block);
-	return false;
-
+	return appendNewBlock(data, block);
 }
 
 static void * readBinaryFile(void * args) {
@@ -148,9 +156,8 @@ static void launchDownloader(BinaryFileReaderData * data) {
 	int err = pthread_create(&data->threadID, NULL, &readBinaryFile, data);
 	if (err) {
 		printf("Could not create new thread %i\n", err);
-		abort();
+		exit(1);
 	}
-	pthread_detach(data->threadID);
 }
 
 static void destroyBlockData(BlockData * block) {
@@ -162,8 +169,10 @@ static void destroyBlockData(BlockData * block) {
 }
 
 static void killDownloader(BinaryFileReaderData * data) {
-	if (data->threadID)
-		pthread_cancel(data->threadID);
+	pthread_mutex_lock(&data->count_mutex);
+	data->count = -1;
+	pthread_mutex_unlock(&data->count_mutex);
+	pthread_join(data->threadID, NULL);
 
 	pthread_mutex_destroy(&data->count_mutex);
 	pthread_cond_destroy(&data->count_cond);
@@ -188,14 +197,15 @@ static void BinaryFileReaderEnterBlock(BinaryFileReaderData * data) {
 
 static void BinaryFileReaderGoToNextBlock(BinaryFileReaderData * data) {
 	BlockData * ptr = data->blocks;
+	static int i = 0;
+	i++;
 
 	pthread_mutex_lock(&data->count_mutex);
-	if (data->count == 0)
+	if (--data->count == 0) 
 		pthread_cond_wait(&data->count_cond, &data->count_mutex);
 	data->blocks = data->blocks->next;
 	if (!data->blocks)
 		data->lastBlock = NULL;
-	data->count--;
 	pthread_cond_signal(&data->count_cond);
 	pthread_mutex_unlock(&data->count_mutex);
 
@@ -212,17 +222,20 @@ void BinaryFileReaderPop(WiggleIterator * wi) {
 	data = (BinaryFileReaderData*) wi->data;
 
 	if (!data->blocks) {
+		killDownloader(data);
 		wi->done = true;
 		return;
 	}
 		
-	if (data->blocks->chroms[data->index])
+	if (data->blocks->chroms[data->index]) {
 		wi->chrom = data->blocks->chroms[data->index];
+	}
 	wi->start = data->blocks->starts[data->index];
 	wi->finish = data->blocks->finishes[data->index];
 	wi->value = data->blocks->values[data->index];
 
 	if (data->stop > 0 && (wi->start > data->stop)) {
+		killDownloader(data);
 		wi->done = true;
 		return;
 	}
@@ -250,6 +263,10 @@ void BinaryFileReaderSeek(WiggleIterator * wi, const char * chrom, int start, in
 WiggleIterator * BinaryFileReader(char * f) {
 	BinaryFileReaderData * data = (BinaryFileReaderData *) calloc(1, sizeof(BinaryFileReaderData));
 	data->file = fopen(f, "rb");
+	if (!data->file) {
+		printf("Could not open %s\n", f);
+		exit(1);
+	}
 	launchDownloader(data);
 	BinaryFileReaderEnterBlock(data);
 

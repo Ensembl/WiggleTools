@@ -136,6 +136,9 @@ void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int fin
 	int i;
 	for (i=0; i<multi->count; i++)
 		seek(multi->iters[i], chrom, start, finish);
+	multi->chrom = NULL;
+	multi->start = 0;
+	popMultiplexer(multi);
 }
 
 Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {

@@ -86,17 +86,23 @@ void goToNextBlock(BigFileReaderData * data) {
 	destroyBlockData(prevBlockData);
 }
 
-static void declareNewBlock(BigFileReaderData * data) {
+static bool declareNewBlock(BigFileReaderData * data) {
 	pthread_mutex_lock(&data->count_mutex);
+	if (data->blockCount < 0) {
+		pthread_mutex_unlock(&data->count_mutex);
+		return true;
+	}
+
 	if (data->blockCount > MAX_HEAD_START) {
 		pthread_cond_wait(&data->count_cond, &data->count_mutex);
 	}
 	data->blockCount++;
 	pthread_cond_signal(&data->count_cond);
 	pthread_mutex_unlock(&data->count_mutex);
+	return false;
 }
 
-static void * downloadBlockRun(BigFileReaderData * data, char * chrom, struct fileOffsetSize * firstBlock, struct fileOffsetSize * afterBlock, bits64 mergedSize) {
+static bool downloadBlockRun(BigFileReaderData * data, char * chrom, struct fileOffsetSize * firstBlock, struct fileOffsetSize * afterBlock, bits64 mergedSize) {
 	char * mergedBuf, *blockBuf;
 	struct fileOffsetSize * block;
 
@@ -111,7 +117,9 @@ static void * downloadBlockRun(BigFileReaderData * data, char * chrom, struct fi
 		} else {
 			data->blockData = new;
 		}
-		declareNewBlock(data);
+
+		if (declareNewBlock(data))
+			return true;
 
 		// Move on
 		data->lastBlockData = new;
@@ -119,10 +127,10 @@ static void * downloadBlockRun(BigFileReaderData * data, char * chrom, struct fi
 	}
 
 	freeMem(mergedBuf);
-	return NULL;
+	return false;
 }
 
-static void downloadBigRegion(BigFileReaderData * data, char * chrom, int start, int finish) {
+static bool downloadBigRegion(BigFileReaderData * data, char * chrom, int start, int finish) {
 	struct fileOffsetSize *blockList, *block, *beforeGap, *afterGap;
 	int blockCounter;
 	bits64 mergedSize;
@@ -148,10 +156,16 @@ static void downloadBigRegion(BigFileReaderData * data, char * chrom, int start,
 
 		mergedSize = beforeGap->offset + beforeGap->size - block->offset;
 
-		downloadBlockRun(data, chrom, block, afterGap, mergedSize);
+		if (downloadBlockRun(data, chrom, block, afterGap, mergedSize)) {
+			if (blockList)
+				slFreeList(blockList);
+			return true;
+		}
 	}
 
-	slFreeList(blockList);
+	if (blockList)
+		slFreeList(blockList);
+	return false;
 }
 
 static void downloadFullGenome(BigFileReaderData * data) {
@@ -159,7 +173,8 @@ static void downloadFullGenome(BigFileReaderData * data) {
 	struct bbiChromInfo *chrom;
 
 	for (chrom = chromList; chrom; chrom = chrom->next) 
-		downloadBigRegion(data, chrom->name, 0, chrom->size);
+		if (downloadBigRegion(data, chrom->name, 0, chrom->size))
+			break;
 	// TODO free chromList memory... yes but labels lost! Need to be copied out first....
 	//bbiChromInfoFreeList(&(data->chromList));
 }
@@ -190,14 +205,15 @@ void launchDownloader(BigFileReaderData * data) {
 		printf("Could not create new thread %i\n", err);
 		abort();
 	}
-	pthread_detach(data->downloaderThreadID);
 
 	waitForNextBlock(data);
 }
 
 void killDownloader(BigFileReaderData * data) {
-	if (data->downloaderThreadID)
-		pthread_cancel(data->downloaderThreadID);
+	pthread_mutex_lock(&data->count_mutex);
+	data->blockCount = -1;
+	pthread_mutex_unlock(&data->count_mutex);
+	pthread_join(data->downloaderThreadID, NULL);
 
 	pthread_mutex_destroy(&data->count_mutex);
 	pthread_cond_destroy(&data->count_cond);

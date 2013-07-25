@@ -74,6 +74,7 @@ FILE * openOrFail(char * filename, char * description, char * mode) {;
 	FILE * file;
 	if (!(file = fopen(filename, mode))) {
 		printf("Could not open %s %s, exiting...\n", (char *) description, (char *) filename);
+		exit(1);
 	}
 	return file;
 }
@@ -234,7 +235,7 @@ static void printBlock(FILE * file, BlockData * block) {
 	int i;
 
 	for (i = 0; i < block->count; i++)
-		fprintf(file, "%s\t%i\t%i\t%lf\n", block->chroms[i], block->starts[i], block->finishes[i], block->values[i]);
+		fprintf(file, "%s\t%i\t%i\t%lf\n", block->chroms[i], block->starts[i]-1, block->finishes[i]-1, block->values[i]);
 }
 
 static void printBinaryBlock(FILE * file, BlockData * block) {
@@ -267,12 +268,14 @@ static void printBinaryBlock(FILE * file, BlockData * block) {
 
 static void goToNextBlock(TeeWiggleIteratorData * data) {
 	BlockData * ptr = data->finishedBlocks;
+	static int i = 0;
+	i++;
 
 	pthread_mutex_lock(&data->continue_mutex);
 	if (!data->finishedBlocks->next && !data->done) 
 		pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
 	data->finishedBlocks = data->finishedBlocks->next;
-	if (!data->finishedBlocks) 
+	if (!data->finishedBlocks)
 		data->lastBlock = NULL;
 	data->count--;
 	pthread_cond_signal(&data->continue_cond);
@@ -342,7 +345,7 @@ static void launchWriter(TeeWiggleIteratorData * data) {
 	int err = pthread_create(&data->threadID, NULL, &printToFile, data);
 	if (err) {
 		printf("Could not create new thread %i\n", err);
-		abort();
+		exit(1);
 	}
 }
 
@@ -354,9 +357,11 @@ static void killWriter(TeeWiggleIteratorData * data) {
 
 void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) wi->data;
+	fseek(data->file, 0, SEEK_SET);
 	killWriter(data);
 	seek(data->iter, chrom, start, finish);
 	wi->done = false;
+	data->done = false;
 	launchWriter(data);
 	pop(wi);
 }
@@ -383,8 +388,9 @@ WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * file) {
 }
 
 void runWiggleIterator(WiggleIterator * wi) {
-	while (!wi->done)
+	while (!wi->done) {
 		pop(wi);
+	}
 }
 
 void toBinaryFile(WiggleIterator * wi, char * filename) {
@@ -503,6 +509,7 @@ void ScaleWiggleIteratorPop(WiggleIterator * wi) {
 void ScaleWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) wi->data;
 	seek(data->iter, chrom, start, finish);
+	pop(wi);
 }
 
 WiggleIterator * ScaleWiggleIterator(WiggleIterator * i, double s) {
@@ -541,6 +548,7 @@ void LogWiggleIteratorPop(WiggleIterator * wi) {
 void LogWiggleIteratorSeek(WiggleIterator * wi, const char  * chrom, int start, int finish) {
 	LogWiggleIteratorData * data = (LogWiggleIteratorData *) wi->data;
 	seek(data->iter, chrom, start, finish);
+	pop(wi);
 }
 
 WiggleIterator * NaturalLogWiggleIterator(WiggleIterator * i) {
@@ -586,6 +594,7 @@ void ExpWiggleIteratorPop(WiggleIterator * wi) {
 void ExpWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	ExpWiggleIteratorData * data = (ExpWiggleIteratorData *) wi->data;
 	seek(data->iter, chrom, start, finish);
+	pop(wi);
 }
 
 WiggleIterator * ExpWiggleIterator(WiggleIterator * i, double s) {
@@ -869,19 +878,30 @@ void CatWiggleIteratorPop(WiggleIterator * wi) {
 		wi->finish = iter->finish;
 		wi->value = iter->value;
 		pop(iter);
-	} else if (++data->index < data->count) {
-		data->iter = SmartReader(data->filenames[data->index]);
-		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = iter->finish;
-		wi->value = iter->value;
-		pop(iter);
+	} else if (data->index < data->count - 1) {
+		while (++data->index < data->count) {
+			iter = data->iter = SmartReader(data->filenames[data->index]);
+			while (!iter->done && (strcmp(wi->chrom, iter->chrom) >= 0 || (strcmp(wi->chrom, iter->chrom) == 0 && wi->finish >= iter->finish)))
+				pop(iter);
+			if (!iter->done) {
+				if (strcmp(wi->chrom, iter->chrom) < 0 || iter->start > wi->finish)
+					wi->start = iter->start;
+				else
+					wi->start = wi->finish;
+				wi->chrom = iter->chrom;
+				wi->finish = iter->finish;
+				wi->value = iter->value;
+				pop(iter);
+				break;
+			}
+		}
 	} else 
 		wi->done = true;
 }
 
 void CatWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	puts("Cannot apply seek to a concatenation of files!");
+	exit(1);
 }
 
 WiggleIterator * CatWiggleIterator(char ** filenames, int count) {

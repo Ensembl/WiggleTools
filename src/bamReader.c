@@ -69,6 +69,8 @@ typedef struct bamReaderData_st {
 	mplp_aux_t * data;
 	int ref_tid;
 	bam_mplp_t iter;
+	char * chrom;
+	int stop;
 } BamReaderData;
 
 void setSamtoolsDefaultConf(BamReaderData * data) {
@@ -163,7 +165,6 @@ void BamReaderPop(WiggleIterator * wi)
 		return;
 
 	if (bam_mplp_auto(data->iter, &tid, &pos, &n_plp, &plp) > 0) {
-		// TODO Check you are in bounds
 		// If a new chrom. was entered:
 		if (tid != data->ref_tid) {
 			wi->chrom = data->data->h->target_name[tid];
@@ -184,10 +185,11 @@ void BamReaderPop(WiggleIterator * wi)
 		wi->start = pos + 1;
 		wi->finish = pos + 2;
 		wi->value = cnt;
-	} else {
-		closeBamFile(data);
+
+		if (data->stop > 0 && (strcmp(wi->chrom, data->chrom) > 0 || wi->start >= data->stop)) 
+			wi->done = true;
+	} else 
 		wi->done = true;
-	}
 }
 
 void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
@@ -198,6 +200,13 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 		free(data->conf->reg);
 	data->conf->reg = region;
 	seekRegion(data);
+	BamReaderPop(wi);
+
+	while (strcmp(wi->chrom, chrom) < 0 || wi->finish <= start)
+		BamReaderPop(wi);
+
+	data->chrom = chrom;
+	data->stop = finish;
 }
 
 WiggleIterator * BamReader(char * filename) {
