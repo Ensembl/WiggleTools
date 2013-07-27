@@ -31,50 +31,61 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <zlib.h>
-#include <pthread.h>
 
 // Local header
 #include "wiggleTools.h"
 #include "wiggleIterators.h"
 
-void pop(WiggleIterator * wi) {
-	// Safety check
-	if (wi->done)
-		return;
-	// Update
-	wi->pop(wi);
+//////////////////////////////////////////////////////
+// Basic Stats
+//////////////////////////////////////////////////////
+
+double AUC(WiggleIterator * wi) {
+	double total = 0;
+	for(;!wi->done; pop(wi)) 
+		total += (wi->finish - wi->start) * wi->value;
+	return total;
 }
 
-WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int)) {
-	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
-	new->data = data;
-	new->pop = popFunction;
-	new->seek = seek;
-	new->chrom = calloc(1000,1);
-	new->chrom = calloc(1000,1);
-	new->value = 1; // Default value for non-valued bed tracks;
-	pop(new);
-	return new;
+double span(WiggleIterator * wi) {
+	double total = 0;
+	for(;!wi->done; pop(wi)) 
+		if (wi->value)
+			total += (wi->finish - wi->start);
+	return total;
 }
 
-void destroyWiggleIterator(WiggleIterator * wi) {
-	free(wi->data);
-	free(wi->chrom);
-	free(wi);
-}
-
-void seek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	(*(wi->seek))(wi, chrom, start, finish);
-}
-
-FILE * openOrFail(char * filename, char * description, char * mode) {;
-	FILE * file;
-	if (!(file = fopen(filename, mode))) {
-		printf("Could not open %s %s, exiting...\n", (char *) description, (char *) filename);
-		exit(1);
+double mean(WiggleIterator * wi) {
+	double total = 0;
+	double span = 0;
+	for(;!wi->done; pop(wi)) {
+		span += (wi->finish - wi->start);
+		total += (wi->finish - wi->start) * wi->value;
 	}
-	return file;
+	return total / span;
+}
+
+double variance(WiggleIterator * wi) {
+	// Online algorithm copied from 
+	// http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Two-pass_algorithm
+	double sumWeight = 0;
+	double mean = 0;
+	double M2 = 0;
+	double count = 0;
+
+	for(;!wi->done; pop(wi)) {
+		double weight = wi->finish - wi->start;
+		double temp = sumWeight + weight;
+		double delta = wi->value - mean;
+		double R = delta * weight / temp;
+		mean += R;
+		M2 += sumWeight * delta * R;
+		sumWeight = temp;
+		count++;
+	}
+	return (M2 * count) / (sumWeight * (count - 1));
+}
+
+double stddev(WiggleIterator * wi) {
+	return sqrt(variance(wi));
 }
