@@ -88,13 +88,13 @@ void goToNextBlock(BigFileReaderData * data) {
 
 static bool declareNewBlock(BigFileReaderData * data) {
 	pthread_mutex_lock(&data->count_mutex);
-	if (data->blockCount < 0) {
-		pthread_mutex_unlock(&data->count_mutex);
-		return true;
-	}
 
 	if (data->blockCount > MAX_HEAD_START) {
 		pthread_cond_wait(&data->count_cond, &data->count_mutex);
+	} 
+	if (data->blockCount < 0) {
+		pthread_mutex_unlock(&data->count_mutex);
+		return true;
 	}
 	data->blockCount++;
 	pthread_cond_signal(&data->count_cond);
@@ -212,6 +212,8 @@ void launchDownloader(BigFileReaderData * data) {
 void killDownloader(BigFileReaderData * data) {
 	pthread_mutex_lock(&data->count_mutex);
 	data->blockCount = -1;
+	// Send a signal in case the slave is waiting somewhere
+	pthread_cond_signal(&data->count_cond);
 	pthread_mutex_unlock(&data->count_mutex);
 	pthread_join(data->downloaderThreadID, NULL);
 

@@ -193,6 +193,38 @@ WiggleIterator * UnitWiggleIterator(WiggleIterator * i) {
 }
 
 //////////////////////////////////////////////////////
+// Compression operator
+//////////////////////////////////////////////////////
+
+void CompressionWiggleIteratorPop(WiggleIterator * wi) {
+	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+
+	if (iter->done) {
+		wi->done = true;
+	} else {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		wi->value = iter->value;
+		pop(iter);
+
+		while (!iter->done && strcmp(iter->chrom, wi->chrom) == 0 && iter->start == wi->finish && iter->value == wi->value) {
+			wi->finish = iter->finish;
+			pop(iter);
+		}
+	}
+}
+
+
+WiggleIterator * CompressionWiggleIterator(WiggleIterator * i) {
+	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) calloc(1, sizeof(UnitWiggleIteratorData));
+	data->iter = i;
+	WiggleIterator * wi =  newWiggleIterator(data, &CompressionWiggleIteratorPop, &UnitWiggleIteratorSeek);
+	return wi;
+}
+
+//////////////////////////////////////////////////////
 // Tee operator
 //////////////////////////////////////////////////////
 
@@ -368,7 +400,7 @@ void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, i
 
 WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator * i, FILE * file) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
-	data->iter = i;
+	data->iter = CompressionWiggleIterator(i);
 	data->file = file;
 	data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
 	data->binary = true;
@@ -379,7 +411,7 @@ WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator * i, FILE * file) {
 
 WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * file) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
-	data->iter = i;
+	data->iter = CompressionWiggleIterator(i);
 	data->file = file;
 	data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
 	launchWriter(data);
@@ -451,35 +483,6 @@ WiggleIterator * UnionWiggleIterator(WiggleIterator * i) {
 	data->iter = i;
 	WiggleIterator * wi =  newWiggleIterator(data, &UnionWiggleIteratorPop, &UnitWiggleIteratorSeek);
 	wi->value = 1;
-	return wi;
-}
-
-//////////////////////////////////////////////////////
-// Compression operator
-//////////////////////////////////////////////////////
-
-void CompressionWiggleIteratorPop(WiggleIterator * wi) {
-	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) wi->data;
-	WiggleIterator * iter = data->iter;
-
-	if (iter->done) {
-		wi->done = true;
-	} else {
-		do {
-			wi->chrom = iter->chrom;
-			wi->start = iter->start;
-			wi->finish = iter->finish;
-			wi->value = iter->value;
-			pop(iter);
-		} while (!iter->done && strcmp(iter->chrom, wi->chrom) == 0 && iter->start == wi->finish && iter->value == wi->value);
-	}
-}
-
-
-WiggleIterator * CompressionWiggleIterator(WiggleIterator * i) {
-	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) calloc(1, sizeof(UnitWiggleIteratorData));
-	data->iter = i;
-	WiggleIterator * wi =  newWiggleIterator(data, &CompressionWiggleIteratorPop, &UnitWiggleIteratorSeek);
 	return wi;
 }
 

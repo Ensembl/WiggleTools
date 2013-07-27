@@ -69,21 +69,22 @@ static void chooseCoords(Multiplexer * multi) {
 		} else if (comparison > 0){
 			*inplayPtr = false;
 		} else {
-
 			int start = (*wiPtr)->start;
 			*inplayPtr = true;
 			if (multi->start > clipping && start < multi->start) {
+				multi->finish = multi->start;
 				if (start < clipping)
 					multi->start = clipping;
 				else
 					multi->start = start;
-				multi->finish = (*wiPtr)->finish;
 				first = i;
 			} else if (start > multi->start) {
 				*inplayPtr = false;
-			} else if ((*wiPtr)->finish < multi->finish) {
+			} 
+			
+			if ((*wiPtr)->finish < multi->finish) {
 				multi->finish = (*wiPtr)->finish;
-			}
+			} 
 		}
 
 		inplayPtr++;
