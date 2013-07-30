@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <stdint.h>
 
 // Local header
 #include "wiggleTools.h"
@@ -78,10 +79,41 @@ static void appendFinishedBlock(TeeWiggleIteratorData * data) {
 }
 
 static void printBlock(FILE * file, BlockData * block) {
-	int i;
+	int i, j;
+	bool pointByPoint = false;
+	bool makeHeader=false;
+	char ** chromPtr = block->chroms;
+	int * startPtr = block->starts;
+	int * finishPtr = block->finishes;
+	double * valuePtr = block->values;
+	char * lastChrom = NULL;
+	int lastFinish = -1;
 
-	for (i = 0; i < block->count; i++)
-		fprintf(file, "%s\t%i\t%i\t%lf\n", block->chroms[i], block->starts[i]-1, block->finishes[i]-1, block->values[i]);
+	for (i = 0; i < block->count; i++) {
+		// Change mode
+		if (*finishPtr - *startPtr < 2 && !pointByPoint) {
+			pointByPoint = true;
+			makeHeader = true;
+		} else if (*finishPtr - *startPtr > 5 && pointByPoint) {
+			pointByPoint = false;
+		}
+
+		if (pointByPoint) {
+			if (makeHeader || (pointByPoint && (lastChrom != *chromPtr || *startPtr > lastFinish)))
+				fprintf(file, "fixedStep chrom=%s start=%i step=1\n", *chromPtr, *startPtr);
+			makeHeader = false;
+			for (j = 0; j < *finishPtr - *startPtr; j++)
+				fprintf(file, "%lf\n", *valuePtr);
+		} else
+			fprintf(file, "%s\t%i\t%i\t%lf\n", *chromPtr, *startPtr-1, *finishPtr-1, *valuePtr);
+
+		lastChrom = *chromPtr;
+		lastFinish = *finishPtr;
+		chromPtr++;
+		startPtr++;
+		finishPtr++;
+		valuePtr++;
+	}
 }
 
 static void printBinaryBlock(FILE * file, BlockData * block) {
@@ -92,21 +124,74 @@ static void printBinaryBlock(FILE * file, BlockData * block) {
 	double * valuePtr = block->values;
 	char * emptyString = "";
 	char * lastChrom = NULL;
+	int lastFinish = -1;
 	bool pointByPoint = false;
-	char pointByPointFlag = (char) 1;
+	bool makeHeader;
+	char flag;
+	int32_t holder;
+	float holder2;
 
 	for (i = 0; i < block->count; i++) {
-		if (*chromPtr != lastChrom) {
-			fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, file);
+		// Change mode
+		if (*finishPtr - *startPtr < 2 && !pointByPoint) {
+			pointByPoint = true;
+			makeHeader = true;
+		} else if (*finishPtr - *startPtr > 5 && pointByPoint) {
+			pointByPoint = false;
+			makeHeader = true;
+		} else 
+			makeHeader = false;
+
+		// Detect discontinuity
+		if (lastChrom != *chromPtr || (pointByPoint && *startPtr > lastFinish))
+			makeHeader = true;
+
+		// Make header
+		if (makeHeader) {
+			if (pointByPoint) {
+				flag = (char) 1;
+				fwrite(&flag, sizeof(char), 1, file);
+				if (*chromPtr == lastChrom) {
+					fwrite(emptyString, sizeof(char), 1, file);
+				} else {
+					fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, file);
+				}
+				holder = (int32_t) *startPtr;
+				fwrite(&holder, sizeof(int32_t), 1, file);
+			} else {
+				flag = (char) 2;
+				fwrite(&flag, sizeof(char), 1, file);
+				if (*chromPtr == lastChrom) {
+					fwrite(emptyString, sizeof(char), 1, file);
+				} else
+					fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, file);
+			}
 		} else {
 			fwrite(emptyString, sizeof(char), 1, file);
 		}
+
+		// Data
+		if (!pointByPoint) {
+			holder = (int32_t) *startPtr;
+			fwrite(&holder, sizeof(int32_t), 1, file);
+			holder = (int32_t) *finishPtr;
+			fwrite(&holder, sizeof(int32_t), 1, file);
+			holder2 = *valuePtr;
+			fwrite(&holder2, sizeof(float), 1, file);
+		} else {
+			int j;
+			holder2 = *valuePtr;
+			fwrite(&holder2, sizeof(float), 1, file);
+
+			for (j = 1; j < *finishPtr - *startPtr; j++) {
+				fwrite(emptyString, sizeof(char), 1, file);
+				holder2 = *valuePtr;
+				fwrite(&holder2, sizeof(float), 1, file);
+			}
+		}
+
 		lastChrom = *chromPtr;
-
-		fwrite(startPtr, sizeof(*startPtr), 1, file);
-		fwrite(finishPtr, sizeof(*finishPtr), 1, file);
-		fwrite(valuePtr, sizeof(*valuePtr), 1, file);
-
+		lastFinish = *finishPtr;
 		chromPtr++;
 		startPtr++;
 		finishPtr++;
@@ -233,12 +318,6 @@ WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * file) {
 	launchWriter(data);
 
 	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
-}
-
-void runWiggleIterator(WiggleIterator * wi) {
-	while (!wi->done) {
-		pop(wi);
-	}
 }
 
 void toBinaryFile(WiggleIterator * wi, char * filename) {

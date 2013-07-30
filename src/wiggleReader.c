@@ -213,7 +213,10 @@ void WiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int fi
 	if (strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
 		if (data->file)
 			fclose(data->file);
-		data->file = openOrFail(data->filename, "input file", "r");
+		if (!(data->file = fopen(data->filename, "r"))) {
+			printf("Cannot open input file %s\n", data->filename);
+			exit(1);
+		}
 		WiggleReaderPop(wi);
 	}
 
@@ -225,9 +228,12 @@ void WiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int fi
 WiggleIterator * WiggleReader(char * f) {
 	WiggleReaderData * data = (WiggleReaderData *) calloc(1, sizeof(WiggleReaderData));
 	data->filename = f;
-	if (strcmp(f, "-"))
-		data->file = openOrFail(f, "input file", "r");
-	else
+	if (strcmp(f, "-")) {
+		if (!(data->file = fopen(f, "r"))) {
+			printf("Could not open input file %s\n", f);
+			exit(1);
+		}
+	} else
 		data->file = stdin;
 	data->readingMode = BED_GRAPH;
 	data->stop = -1;

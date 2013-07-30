@@ -46,10 +46,8 @@ struct wiggleIterator_st {
 	void (*seek)(WiggleIterator *, const char *, int, int);
 };
 
-FILE * openOrFail(char * filename, char * description, char * mode);
 WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int));
 void pop(WiggleIterator *);
-WiggleIterator * NullWiggleIterator ();
 WiggleIterator * CompressionWiggleIterator(WiggleIterator *);
 
 #endif

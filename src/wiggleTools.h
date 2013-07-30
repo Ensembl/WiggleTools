@@ -46,7 +46,7 @@ typedef struct multiplexer_st Multiplexer;
 // Creators
 WiggleIterator * SmartReader (char *);
 WiggleIterator * CatWiggleIterator (char **, int);
-// Secondar creators (to force file format recognition)
+// Secondary creators (to force file format recognition if necessary)
 WiggleIterator * WiggleReader (char *);
 WiggleIterator * BigWiggleReader (char *);
 WiggleIterator * BedReader (char *);
@@ -54,9 +54,8 @@ WiggleIterator * BigBedReader (char *);
 WiggleIterator * BamReader (char *);
 WiggleIterator * BinaryFileReader (char *);
 
-// Basic ops
+// Generic class functions 
 void seek(WiggleIterator *, const char *, int, int);
-void runWiggleIterator(WiggleIterator * wi);
 
 // Algebraic operations on iterators
 	
@@ -93,6 +92,7 @@ void toBinaryFile (WiggleIterator *, char *);
 void toStdout (WiggleIterator *);
 WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator *, FILE *);
 WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *);
+void runWiggleIterator(WiggleIterator * );
 
 // Statistics
 // 	Unary
@@ -103,20 +103,22 @@ double variance (WiggleIterator *);
 double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 
 // Regional statistics
-WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * data);
+WiggleIterator * apply(WiggleIterator * , double (*statistic)(WiggleIterator *), WiggleIterator *);
 
 // Cleaning up
 void destroyWiggleIterator (WiggleIterator *);
 
 // Big file params
-void setMaxBlocks(int value);
-void setMaxHeadStart(int value);
+void setMaxBlocks(int);
+void setMaxHeadStart(int);
+
+// Command line parser
+void rollYourOwn(char *);
 
 // Deprecated
 Multiplexer * newStreamingMultiplexer(FILE * input);
 Multiplexer * newIteratorMultiplexer(WiggleIterator *, int, int);
-void streamWiggleIteratorAtIndex(FILE * dest, WiggleIterator * iter, int index, int count);
-void streamMultiplexer(FILE * dest, Multiplexer * multi);
+void streamWiggleIteratorAtIndex(FILE * , WiggleIterator * , int , int );
+void streamMultiplexer(FILE *, Multiplexer *);
 
-void rollYourOwn(char *);
 #endif

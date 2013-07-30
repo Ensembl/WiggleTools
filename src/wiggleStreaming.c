@@ -167,3 +167,22 @@ Multiplexer * newStreamingMultiplexer(FILE * input) {
 	}	
 	return new;
 }
+
+Multiplexer * newIteratorMultiplexer(WiggleIterator * iter, int index, int count) {
+	int i;
+
+	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
+	new->pop = popListMultiplexer;
+	new->count = count;
+	new->iters = (WiggleIterator **) calloc(count, sizeof(WiggleIterator *));
+	for (i = 0; i< count; i++) {
+		if (i != count)
+			new->iters[i] = NullWiggleIterator();
+		else
+			new->iters[i] = iter;
+	}
+	new->inplay = (bool *) calloc(count, sizeof(bool));
+	new->values = (double *) calloc(count, sizeof(double));
+	popMultiplexer(new);
+	return new;
+}

@@ -29,24 +29,10 @@
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <zlib.h>
-#include <pthread.h>
 
-// Local header
-#include "wiggleTools.h"
 #include "wiggleIterators.h"
-
-void pop(WiggleIterator * wi) {
-	// Safety check
-	if (wi->done)
-		return;
-	// Update
-	wi->pop(wi);
-}
 
 WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int)) {
 	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
@@ -66,15 +52,16 @@ void destroyWiggleIterator(WiggleIterator * wi) {
 	free(wi);
 }
 
-void seek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	(*(wi->seek))(wi, chrom, start, finish);
+void pop(WiggleIterator * wi) {
+	if (!wi->done)
+		wi->pop(wi);
 }
 
-FILE * openOrFail(char * filename, char * description, char * mode) {;
-	FILE * file;
-	if (!(file = fopen(filename, mode))) {
-		printf("Could not open %s %s, exiting...\n", (char *) description, (char *) filename);
-		exit(1);
-	}
-	return file;
+void runWiggleIterator(WiggleIterator * wi) {
+	while (!wi->done)
+		wi->pop(wi);
+}
+
+void seek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	(*(wi->seek))(wi, chrom, start, finish);
 }

@@ -266,6 +266,8 @@ void rollYourOwn(char * str) {
 		printf("%lf\n", pearsonCorrelation(readIterator(), readIterator()));	
 	else if (strncmp(token, "write", 5) == 0)
 		runWiggleIterator(readIteratorToken(token));
+	else if (strcmp(token, "do") == 0)
+		runWiggleIterator(readIterator());
 	else
 		toStdout(readIteratorToken(token));	
 }

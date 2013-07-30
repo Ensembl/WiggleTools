@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "wiggleIterators.h"
 
@@ -94,15 +95,19 @@ static void mustRead(void * ptr, size_t size, size_t nelem, FILE * file) {
 	}
 }
 
-static bool readNextBlock(BinaryFileReaderData * data) {
+static bool readNextBlock(BinaryFileReaderData * data, char ** lastChrom, int * lastStart, bool * pointByPoint) {
 	BlockData * block = calloc(1, sizeof(BlockData));
 	char ** chromPtr = block->chroms;
 	int * startPtr = block->starts;
 	int * finishPtr = block->finishes;
 	double * valuePtr = block->values;
 	char c;
+	bool startSet;
+	int32_t holder;
+	float holder2;
 
 	for (block->count = 0; block->count < BLOCK_LENGTH; block->count++) {
+		// Check whether file finished
 		if (fread(&c, 1, 1, data->file) == 0) {
 			appendNewBlock(data, block);
 			// Increment counter to push the reader into NULL block
@@ -111,25 +116,73 @@ static bool readNextBlock(BinaryFileReaderData * data) {
 			pthread_mutex_unlock(&data->count_mutex);
 			return true;
 		}
+		
+		if (*pointByPoint)
+			startSet = false;
 
-		if (c) {
-			*chromPtr = calloc(1000, 1);
-			char * ptr = * chromPtr;
-			int pos;
-			for (pos = 0; pos < 1000 && c; pos++) {
-				*ptr = c;
-				mustRead(&c, 1, 1, data->file);
-				ptr++;
+		// Read header
+		if (c == 1) {
+			// Point by Point
+			*pointByPoint = true;
+			mustRead(&c, 1, 1, data->file);
+			if (c) {
+				*chromPtr = calloc(1000, 1);
+				char * ptr = * chromPtr;
+				int pos;
+				for (pos = 0; pos < 1000 && c; pos++) {
+					*ptr = c;
+					mustRead(&c, 1, 1, data->file);
+					ptr++;
+				}
+				while (c)
+					mustRead(&c, 1, 1, data->file);
 			}
+			mustRead(&holder, sizeof(int32_t), 1, data->file);
+			*startPtr = holder;
+			startSet = true;
+		} else if (c == 2) {
+			// Normal
+			*pointByPoint = false;
+			mustRead(&c, 1, 1, data->file);
+			if (c) {
+				*chromPtr = calloc(1000, 1);
+				char * ptr = * chromPtr;
+				int pos;
+				for (pos = 0; pos < 1000 && c; pos++) {
+					*ptr = c;
+					mustRead(&c, 1, 1, data->file);
+					ptr++;
+				}
+				while (c)
+					mustRead(&c, 1, 1, data->file);
+			}
+		}
 
-			while (c)
-				mustRead(&c, 1, 1, data->file);
-		} 
+		// Set chromosome if unset in header
+		if (*chromPtr == NULL) 
+			*chromPtr = *lastChrom;
 
-		mustRead(startPtr, sizeof(int), 1, data->file);
-		mustRead(finishPtr, sizeof(int), 1, data->file);
-		mustRead(valuePtr, sizeof(double), 1, data->file);
+		// Read coords
+		if (*pointByPoint) {
+			if (!startSet)
+				*startPtr = *lastStart + 1;
+			*finishPtr = *startPtr + 1;
+		} else {
+			mustRead(&holder, sizeof(int32_t), 1, data->file);
+			*startPtr = holder;
+			mustRead(&holder, sizeof(int32_t), 1, data->file);
+			*finishPtr = holder;
+		}
 
+		// Read value
+		mustRead(&holder2, sizeof(float), 1, data->file);
+		*valuePtr = holder2;
+
+		// Record stuff
+		*lastChrom = *chromPtr;
+		*lastStart = *startPtr;
+
+		// Step ahead
 		chromPtr++;
 		startPtr++;
 		finishPtr++;
@@ -141,9 +194,12 @@ static bool readNextBlock(BinaryFileReaderData * data) {
 
 static void * readBinaryFile(void * args) {
 	BinaryFileReaderData * data = (BinaryFileReaderData *) args;
+	char * lastChrom = NULL;
+	int lastStart = -1;
+	bool pointByPoint = false;
 
 	while (true)
-		if (readNextBlock(data))
+		if (readNextBlock(data, &lastChrom, &lastStart, &pointByPoint))
 			return NULL;
 
 	return NULL;
@@ -226,22 +282,28 @@ void BinaryFileReaderPop(WiggleIterator * wi) {
 		wi->done = true;
 		return;
 	}
-		
-	if (data->blocks->chroms[data->index]) {
-		wi->chrom = data->blocks->chroms[data->index];
+
+        if (data->index == data->blocks->count)
+	    BinaryFileReaderGoToNextBlock(data);
+
+	if (!data->blocks) {
+		killDownloader(data);
+		wi->done = true;
+		return;
 	}
+		
+	wi->chrom = data->blocks->chroms[data->index];
 	wi->start = data->blocks->starts[data->index];
 	wi->finish = data->blocks->finishes[data->index];
 	wi->value = data->blocks->values[data->index];
+
+	data->index++;
 
 	if (data->stop > 0 && (wi->start > data->stop)) {
 		killDownloader(data);
 		wi->done = true;
 		return;
 	}
-
-        if (++(data->index) == data->blocks->count)
-	    BinaryFileReaderGoToNextBlock(data);
 
 }
 
