@@ -108,9 +108,13 @@ static bool downloadBlockRun(BigFileReaderData * data, char * chrom, struct file
 
 	udcSeek(data->udc, firstBlock->offset);
 	blockBuf = mergedBuf = (char *) needLargeMem(mergedSize);
+	if (data->blockCount < 0)
+		return true;
 	udcMustRead(data->udc, mergedBuf, mergedSize);
 
 	for (block = firstBlock; block != afterBlock; block = block->next) {
+		if (data->blockCount < 0)
+			return true;
 		BlockData * new = createBlockData(chrom, block, blockBuf, data->bwf->uncompressBufSize);
 		if (data->lastBlockData) {
 			data->lastBlockData->next = new;
