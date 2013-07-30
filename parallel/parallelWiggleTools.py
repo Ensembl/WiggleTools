@@ -3,23 +3,26 @@
 import sys
 import os.path
 import re
+import tempfile
+import subprocess
 
 ################################################
 ## Splitting a wiggletools command into regional jobs
 ################################################
 
 def create_dirs(command):
-	for match in re.finditer(r'write\W*(\w*.bw)\W', command):
-		if not os.path.exists(match.group(1)):
-			os.mkdirs(match.group(1) + "x")
+	for match in re.finditer(r'write\s*(\S*.bw)\s', command):
+		path = match.group(1) + "x"
+		if not os.path.exists(path):
+			os.makedirs(path)
 
 def create_new_command(command, chr, start, finish, chrom_sizes_file):
-	substitute_cmd = re.sub(r'write\W*(\w*.bw)\W',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
-	return " ".join(map(str, ['time','wiggletoolsIndex.py', chrom_sizes_file, "'", 'do','seek',chr,start,finish,substitute_cmd, "'"]))
+	substitute_cmd = re.sub(r'write\s*(\S*.bw)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
+	return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file, "'", 'do','seek',chr,start,finish,substitute_cmd, "'"]))
 
 def makeMapCommand(command, chrom_sizes_file, chrom_sizes, region_size):
 	create_dirs(command)
-	return [create_new_command(command, chr, start, min(chrom_sizes[chr], start + region_size), chrom_sizes_file) for chr in sorted(chrom_sizes.keys()) for start in range(1, chrom_sizes[chr], region_size)]
+	return [create_new_command(command, chr, start, min(chrom_sizes[chr], start + int(region_size)), chrom_sizes_file) for chr in sorted(chrom_sizes.keys()) for start in range(1, chrom_sizes[chr], int(region_size))]
 
 def test_makeMapCommand():
 	chrom_sizes = dict([("chr1", 20), ("chr2", 30)])
@@ -32,22 +35,22 @@ def test_makeMapCommand():
 ## LSF MultiJob
 ################################################
 
-def makeMultiJobCommand(filename):
-	bsub_cmd = "bsub -q normal -R'select[mem>4000] rusage[mem=4000]' -M4000 -J%s[1-%s] " % (name, len(cmds))
+def makeMultiJobCommand(filename, count):
+	name = os.path.basename(filename)
+	bsub_cmd = "bsub -q normal -R'select[mem>4000] rusage[mem=4000]' -M4000 -J%s[1-%s] " % (name, count)
 	output = "-o %s_%%I.out -e %s_%%I.err" % (filename, filename)
 	jobCmd = " ".join([bsub_cmd, output, 'LSFwrapper.sh', "' multiJob.py ", filename, "'"])
 	print jobCmd
 	return jobCmd
 
 def submitMultiJobToLSF(cmds):
-	descr, filename = tempfile.mkstemp(dir=dir)
-	name = os.path.basename(filename)
+	descr, filename = tempfile.mkstemp(dir="/lustre/scratch109/ensembl/dz1")
 
 	fh = open(filename, 'w')
 	fh.write("\n".join(cmds))
 	fh.close()
 
-	p = subprocess.Popen(makeMultiJobCommand(filename), shell=True)
+	p = subprocess.Popen(makeMultiJobCommand(filename, len(cmds)), shell=True)
 	err = p.wait()
 	if err != 0:
 		print "Could not start job %s" % cmds

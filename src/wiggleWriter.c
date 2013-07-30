@@ -199,12 +199,14 @@ static void printBinaryBlock(FILE * file, BlockData * block) {
 	}
 }
 
-static void goToNextBlock(TeeWiggleIteratorData * data) {
+static bool goToNextBlock(TeeWiggleIteratorData * data) {
 	BlockData * ptr = data->finishedBlocks;
 	static int i = 0;
 	i++;
 
 	pthread_mutex_lock(&data->continue_mutex);
+	if (data->count < 0)
+		return true;
 	if (!data->finishedBlocks->next && !data->done) 
 		pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
 	data->finishedBlocks = data->finishedBlocks->next;
@@ -215,6 +217,7 @@ static void goToNextBlock(TeeWiggleIteratorData * data) {
 	pthread_mutex_unlock(&data->continue_mutex);
 
 	free(ptr);
+	return false;
 }
 
 static void * printToFile(void * args) {
@@ -231,7 +234,8 @@ static void * printToFile(void * args) {
 			printBinaryBlock(data->file, data->finishedBlocks);
 		else
 			printBlock(data->file, data->finishedBlocks);
-		goToNextBlock(data);
+		if (goToNextBlock(data))
+			return NULL;
 	}
 	return NULL;
 }
@@ -272,9 +276,14 @@ void TeeWiggleIteratorPop(WiggleIterator * wi) {
 }
 
 static void launchWriter(TeeWiggleIteratorData * data) {
+	// Initialize variables
+	data->count = 0;
+	data->done = false;
 	pthread_cond_init(&data->continue_cond, NULL);
 	pthread_mutex_init(&data->continue_mutex, NULL);
+	data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
 
+	// Launch pthread
 	int err = pthread_create(&data->threadID, NULL, &printToFile, data);
 	if (err) {
 		printf("Could not create new thread %i\n", err);
@@ -283,18 +292,43 @@ static void launchWriter(TeeWiggleIteratorData * data) {
 }
 
 static void killWriter(TeeWiggleIteratorData * data) {
-	pthread_cancel(data->threadID);
+	BlockData * block;
+
+	// Set trap
+	pthread_mutex_lock(&data->continue_mutex);
+	data->count = -1;
+	pthread_cond_signal(&data->continue_cond);
+	pthread_mutex_unlock(&data->continue_mutex);
+
+	// Wait for the catch
+	pthread_join(data->threadID, NULL);
+
+	// Clear variables
 	pthread_cond_destroy(&data->continue_cond);
 	pthread_mutex_destroy(&data->continue_mutex);
+
+	while (data->finishedBlocks) {
+		block = data->finishedBlocks;
+		data->finishedBlocks = block->next;
+		free(block);
+	}
+
+	data->finishedBlocks = NULL;
+	data->lastBlock = NULL;
+	
+	if (data->fillingBlock) 
+		free(data->fillingBlock);
+
+	data->fillingBlock = NULL;
 }
 
 void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) wi->data;
-	fseek(data->file, 0, SEEK_SET);
 	killWriter(data);
+	fflush(data->file);
+	fseek(data->file, 0, SEEK_SET);
 	seek(data->iter, chrom, start, finish);
 	wi->done = false;
-	data->done = false;
 	launchWriter(data);
 	pop(wi);
 }
@@ -303,7 +337,6 @@ WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator * i, FILE * file) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
 	data->file = file;
-	data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
 	data->binary = true;
 	launchWriter(data);
 
@@ -314,7 +347,6 @@ WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * file) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
 	data->file = file;
-	data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
 	launchWriter(data);
 
 	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
