@@ -58,9 +58,8 @@ typedef struct BlockData_st {
 typedef struct TeeWiggleIteratorData_st {
 	FILE * file;
 	WiggleIterator * iter;
-	BlockData * finishedBlocks;
+	BlockData * dataBlocks;
 	BlockData * lastBlock;
-	BlockData * fillingBlock;
 	int count;
 	pthread_t threadID;
 	pthread_mutex_t continue_mutex;
@@ -68,15 +67,6 @@ typedef struct TeeWiggleIteratorData_st {
 	bool done;
 	bool binary;
 } TeeWiggleIteratorData;
-
-static void appendFinishedBlock(TeeWiggleIteratorData * data) {
-	if (data->lastBlock)
-		data->lastBlock->next = data->fillingBlock;
-	else
-		data->finishedBlocks = data->fillingBlock;
-	data->lastBlock = data->fillingBlock;
-	data->count++;
-}
 
 static void printBlock(FILE * file, BlockData * block) {
 	int i, j;
@@ -200,22 +190,24 @@ static void printBinaryBlock(FILE * file, BlockData * block) {
 }
 
 static bool goToNextBlock(TeeWiggleIteratorData * data) {
-	BlockData * ptr = data->finishedBlocks;
+	BlockData * ptr = data->dataBlocks;
 	static int i = 0;
 	i++;
 
 	pthread_mutex_lock(&data->continue_mutex);
+	// Received kill signal
 	if (data->count < 0)
 		return true;
-	if (!data->finishedBlocks->next && !data->done) 
-		pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
-	data->finishedBlocks = data->finishedBlocks->next;
-	if (!data->finishedBlocks)
-		data->lastBlock = NULL;
+
+	// Check that there is work left
 	data->count--;
+	if (data->count == 0 && !data->done) 
+		pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
 	pthread_cond_signal(&data->continue_cond);
 	pthread_mutex_unlock(&data->continue_mutex);
 
+	// Step forward
+	data->dataBlocks = data->dataBlocks->next;
 	free(ptr);
 	return false;
 }
@@ -225,15 +217,17 @@ static void * printToFile(void * args) {
 
 	// Wait for first block to arrive
 	pthread_mutex_lock(&data->continue_mutex);
-	if (!data->finishedBlocks && !data->done)
+	if (data->count == 0 && !data->done) 
 		pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
+	if (data->count < 0)
+		return true;
 	pthread_mutex_unlock(&data->continue_mutex);
 
-	while(data->finishedBlocks) {
+	while(data->dataBlocks) {
 		if (data->binary)
-			printBinaryBlock(data->file, data->finishedBlocks);
+			printBinaryBlock(data->file, data->dataBlocks);
 		else
-			printBlock(data->file, data->finishedBlocks);
+			printBlock(data->file, data->dataBlocks);
 		if (goToNextBlock(data))
 			return NULL;
 	}
@@ -249,24 +243,27 @@ void TeeWiggleIteratorPop(WiggleIterator * wi) {
 		wi->finish = iter->finish;
 		wi->value = iter->value;
 
-		int index = data->fillingBlock->count;
-		data->fillingBlock->chroms[index] =  iter->chrom;
-		data->fillingBlock->starts[index] =  iter->start;
-		data->fillingBlock->finishes[index] =  iter->finish;
-		data->fillingBlock->values[index] =  iter->value;
-		if (++data->fillingBlock->count >= BLOCK_LENGTH) {
+		int index = data->lastBlock->count;
+		data->lastBlock->chroms[index] =  iter->chrom;
+		data->lastBlock->starts[index] =  iter->start;
+		data->lastBlock->finishes[index] =  iter->finish;
+		data->lastBlock->values[index] =  iter->value;
+		if (++data->lastBlock->count >= BLOCK_LENGTH) {
+			// Communications
 			pthread_mutex_lock(&data->continue_mutex);
-			appendFinishedBlock(data);
+			data->count++;
 			pthread_cond_signal(&data->continue_cond);
 			if (data->count > MAX_OUT_BLOCKS)
 				pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
 			pthread_mutex_unlock(&data->continue_mutex);
-			data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
+
+			data->lastBlock->next = (BlockData*) calloc(1, sizeof(BlockData));
+			data->lastBlock = data->lastBlock->next;
 		}
 		pop(iter);
 	} else {
 		pthread_mutex_lock(&data->continue_mutex);
-		appendFinishedBlock(data);
+		data->count++;
 		data->done = true;
 		pthread_cond_signal(&data->continue_cond);
 		pthread_mutex_unlock(&data->continue_mutex);
@@ -281,7 +278,7 @@ static void launchWriter(TeeWiggleIteratorData * data) {
 	data->done = false;
 	pthread_cond_init(&data->continue_cond, NULL);
 	pthread_mutex_init(&data->continue_mutex, NULL);
-	data->fillingBlock = (BlockData*) calloc(1, sizeof(BlockData));
+	data->dataBlocks = data->lastBlock = (BlockData*) calloc(1, sizeof(BlockData));
 
 	// Launch pthread
 	int err = pthread_create(&data->threadID, NULL, &printToFile, data);
@@ -307,19 +304,14 @@ static void killWriter(TeeWiggleIteratorData * data) {
 	pthread_cond_destroy(&data->continue_cond);
 	pthread_mutex_destroy(&data->continue_mutex);
 
-	while (data->finishedBlocks) {
-		block = data->finishedBlocks;
-		data->finishedBlocks = block->next;
+	while (data->dataBlocks) {
+		block = data->dataBlocks;
+		data->dataBlocks = block->next;
 		free(block);
 	}
 
-	data->finishedBlocks = NULL;
+	data->dataBlocks = NULL;
 	data->lastBlock = NULL;
-	
-	if (data->fillingBlock) 
-		free(data->fillingBlock);
-
-	data->fillingBlock = NULL;
 }
 
 void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
