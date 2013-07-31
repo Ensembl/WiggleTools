@@ -32,8 +32,8 @@
 // Local header
 #include "bigFileReader.h"
 
-static int MAX_BLOCKS = 100;
-static int MAX_HEAD_START = 300;
+static int MAX_BLOCKS = 10;
+static int MAX_HEAD_START = 30;
 
 static BlockData * createBlockData(char * chrom, struct fileOffsetSize * block, char * blockBuf, size_t uncompressBufSize) {
 	BlockData * new = (BlockData * ) calloc(1, sizeof(BlockData));
