@@ -1,1 +1,5 @@
 Memory tracking & cleaning
+Chrom labels (esp fixed step wiggle files?)
+VCF/BCF reader?
+Peak Caller?
+HMM?
