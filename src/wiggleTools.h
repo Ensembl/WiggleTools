@@ -70,6 +70,7 @@ WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
 WiggleIterator * PowerWiggleIterator (WiggleIterator *, double);
 WiggleIterator * LogWiggleIterator (WiggleIterator * , double);
 WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
+WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int width);
 
 // Sets of iterators 
 Multiplexer * newMultiplexer(WiggleIterator **, int);

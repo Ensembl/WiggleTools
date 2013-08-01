@@ -124,8 +124,7 @@ void CompressionWiggleIteratorPop(WiggleIterator * wi) {
 WiggleIterator * CompressionWiggleIterator(WiggleIterator * i) {
 	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) calloc(1, sizeof(UnitWiggleIteratorData));
 	data->iter = i;
-	WiggleIterator * wi =  newWiggleIterator(data, &CompressionWiggleIteratorPop, &UnitWiggleIteratorSeek);
-	return wi;
+	return newWiggleIterator(data, &CompressionWiggleIteratorPop, &UnitWiggleIteratorSeek);
 }
 
 //////////////////////////////////////////////////////
@@ -347,172 +346,120 @@ WiggleIterator * AbsWiggleIterator(WiggleIterator * i) {
 }
 
 //////////////////////////////////////////////////////
-// Correlation function
+// Smooth' operator !
 //////////////////////////////////////////////////////
-// Note: this is an approximate calculation of the Pearson calculation
-// which has the benefit of running in a single pass through the data
-// The origin of the code can be found at:
-// http://en.wikipedia.org/wiki?title=Talk:Correlation
 
-double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
-	double sum_sq_A = 0;
-	double sum_sq_B = 0;
-	double sum_AB = 0;
-	double meanA = iterA->value;
-	double meanB = iterB->value;
-	int totalLength = 0;
-	int halfway, width;
-	double sweep, deltaA, deltaB;
-	char *chrom = NULL; 
-	int start = -1;
-	int finish = -1;
-
-	while (!iterA->done || !iterB->done) {
-		if (iterA->done) {
-			if (!chrom || strcmp(chrom, iterB->chrom) < 0) {
-				chrom = iterB->chrom;
-				finish = -1;
-			}
-			start = iterB->start > finish? iterB->start: finish;
-			finish = iterB->finish;
-			width = (finish - start);
-			halfway = totalLength + width/2;
-			if (halfway == 0)
-				halfway = 1;
-			sweep = (halfway - 1.0) / halfway;
-			totalLength += width;
-			deltaA = -meanA;
-			deltaB = iterB->value - meanB;
-			sum_sq_A += deltaA * deltaA * sweep;
-			sum_sq_B += deltaB * deltaB * sweep;
-			sum_AB += deltaA * deltaB * sweep;
-			meanA += deltaA / totalLength;
-			meanB += deltaB / totalLength;
-			pop(iterB);
-			continue;
-		}
-		if (iterB->done) {
-
-			if (!chrom || strcmp(chrom, iterA->chrom) < 0) {
-				chrom = iterA->chrom;
-				finish = -1;
-			}
-			start = iterA->start > finish? iterA->start: finish;
-			finish = iterA->finish;
-			width = (finish - start);
-			halfway = totalLength + width/2;
-			if (halfway == 0)
-				halfway = 1;
-			sweep = (halfway - 1.0) / halfway;
-			totalLength += width;
-			deltaB = -meanB;
-			deltaA = iterA->value - meanA;
-			sum_sq_B += deltaB * deltaB * sweep;
-			sum_sq_A += deltaA * deltaA * sweep;
-			sum_AB += deltaB * deltaA * sweep;
-			meanB += deltaB / totalLength;
-			meanA += deltaA / totalLength;
-			pop(iterA);
-			continue;
-		}
-
-		int chromDiff = strcmp(iterA->chrom, iterB->chrom);
-
-		if (chromDiff < 0) {
-			if (!chrom || strcmp(chrom, iterA->chrom) < 0) {
-				chrom = iterA->chrom;
-				finish = -1;
-			}
-			start = iterA->start > finish? iterA->start: finish;
-			finish = iterA->finish;
-			width = (finish - start);
-			halfway = totalLength + width/2;
-			if (halfway == 0)
-				halfway = 1;
-			sweep = (halfway - 1.0) / halfway;
-			totalLength += width;
-			deltaB = -meanB;
-			deltaA = iterA->value - meanA;
-			sum_sq_B += deltaB * deltaB * sweep;
-			sum_sq_A += deltaA * deltaA * sweep;
-			sum_AB += deltaB * deltaA * sweep;
-			meanB += deltaB / totalLength;
-			meanA += deltaA / totalLength;
-			pop(iterA);
-		} else if (chromDiff > 0) {
-			if (!chrom || strcmp(chrom, iterB->chrom) < 0) {
-				chrom = iterB->chrom;
-				finish = -1;
-			}
-			start = iterB->start > finish? iterB->start: finish;
-			finish = iterB->finish;
-			width = (finish - start);
-			halfway = totalLength + width/2;
-			if (halfway == 0)
-				halfway = 1;
-			sweep = (halfway - 1.0) / halfway;
-			totalLength += width;
-			deltaA = -meanA;
-			deltaB = iterB->value - meanB;
-			sum_sq_A += deltaA * deltaA * sweep;
-			sum_sq_B += deltaB * deltaB * sweep;
-			sum_AB += deltaA * deltaB * sweep;
-			meanA += deltaA / totalLength;
-			meanB += deltaB / totalLength;
-			pop(iterB);
-		} else {
-			// Both iterators on the same chromosome:	
-			chrom = iterA->chrom;
-
-			if (iterA->start < iterB->start) {
-				start = iterA->start > finish? iterA->start: finish;	
-				if (iterA->finish <= iterB->start) {
-					finish = iterA->finish;
-				} else {
-					finish = iterB->start - 1;
-				}
-				deltaB = -meanB;
-				deltaA = iterA->value - meanA;
-			} else if (iterB->start < iterA->start) {
-				start = iterB->start > finish? iterB->start: finish;	
-				if (iterB->finish <= iterA->start) {
-					finish = iterB->finish;
-				} else {
-					finish = iterA->start - 1;
-				}
-				deltaA = -meanA;
-				deltaB = iterB->value - meanB;
-			} else {
-				start = iterA->start > finish? iterA->start: finish;	
-				finish = iterA->finish < iterB->finish ? iterA->finish: iterB->finish;
-				deltaA = iterA->value - meanA;
-				deltaB = iterB->value - meanB;
-			}
-
-			width = (finish - start);
-			halfway = totalLength + width/2;
-			if (halfway == 0)
-				halfway = 1;
-			sweep = (halfway - 1.0) / halfway;
-			totalLength += width;
-			deltaA = iterA->value - meanA;
-			deltaB = iterB->value - meanB;
-			sum_sq_A += deltaA * deltaA * sweep;
-			sum_sq_B += deltaB * deltaB * sweep;
-			sum_AB += deltaA * deltaB * sweep;
-			meanA += deltaA / totalLength;
-			meanB += deltaB / totalLength;
-
-			if (iterA->finish == finish)
-				pop(iterA);
-			if (iterB->finish == finish)
-				pop(iterB);
-		}
-	}
-
-	return sum_AB / (sqrt(sum_sq_A) * sqrt(sum_sq_B));
+typedef struct SmoothWiggleIteratorData_st {
+	WiggleIterator * iter;
+	double * buffer;
+	double sum;
+	int first;
+	int last;
+	int count;
+	int width;
+} SmoothWiggleIteratorData;
+   
+static void smoothWiggleIteratorEraseOne(SmoothWiggleIteratorData * data) {
+	data->sum -= data->buffer[data->last];
+	data->count--;
+	if (++data->last >= data->width)
+		data->last = 0;
 }
 
+static void smoothWiggleIteratorReadOne(char * chrom, int position, SmoothWiggleIteratorData * data) {
+	WiggleIterator * iter = data->iter;
+
+	// Let iter run if necessary
+	while (!iter->done && iter->chrom == chrom && iter->finish <= position)
+		pop(iter);
+	
+	if (!iter->done && iter->chrom == chrom) {
+		// Clear space if necessary
+		if (data->count == data->width) 
+			smoothWiggleIteratorEraseOne(data);
+
+		// Record iter's value as appropriate
+		if (!iter->done && iter->chrom == chrom && iter->start <= position) {
+			data->buffer[data->first] = iter->value;
+			data->sum += iter->value;
+		} else 
+			data->buffer[data->first] = 0;
+		data->count++;
+
+		// Increment ptr
+		if (++data->first >= data->width)
+			data->first = 0;
+
+		if (iter->finish == position + 1)
+			pop(iter);
+	} else 
+		smoothWiggleIteratorEraseOne(data);
+}
+
+static void SmoothWiggleIteratorPop(WiggleIterator * wi) {
+	SmoothWiggleIteratorData * data = (SmoothWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+	int i;
+
+	if (data->count == 0) {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = wi->start + 1;
+		for (i = 0; i < data->width / 2 + 1; i++)
+			smoothWiggleIteratorReadOne(wi->chrom, wi->start + i, data);
+		wi->value = data->sum / data->count;
+	} else if (data->count == data->width/2 + 1) {
+		if (iter->done) {
+			wi->done = true;
+			return;
+		} else if (iter->chrom != wi->chrom) {
+			wi->chrom = iter->chrom;
+			wi->start = iter->start;
+			wi->finish = wi->start + 1;
+			for (i = 0; i < data->width / 2 + 1; i++)
+				smoothWiggleIteratorReadOne(wi->chrom, wi->start + i, data);
+			wi->value = data->sum / data->count;
+		} else {
+			wi->start++;
+			wi->finish = wi->start + 1;
+			if (!iter->done && iter->chrom == wi->chrom)
+				smoothWiggleIteratorReadOne(wi->chrom, wi->start + data->width/2, data);
+			else
+				smoothWiggleIteratorEraseOne(data);
+			wi->value = data->sum / data->count;
+		}
+	} else {
+		wi->start++;
+		wi->finish = wi->start + 1;
+		if (!iter->done && iter->chrom == wi->chrom)
+			smoothWiggleIteratorReadOne(wi->chrom, wi->start + data->width/2, data);
+		else
+			smoothWiggleIteratorEraseOne(data);
+		wi->value = data->sum / data->count;
+	}
+}
+
+void SmoothWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	SmoothWiggleIteratorData * data = (SmoothWiggleIteratorData *) wi->data;
+	seek(data->iter, chrom, start, finish);
+	int i;
+	for (i = 0; i < data->width; i++)
+		data->buffer[i] = 0;
+	data->first = 0;
+	data->last = 0;
+	data->sum = 0;
+	data->count = 0;
+	wi->done = false;
+	pop(wi);
+}
+
+WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int width) {
+	SmoothWiggleIteratorData * data = (SmoothWiggleIteratorData *) calloc(1, sizeof(SmoothWiggleIteratorData));
+	data->iter = i;
+	data->buffer = (double*) calloc(1, width);
+	data->width = width;
+	return newWiggleIterator(data, &SmoothWiggleIteratorPop, &SmoothWiggleIteratorSeek);
+}
 
 //////////////////////////////////////////////////////
 // Convenience file reader

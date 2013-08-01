@@ -86,6 +86,12 @@ static WiggleIterator * readBTee() {
 	return BinaryTeeWiggleIterator(readIterator(), file);
 }
 
+static WiggleIterator * readSmooth() {
+	int width = atoi(nextToken());
+	return SmoothWiggleIterator(readIterator(), width);
+}
+
+
 static WiggleIterator * readStdOut() {
 	return TeeWiggleIterator(readIterator(), stdout);
 }
@@ -202,6 +208,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readTee();
 	if (strcmp(token, "writeb") == 0)
 		return readBTee();
+	if (strcmp(token, "smooth") == 0)
+		return readSmooth();
 
 	return SmartReader(token);
 
