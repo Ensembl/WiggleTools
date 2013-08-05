@@ -11,13 +11,13 @@ default: lib bin
 	
 bin: ${BINDIR}/wiggletools
 
-${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggleTools.o
+${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggletools.o
 	mkdir -p ${BINDIR}
-	${CC} ${CFLAGS} ${LIB_PATHS} wiggleTools.c -static ${LIBS} -o ${BINDIR}/wiggletools 
+	${CC} ${CFLAGS} ${LIB_PATHS} wiggletools.c -static ${LIBS} -o ${BINDIR}/wiggletools 
 
 lib: ${LIBDIR}/libwiggletools.a 
 
-${LIBDIR}/libwiggletools.a: wiggleIterators.o wiggleReader.o bigWiggleReader.o wiggleMultiplexer.o wiggleReducers.o bedReader.o bigBedReader.o bamReader.o wiggleApply.o bigFileReader.o binaryFileReader.o commandParser.o wiggleWriter.o wiggleStatistics.o wiggleUnaryOps.o
+${LIBDIR}/libwiggletools.a: wiggleIterator.o wiggleReader.o bigWiggleReader.o multiplexer.o reducers.o bedReader.o bigBedReader.o bamReader.o apply.o bigFileReader.o binaryFileReader.o commandParser.o wiggleWriter.o statistics.o unaryOps.o
 	mkdir -p ${LIBDIR}
 	ar rcs ${LIBDIR}/libwiggletools.a *.o ${SAMTOOLS}/bam_plcmd.o ${SAMTOOLS}/sample.o ${SAMTOOLS}/bam2bcf.o ${SAMTOOLS}/errmod.o ${SAMTOOLS}/bam2bcf_indel.o
 

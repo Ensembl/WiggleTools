@@ -33,7 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "wiggleMultiplexer.h"
+#include "multiplexer.h"
 
 void popMultiplexer(Multiplexer * multi) {
 	(*(multi->pop))(multi);

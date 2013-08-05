@@ -28,26 +28,40 @@
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
-//
-#ifndef _WIGGLETOOLS_PRIV_
-#define _WIGGLETOOLS_PRIV_
 
+#include <stdlib.h>
 #include <stdio.h>
-#include "wiggleTools.h"
 
-struct wiggleIterator_st {
-	char * chrom;
-	int start;
-	int finish;
-	double value;
-	bool done;
-	void * data;
-	void (*pop)(WiggleIterator *);
-	void (*seek)(WiggleIterator *, const char *, int, int);
-};
+#include "wiggleIterator.h"
 
-WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int));
-void pop(WiggleIterator *);
-WiggleIterator * CompressionWiggleIterator(WiggleIterator *);
+WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int)) {
+	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
+	new->data = data;
+	new->pop = popFunction;
+	new->seek = seek;
+	new->chrom = calloc(1000,1);
+	new->chrom = calloc(1000,1);
+	new->value = 1; // Default value for non-valued bed tracks;
+	pop(new);
+	return new;
+}
 
-#endif
+void destroyWiggleIterator(WiggleIterator * wi) {
+	free(wi->data);
+	free(wi->chrom);
+	free(wi);
+}
+
+void pop(WiggleIterator * wi) {
+	if (!wi->done)
+		wi->pop(wi);
+}
+
+void runWiggleIterator(WiggleIterator * wi) {
+	while (!wi->done)
+		wi->pop(wi);
+}
+
+void seek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	(*(wi->seek))(wi, chrom, start, finish);
+}

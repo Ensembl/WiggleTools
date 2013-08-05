@@ -33,7 +33,7 @@
 #include <string.h>
 
 // Local header
-#include "wiggleMultiplexer.h"
+#include "multiplexer.h"
 
 static char * firstToken(char *str) {
 	char * ptr;
@@ -186,7 +186,7 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readDifference();
 	if (strcmp(token, "mean") == 0)
 		return readMean();
-	if (strcmp(token, "variance") == 0)
+	if (strcmp(token, "var") == 0)
 		return readVariance();
 	if (strcmp(token, "stddev") == 0)
 		return readStdDev();

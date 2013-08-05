@@ -29,7 +29,7 @@
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "wiggleMultiplexer.h"
+#include "multiplexer.h"
 
 typedef struct combiner_st {
 	char * chrom;

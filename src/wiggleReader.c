@@ -33,8 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "wiggleTools.h"
-#include "wiggleIterators.h"
+#include "wiggleIterator.h"
 
 //////////////////////////////////////////////////////
 // File Reader

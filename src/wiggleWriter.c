@@ -36,8 +36,7 @@
 #include <stdint.h>
 
 // Local header
-#include "wiggleTools.h"
-#include "wiggleIterators.h"
+#include "wiggleIterator.h"
 
 //////////////////////////////////////////////////////
 // Tee operator
@@ -219,9 +218,10 @@ static void * printToFile(void * args) {
 	pthread_mutex_lock(&data->continue_mutex);
 	if (data->count == 0 && !data->done) 
 		pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
-	if (data->count < 0)
-		return true;
 	pthread_mutex_unlock(&data->continue_mutex);
+
+	if (data->count < 0)
+		return NULL;
 
 	while(data->dataBlocks) {
 		if (data->binary)

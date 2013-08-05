@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "wiggleMultiplexer.h"
+#include "multiplexer.h"
 
 typedef struct wiggleReducerData_st {
 	Multiplexer * multi;

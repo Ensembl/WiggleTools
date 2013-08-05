@@ -32,7 +32,7 @@
 #include <string.h>
 #include "sam.h"
 #include "faidx.h"
-#include "wiggleIterators.h"
+#include "wiggleIterator.h"
 
 #define MPLP_NO_ORPHAN 0x40
 #define MPLP_REALN   0x80

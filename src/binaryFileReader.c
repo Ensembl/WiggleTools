@@ -35,7 +35,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "wiggleIterators.h"
+#include "wiggleIterator.h"
 
 static int MAX_BLOCKS = 100;
 #define BLOCK_LENGTH 10000

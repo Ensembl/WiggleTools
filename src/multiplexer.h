@@ -29,39 +29,26 @@
 // IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include <stdlib.h>
-#include <stdio.h>
+#ifndef WIGGLE_MULTIPLEXER_H_
+#define WIGGLE_MULTIPLEXER_H_
 
-#include "wiggleIterators.h"
+#include "wiggleIterator.h"
 
-WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int)) {
-	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
-	new->data = data;
-	new->pop = popFunction;
-	new->seek = seek;
-	new->chrom = calloc(1000,1);
-	new->chrom = calloc(1000,1);
-	new->value = 1; // Default value for non-valued bed tracks;
-	pop(new);
-	return new;
-}
+struct multiplexer_st {
+	char * chrom;
+	int start;
+	int finish;
+	double * values;
+	int count;
+	bool *inplay;
+	WiggleIterator ** iters;
+	bool done;
+	void (*pop)(struct multiplexer_st *);
 
-void destroyWiggleIterator(WiggleIterator * wi) {
-	free(wi->data);
-	free(wi->chrom);
-	free(wi);
-}
+	FILE * file;
+};
 
-void pop(WiggleIterator * wi) {
-	if (!wi->done)
-		wi->pop(wi);
-}
+void popMultiplexer(Multiplexer * multi);
+void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish);
 
-void runWiggleIterator(WiggleIterator * wi) {
-	while (!wi->done)
-		wi->pop(wi);
-}
-
-void seek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	(*(wi->seek))(wi, chrom, start, finish);
-}
+#endif

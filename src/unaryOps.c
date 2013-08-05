@@ -34,8 +34,7 @@
 #include <string.h>
 
 // Local header
-#include "wiggleTools.h"
-#include "wiggleIterators.h"
+#include "wiggleIterator.h"
 
 //////////////////////////////////////////////////////
 // Null operator

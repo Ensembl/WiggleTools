@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h> 
 
-#include "wiggleIterators.h"
+#include "wiggleIterator.h"
 
 typedef struct bedReaderData_st {
 	char  *filename;

@@ -34,7 +34,7 @@
 #include <string.h>
  
 // Local header
-#include "wiggleTools.h"
+#include "wiggletools.h"
 
 static void printHelp() {
 	puts("Inputs:");

@@ -35,7 +35,7 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#include "wiggleIterators.h"
+#include "wiggleIterator.h"
 
 // Kent library headers
 #include "common.h"

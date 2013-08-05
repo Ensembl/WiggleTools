@@ -31,10 +31,10 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Local header
-#include "wiggleTools.h"
-#include "wiggleIterators.h"
+#include "wiggleIterator.h"
 
 //////////////////////////////////////////////////////
 // Basic Stats

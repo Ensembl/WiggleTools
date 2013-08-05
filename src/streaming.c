@@ -31,7 +31,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "wiggleMultiplexer.h"
+#include "multiplexer.h"
 
 #define MAXLINE 10000
 
