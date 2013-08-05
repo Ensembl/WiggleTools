@@ -115,6 +115,7 @@ void setMaxHeadStart(int);
 
 // Command line parser
 void rollYourOwn(char *);
+void printHelp();
 
 // Deprecated
 Multiplexer * newStreamingMultiplexer(FILE * input);

@@ -36,44 +36,6 @@
 // Local header
 #include "wiggletools.h"
 
-static void printHelp() {
-	puts("Inputs:");
-	puts("\tThe program takes in Wig, BigWig, BedGraph, Bed, BigBed and Bam files, which are distinguished thanks to their suffix (.wig, .bw, bg, .bed, .bb, .bam respectively).");
-	puts("\tNote that Bed and BigBed files are treated as a binary {0,1} signal that indicates the union of regions defined in the bed.");
-	puts("\tAlso note that .wig, .bed and .bg files have to be sorted by coordinate (.bw, .bb and .bam files are already internally sorted)");
-	puts("\tFinally, the program assumes that every .bam file has an ancillary .bai index file in the same directory");
-	puts("");
-	puts("Outputs:");
-	puts("\tThe program outputs a bedGraph flat file in stdout.");
-	puts("");
-	puts("Parameters:");
-	puts("wiggletools [opts] 'command'");
-	puts("");
-	puts("Options:");
-	puts("\t-maxBlocks n\t: set the max number of blocks read at once in a BigFile reader");
-	puts("\t-maxHeadStart n\t: set the max number of decompressed blocks in a BigFile reader");
-	puts("\t--help");
-	puts("");
-	puts("Command grammar:");
-	puts("\tcommand:\t\titerator|statistic iterator|apply|comparison");
-	puts("\titerator:\t\tfilename|unary_operation|binary_operation|reduction|output_operation");
-	puts("\tunary_operation:\tunary_operator iterator");
-	puts("\tunary_operator:\t\t'unit'");
-	puts("\tbinary_operation:\tbinary_operator iterator");
-	puts("\tbinary_operator:\t'diff'");
-	puts("\treduction:\t\treduction_operator multiplexer");
-	puts("\treduction_operator:\t'cat'|'add'|'product'|'mean'|'variance'|'stddev'|'median'|'min'|'max'");
-	puts("\tmultiplexer:\t\tfilename_list|map");
-	puts("\tfilename list:\t\tfilename1 filename2 ... ; ");
-	puts("\tmap:\t\t\t'map' unary_operator multiplexer");
-	puts("\toutput_operation:\toutput_operator filename iterator");
-	puts("\toutput_operator:\t'write'|'writeb'|'print'");
-	puts("\tstatistic:\t\t'AUC'|'mean'");
-	puts("\tapply:\t\t\t'apply' statistic iterator iterator");
-	puts("\tcomparison:\t\tcomparator iterator iterator");
-	puts("\tcomparator:\t\t'pearson'");
-}
-
 int main(int argc, char ** argv) {
 	int i=0;
 	if (argc < 2 || strcmp(argv[1], "--help") == 0) {

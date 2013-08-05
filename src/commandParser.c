@@ -35,6 +35,40 @@
 // Local header
 #include "multiplexer.h"
 
+void printHelp() {
+
+puts("WiggleTools");
+puts("");
+puts("Copyright Daniel Zerbino, 2013.");
+puts("zerbino@ebi.ac.uk");
+puts("");
+puts("This library parses wiggle files and executes various operations on them streaming through lazy evaluators.");
+puts("");
+puts("Inputs:");
+puts("\tThe program takes in Wig, BigWig, BedGraph, Bed, BigBed and Bam files, which are distinguished thanks to their suffix (.wig, .bw, .bg, .bed, .bb, .bam respectively).");
+puts("\tNote that wiggletools assumes that every bam file has an index .bai file next to it.");
+puts("");
+puts("Outputs:");
+puts("\tThe program outputs a wiggle file in stdout unless the output is squashed");
+puts("");
+puts("Command line:");
+puts("\twiggletools --help");
+puts("\twiggletools ' program '");
+puts("");
+puts("Program grammar:");
+puts("\tprogram = do (command) | (command)                ## 'do' is short for 'just do it and don't print it out'");
+puts("\tcommand = (statistic) (iterator) | (iterator)   ");
+puts("\tstatistic = AUC | mean | variance | pearson    ## A statistic is simply a number computed across the dataset");
+puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex)");
+puts("\tunary_operator = unit | stdout | write (filename.wig) | smooth (int)");
+puts("\tbinary_operator = diff");
+puts("\tmultiplex = (filename_list) | map (unary_operator) (multiplex)");
+puts("\treducer = cat | add | product | mean | var | stddev | median | min | max");
+puts("\tfilename_list = (filename) ; | (filename) (filename_list)");
+puts("\tfilename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam");
+
+}
+
 static char * firstToken(char *str) {
 	char * ptr;
 

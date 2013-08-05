@@ -20,34 +20,20 @@ Inputs:
 	Note that wiggletools assumes that every bam file has an index .bai file next to it.
 
 Outputs:
-	The program outputs a bedGraph flat file in stdout.
+	The program outputs a wiggle file in stdout unless the output is squashed
 
-Parameters:
-	// Unary operators
-	wiggletools unit file
-	wiggletools abs file
-	wiggletools exp file
-	wiggletools log file
-
-	// Operators between a signal and a scalar
-	wiggletools scale file factor
-	wiggletools pow file exponent
-	wiggletools exp file radix
-	wiggletools log file base
-
-	// Reduction operators
-	wiggletools add file1 file2 ... 
-	wiggletools mult file1 file2 ...
-	wiggletools min file1 file2 ...
-	wiggletools max file1 file2 ...
-	wiggletools mean file1 file2 ...
-	wiggletools var file1 file2 ...
-	wiggletools stddev file1 file2 ...
-	wiggletools median file1 file2 ...
-		
-	// Calculations
-	wiggletools AUC file
-	wiggletools pearson file1 file2
-
-	// Other
+Command line:
 	wiggletools --help
+	wiggletools ' program '
+
+Program grammar:
+	program = do (command) | (command)                ## 'do' is short for 'just do it and don't print it out'
+	command = (statistic) (iterator) | (iterator)   
+	statistic = AUC | mean | variance | pearson    ## A statistic is simply a number computed across the dataset
+	iterator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex)
+	unary_operator = unit | stdout | write (filename.wig) | smooth (int)
+	binary_operator = diff
+	multiplex = (filename_list) | map (unary_operator) (multiplex)
+	reducer = cat | add | product | mean | var | stddev | median | min | max
+	filename_list = (filename) ; | (filename) (filename_list)
+	filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam
