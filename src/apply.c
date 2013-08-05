@@ -114,7 +114,7 @@ static void createTargets(ApplyWiggleIteratorData * data) {
 	}
 }
 
-static void pushDataOnPipe(ApplyWiggleIteratorData * data, BufferedWiggleIteratorData * bufferedData) {
+static void pushDataOnBuffer(ApplyWiggleIteratorData * data, BufferedWiggleIteratorData * bufferedData) {
 	int pos, start, finish;
 
 	if (bufferedData->start > data->input->start)
@@ -139,7 +139,7 @@ static void pushData(ApplyWiggleIteratorData * data) {
 		if (bufferedData->start >= data->input->finish)
 			break;
 		else
-			pushDataOnPipe(data, bufferedData);
+			pushDataOnBuffer(data, bufferedData);
 	
 	}
 
@@ -166,7 +166,6 @@ void ApplyWiggleIteratorPop(WiggleIterator * wi) {
 		pop(data->input);
 	}
 
-
 	// Return value
 	wi->chrom = data->head->chrom;
 	wi->start = data->head->start;
@@ -180,6 +179,18 @@ void ApplyWiggleIteratorPop(WiggleIterator * wi) {
 	else
 		data->head = data->head->next;
 	destroyBufferedWiggleIteratorData(bufferedData);
+}
+
+void ApplyWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) wi->data;
+	BufferedWiggleIteratorData * bufferedData;
+	while (data->head) {
+		bufferedData = data->head;
+		data->head = data->head->next;
+		destroyBufferedWiggleIteratorData(bufferedData);
+	}
+	data->tail = NULL;
+	seek(data->regions, chrom, start, finish);
 }
 
 WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset) {
