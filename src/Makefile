@@ -1,5 +1,5 @@
 SAMTOOLS=../../samtools/
-CFLAGS=-pg -Wall -O3
+CFLAGS=-g -Wall -O3
 LIBDIR=../lib
 BINDIR=../bin
 INC=-I${KENT_SRC}/inc/ -I${SAMTOOLS}
