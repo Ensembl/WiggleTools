@@ -41,6 +41,7 @@ struct wiggleIterator_st {
 	int finish;
 	double value;
 	bool done;
+	bool strand;
 	void * data;
 	void (*pop)(WiggleIterator *);
 	void (*seek)(WiggleIterator *, const char *, int, int);
