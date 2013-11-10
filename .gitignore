@@ -4,3 +4,4 @@ wiggletools
 .*.swp
 tags
 test*.sh
+bin
