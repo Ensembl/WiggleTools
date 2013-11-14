@@ -102,7 +102,7 @@ static bool readNextBlock(BinaryFileReaderData * data, char ** lastChrom, int * 
 	int * finishPtr = block->finishes;
 	double * valuePtr = block->values;
 	char c;
-	bool startSet;
+	bool startSet = true;
 	int32_t holder;
 	float holder2;
 
