@@ -90,6 +90,13 @@ double stddev(WiggleIterator * wi) {
 	return sqrt(variance(wi));
 }
 
+double isZero(WiggleIterator * wi) {
+	for (; !wi->done; pop(wi))
+		if (wi->value != 0)
+			exit(1);
+	return 1;
+}
+
 //////////////////////////////////////////////////////
 // Correlation function
 //////////////////////////////////////////////////////

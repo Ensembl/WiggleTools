@@ -66,6 +66,9 @@ WiggleIterator * UnionWiggleIterator (WiggleIterator *);
 WiggleIterator * AbsWiggleIterator (WiggleIterator * );
 WiggleIterator * NaturalLogWiggleIterator (WiggleIterator *);
 WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
+WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator * );
+WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator *, double);
+WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator *);
 	// Scalar operations
 WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
 WiggleIterator * PowerWiggleIterator (WiggleIterator *, double);
@@ -101,6 +104,7 @@ void runWiggleIterator(WiggleIterator * );
 double AUC (WiggleIterator *);
 double mean (WiggleIterator *);
 double variance (WiggleIterator *);
+double isZero(WiggleIterator * wi);
 //	Binary 
 double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 

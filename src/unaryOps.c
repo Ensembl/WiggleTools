@@ -96,6 +96,36 @@ WiggleIterator * UnitWiggleIterator(WiggleIterator * i) {
 }
 
 //////////////////////////////////////////////////////
+// TestNonOverlapping operator
+//////////////////////////////////////////////////////
+
+void TestNonOverlappingWiggleIteratorPop(WiggleIterator * wi) {
+	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+
+	if (iter->done) {
+		wi->done = true;
+	} else {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		wi->value = iter->value;
+
+		pop(iter);
+
+		if (wi->chrom == iter->chrom && wi->finish >= iter->start)
+			exit(1);
+	}
+}
+
+
+WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator * i) {
+	UnitWiggleIteratorData * data = (UnitWiggleIteratorData *) calloc(1, sizeof(UnitWiggleIteratorData));
+	data->iter = i;
+	return newWiggleIterator(data, &TestNonOverlappingWiggleIteratorPop, &UnitWiggleIteratorSeek);
+}
+
+//////////////////////////////////////////////////////
 // Compression operator
 //////////////////////////////////////////////////////
 
@@ -164,6 +194,46 @@ WiggleIterator * UnionWiggleIterator(WiggleIterator * i) {
 	wi->value = 1;
 	return wi;
 }
+
+//////////////////////////////////////////////////////
+// High pass filter operator
+//////////////////////////////////////////////////////
+
+typedef struct highPassFilterWiggleIteratorData_st {
+	WiggleIterator * iter;
+	double scalar;
+} HighPassFilterWiggleIteratorData;
+
+void HighPassFilterWiggleIteratorPop(WiggleIterator * wi) {
+	HighPassFilterWiggleIteratorData * data = (HighPassFilterWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+	if (!data->iter->done) {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		if (iter->value > data->scalar)
+			wi->value = 1;
+		else
+			wi->value = 0;
+		pop(data->iter);
+	} else {
+		wi->done = true;
+	}
+}
+
+void HighPassFilterWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	HighPassFilterWiggleIteratorData * data = (HighPassFilterWiggleIteratorData *) wi->data;
+	seek(data->iter, chrom, start, finish);
+	pop(wi);
+}
+
+WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator * i, double s) {
+	HighPassFilterWiggleIteratorData * data = (HighPassFilterWiggleIteratorData *) calloc(1, sizeof(HighPassFilterWiggleIteratorData));
+	data->iter = i;
+	data->scalar = s;
+	return newWiggleIterator(data, &HighPassFilterWiggleIteratorPop, &HighPassFilterWiggleIteratorSeek);
+}
+
 
 //////////////////////////////////////////////////////
 // Scaling operator
@@ -250,7 +320,7 @@ WiggleIterator * LogWiggleIterator(WiggleIterator * i, double s) {
 }
 
 //////////////////////////////////////////////////////
-// Exponentiation operator
+// Exponential operator
 //////////////////////////////////////////////////////
 
 typedef struct expWiggleIteratorData_st {
