@@ -291,6 +291,8 @@ static WiggleIterator * readMWUTest() {
 static WiggleIterator * readIteratorToken(char * token) {
 	if (strcmp(token, "cat") == 0)
 		return readCat();
+	if (strcmp(token, "scale") == 0)
+		return readScale();
 	if (strcmp(token, "unit") == 0)
 		return readUnit();
 	if (strcmp(token, "add") == 0)
@@ -391,6 +393,40 @@ static Multiplexer * readMultiplexer() {
 	return newMultiplexer(iters, count);
 }
 
+static void readProfile() {
+	int width = atoi(nextToken());
+	char * regions = nextToken();
+	WiggleIterator * wig = readIterator();
+	double * profile = profileSum(SmartReader(regions), wig, width);
+	int i;
+	for (i = 0; i < width; i++)
+		printf("%f\n", profile[i]);
+	free(profile);
+}
+
+static void readProfiles() {
+	int width = atoi(nextToken());
+	double * profile = calloc(width, sizeof(double));
+	WiggleIterator * regions = readIterator();
+	WiggleIterator * wig = readIterator();
+
+	for (; !regions->done; pop(regions)) {
+		int i;
+		regionProfile(regions, wig, width, profile, width/2);
+		printf("%f", profile[0]);
+		profile[0] = 0;
+
+		for (i = 1; i < width; i++) {
+			printf("\t%f", profile[i]);
+			profile[i] = 0;
+		}
+
+		printf("\n");
+	}
+
+	free(profile);
+}
+
 void rollYourOwn(char * str) {
 	char * token = firstToken(str);
 	if (strcmp(token, "AUC") == 0)
@@ -409,6 +445,10 @@ void rollYourOwn(char * str) {
 		isZero(readIterator());	
 	else if (strcmp(token, "apply") == 0)
 		runWiggleIterator(readApply());
+	else if (strcmp(token, "profile") == 0)
+		readProfile();
+	else if (strcmp(token, "profiles") == 0)
+		readProfiles();
 	else
 		toStdout(readIteratorToken(token));	
 }

@@ -264,3 +264,38 @@ double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
 	return sum_AB / (sqrt(sum_sq_A) * sqrt(sum_sq_B));
 }
 
+//////////////////////////////////////////////////////
+// Profile summaries
+//////////////////////////////////////////////////////
+
+void regionProfile2(WiggleIterator * wig, int width, int centerRes, int centerRegion, double scaleFactor, double * res) {
+	int start = centerRes + (wig->start - centerRegion); 
+	int finish = centerRes + (wig->finish - centerRegion); 
+	int pos;
+	for (pos = start; pos < finish; pos++) {
+		int index = (int) round(pos * scaleFactor);
+		if (index < 0)
+			index = 0;
+		if (index >= width)
+			index = width - 1;
+		res[index] += wig->value;
+	}
+}
+
+void regionProfile(WiggleIterator * region, WiggleIterator * wig, int width, double * res, int centerRes) {
+	int centerRegion = (region->finish + region->start) / 2;
+	double scaleFactor = width / (double) (region->finish - region->start);
+
+	for (seek(wig, region->chrom, region->start, region->finish-1); !wig->done; pop(wig)) 
+		regionProfile2(wig, width, centerRes, centerRegion, scaleFactor, res);
+}
+
+double * profileSum(WiggleIterator * regions, WiggleIterator * wig, int width) {
+	double * res = calloc(width, sizeof(double));
+	int centerRes = width / 2; 
+
+	for (; !regions->done; pop(regions)) 
+		regionProfile(regions, wig, width, res, centerRes);
+
+	return res;
+}

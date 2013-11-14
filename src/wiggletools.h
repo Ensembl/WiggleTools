@@ -115,6 +115,8 @@ double AUC (WiggleIterator *);
 double mean (WiggleIterator *);
 double variance (WiggleIterator *);
 double isZero(WiggleIterator * wi);
+void regionProfile(WiggleIterator *, WiggleIterator *, int, double *, int);
+double * profileSum(WiggleIterator *, WiggleIterator *, int);
 //	Binary 
 double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 
