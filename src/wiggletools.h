@@ -42,6 +42,7 @@ typedef int bool;
 
 typedef struct wiggleIterator_st WiggleIterator;
 typedef struct multiplexer_st Multiplexer;
+typedef struct multiset_st Multiset;
 
 // Creators
 WiggleIterator * SmartReader (char *);
