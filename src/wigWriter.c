@@ -96,7 +96,7 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 			for (j = 0; j < *finishPtr - *startPtr; j++)
 				fprintf(outfile, "%lf\n", *valuePtr);
 		} else if (!infile)
-			fprintf(outfile, "%s\t%i\t%i\t%lf\n", *chromPtr, *startPtr-1, *finishPtr-1, *valuePtr);
+			fprintf(outfile, "%s\t%i\t%i\t%lf\n", *chromPtr, *startPtr, *finishPtr-1, *valuePtr);
 		else {
 			// Read next line in infile
 			if (!fgets(buffer, 5000, infile)) {
