@@ -33,14 +33,27 @@
 #include "sam.h"
 #include "faidx.h"
 #include "wiggleIterator.h"
+#include <pthread.h>
 
 #define MPLP_NO_ORPHAN 0x40
 #define MPLP_REALN   0x80
 
+static int MAX_HEAD_START = 30;
+static int BLOCK_SIZE = 10000;
 extern int mplp_func(void *data, bam1_t *b);
+
+typedef struct blockData_st {
+	char **chrom;
+	int * start;
+	int * value;
+	int index;
+	int count;
+	struct blockData_st * next;
+} BlockData;
 
 typedef struct {
 	int max_mq, min_mq, flag, min_baseQ, capQ_thres, max_depth, max_indel_depth, fmt_flag;
+    int rflag_require, rflag_filter;
 	int openQ, extQ, tandemQ, min_support; // for indels
 	double min_frac; // for indels
 	char *reg, *pl_list;
@@ -63,15 +76,78 @@ typedef struct {
 	bam_pileup1_t **plp;
 } mplp_pileup_t;
 
-typedef struct bamReaderData_st {
+
+typedef struct bamFileReaderData_st {
+	// Arguments to downloader
+	char * filename;
+	char * chrom;
+	int start, stop;
+	pthread_t downloaderThreadID;
+
+	// Output of downloader
+	BlockData * blockData, *lastBlockData;
+	pthread_mutex_t count_mutex;
+	pthread_cond_t count_cond;
+	int blockCount;
+
+	// BAM stuff
 	mplp_conf_t * conf;
 	bam_index_t * idx;
 	mplp_aux_t * data;
 	int ref_tid;
 	bam_mplp_t iter;
-	char * chrom;
-	int stop;
 } BamReaderData;
+
+static BlockData * createBlockData() {
+	BlockData * new = (BlockData * ) calloc(1, sizeof(BlockData));
+	new->chrom = (char **) calloc(BLOCK_SIZE, sizeof(char*));
+	new->start = (int *) calloc(BLOCK_SIZE, sizeof(int));
+	new->value = (int *) calloc(BLOCK_SIZE, sizeof(int));
+	return new;
+}
+
+void destroyBamBlockData(BlockData * data) {
+	free(data->chrom);
+	free(data->start);
+	free(data->value);
+	free(data);
+}
+
+static void waitForNextBlock(BamReaderData * data) {
+	pthread_mutex_lock(&data->count_mutex);
+	// Check whether allowed to step forward
+	if (data->blockCount == 0) {
+		pthread_cond_wait(&data->count_cond, &data->count_mutex);
+	}
+	// Signal freed memory
+	data->blockCount--;
+	pthread_cond_signal(&data->count_cond);
+	pthread_mutex_unlock(&data->count_mutex);
+}
+
+void goToNextBamBlock(BamReaderData * data) {
+	BlockData * prevBlockData = data->blockData;
+	waitForNextBlock(data);
+	data->blockData = data->blockData->next;
+	destroyBamBlockData(prevBlockData);
+	data->blockData = 0;
+}
+
+static bool declareNewBlock(BamReaderData * data) {
+	pthread_mutex_lock(&data->count_mutex);
+
+	if (data->blockCount > MAX_HEAD_START) {
+		pthread_cond_wait(&data->count_cond, &data->count_mutex);
+	} 
+	if (data->blockCount < 0) {
+		pthread_mutex_unlock(&data->count_mutex);
+		return true;
+	}
+	data->blockCount++;
+	pthread_cond_signal(&data->count_cond);
+	pthread_mutex_unlock(&data->count_mutex);
+	return false;
+}
 
 void setSamtoolsDefaultConf(BamReaderData * data) {
 	data->conf = (mplp_conf_t *) calloc(1, sizeof(mplp_conf_t));
@@ -88,6 +164,88 @@ void setSamtoolsDefaultConf(BamReaderData * data) {
 	data->conf->min_support = 1;
 	data->conf->flag = MPLP_NO_ORPHAN | MPLP_REALN;
 }
+
+static void * downloadBamFile(void * args) {
+	BamReaderData * data = (BamReaderData *) args;
+	int j, tid, cnt, pos, n_plp;
+	const bam_pileup1_t *plp;
+
+	while (bam_mplp_auto(data->iter, &tid, &pos, &n_plp, &plp) > 0) {
+
+		if (data->blockData == NULL) {
+			data->lastBlockData = data->blockData = createBlockData();
+			declareNewBlock(data);
+		} else if (data->lastBlockData->count == BLOCK_SIZE) {
+			data->lastBlockData->next = createBlockData();
+			data->lastBlockData = data->lastBlockData->next;
+			declareNewBlock(data);
+		}
+
+		// Count reads in pileup
+		cnt = 0;
+		const bam_pileup1_t *p = plp;
+		for (j = 0; j < n_plp; ++j) {
+			if (bam1_qual(p->b)[p->qpos] >= data->conf->min_baseQ) 
+				cnt++;
+			p++;
+		}
+
+		// Its a wrap:
+		char * chrom = data->data->h->target_name[tid];
+
+		if (data->stop > 0 && (strcmp(chrom, data->chrom) == 0 && pos >= data->stop)) 
+			break;
+
+		int index = data->lastBlockData->count;
+		data->lastBlockData->chrom[index] = chrom;
+		// +1 to account for 0-based indexing in BAMs:
+		data->lastBlockData->start[index] = pos + 1;
+		data->lastBlockData->value[index] = cnt;
+		data->lastBlockData->count++;
+	}
+
+	// Signals to the reader that it can step into NULL block, hence marking the end of the download
+	declareNewBlock(data);
+	return NULL;
+}
+
+void launchBamDownloader(BamReaderData * data) {
+	pthread_mutex_init(&data->count_mutex, NULL);
+	pthread_cond_init(&data->count_cond, NULL);
+
+	int err = pthread_create(&data->downloaderThreadID, NULL, &downloadBamFile, data);
+	if (err) {
+		printf("Could not create new thread %i\n", err);
+		abort();
+	}
+
+	waitForNextBlock(data);
+}
+
+void killBamDownloader(BamReaderData * data) {
+	pthread_mutex_lock(&data->count_mutex);
+	data->blockCount = -1;
+	// Send a signal in case the slave is waiting somewhere
+	pthread_cond_signal(&data->count_cond);
+	pthread_mutex_unlock(&data->count_mutex);
+	pthread_join(data->downloaderThreadID, NULL);
+
+	pthread_mutex_destroy(&data->count_mutex);
+	pthread_cond_destroy(&data->count_cond);
+
+	if (data->data->iter) 
+		bam_iter_destroy(data->data->iter);
+
+	while (data->blockData) {
+		BlockData * prevData = data->blockData;
+		data->blockData = data->blockData->next;
+		destroyBamBlockData(prevData);
+	}
+
+	data->lastBlockData = NULL;
+	data->blockCount = 0;
+}
+
 
 void seekRegion(BamReaderData * data) {
 	int max_depth, tid, beg, end;
@@ -107,17 +265,6 @@ void seekRegion(BamReaderData * data) {
 
 	// Create pileup iterator	
 	data->iter = bam_mplp_init(1, mplp_func, (void**) &data->data);
-
-	// Set max depth
-	max_depth = data->conf->max_depth;
-	if (max_depth > 1<<20)
-		fprintf(stderr, "(%s) Max depth is above 1M. Potential memory hog!\n", __func__);
-	if (max_depth < 8000) {
-		max_depth = 8000;
-		fprintf(stderr, "<%s> Set max per-file depth to %d\n", __func__, max_depth);
-	}
-	bam_mplp_set_maxcnt(data->iter, max_depth);
-
 }
 
 void OpenBamFile(BamReaderData * data, char * filename) {
@@ -155,51 +302,44 @@ void closeBamFile(BamReaderData * data) {
 	bam_index_destroy(data->idx);
 }
 
-void BamReaderPop(WiggleIterator * wi)
-{
+void BamReaderPop(WiggleIterator * wi) {
 	BamReaderData * data = (BamReaderData *) wi->data;
-	int j, tid, cnt, pos, n_plp;
-	const bam_pileup1_t *plp;
 
 	if (wi->done)
 		return;
-
-	if (bam_mplp_auto(data->iter, &tid, &pos, &n_plp, &plp) > 0) {
-		// If a new chrom. was entered:
-		if (tid != data->ref_tid) {
-			wi->chrom = data->data->h->target_name[tid];
-			data->ref_tid = tid;
-		}
-
-		// Count reads in pileup
-		cnt = 0;
-		const bam_pileup1_t *p = plp;
-		for (j = 0; j < n_plp; ++j) {
-			if (bam1_qual(p->b)[p->qpos] >= data->conf->min_baseQ) 
-				cnt++;
-			p++;
-		}
-
-		// Its a wrap:
-		// +1 to account for 0-based indexing in BAMs:
-		wi->start = pos + 1;
-		wi->finish = pos + 2;
-		wi->value = cnt;
-
-		if (data->stop > 0 && (strcmp(wi->chrom, data->chrom) > 0 || wi->start >= data->stop)) 
-			wi->done = true;
-	} else 
+	else if (data->blockData == NULL) {
 		wi->done = true;
+		return;
+	} else if (data->blockData->index == data->blockData->count) {
+		waitForNextBlock(data);
+		goToNextBamBlock(data);
+		if (data->blockData == NULL) {
+			wi->done = true;
+			return;
+		}
+	} 
+
+	int index = data->blockData->index;
+	wi->chrom = data->blockData->chrom[index];
+	wi->start = data->blockData->start[index];
+	wi->finish = data->blockData->start[index] + 1;
+	wi->value = (double) data->blockData->value[index];
+	data->blockData->index++;
 }
 
 void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	char region[1000];
+
+	killBamDownloader(wi->data);
+
 	sprintf(region, "%s:%i-%i", chrom, start, finish);
 	BamReaderData * data = (BamReaderData *) wi->data;
 	if (data->conf->reg)
 		free(data->conf->reg);
 	data->conf->reg = region;
 	seekRegion(data);
+	launchBamDownloader(data);
+	wi->done = false;
 	BamReaderPop(wi);
 
 	while (strcmp(wi->chrom, chrom) < 0 || wi->finish <= start)
@@ -213,5 +353,6 @@ WiggleIterator * BamReader(char * filename) {
 	BamReaderData * data = (BamReaderData *) calloc(1, sizeof(BamReaderData));
 	setSamtoolsDefaultConf(data);
 	OpenBamFile(data, filename);
+	launchBamDownloader(data);
 	return newWiggleIterator(data, &BamReaderPop, &BamReaderSeek);
 }
