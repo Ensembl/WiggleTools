@@ -100,5 +100,5 @@ WiggleIterator * BedReader(char * filename) {
 		printf("Could not open bed file %s\n", filename);
 		exit(1);
 	}
-	return UnionWiggleIterator(newWiggleIterator(data, &BedReaderPop, &BedReaderSeek));
+	return newWiggleIterator(data, &BedReaderPop, &BedReaderSeek);
 }

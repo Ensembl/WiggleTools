@@ -193,7 +193,7 @@ void ApplyWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start,
 	seek(data->regions, chrom, start, finish);
 }
 
-WiggleIterator * apply(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset) {
+WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset) {
 	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) calloc(1, sizeof(ApplyWiggleIteratorData));
 	data->regions = regions;
 	data->statistic = statistic;

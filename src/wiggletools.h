@@ -106,6 +106,9 @@ WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator *, FILE *);
 WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *);
 void runWiggleIterator(WiggleIterator * );
 
+WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset);
+WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile);
+
 // Statistics
 // 	Unary
 double AUC (WiggleIterator *);

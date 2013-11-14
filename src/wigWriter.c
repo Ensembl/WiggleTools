@@ -55,7 +55,8 @@ typedef struct BlockData_st {
 } BlockData;
 
 typedef struct TeeWiggleIteratorData_st {
-	FILE * file;
+	FILE * infile;
+	FILE * outfile;
 	WiggleIterator * iter;
 	BlockData * dataBlocks;
 	BlockData * lastBlock;
@@ -67,7 +68,7 @@ typedef struct TeeWiggleIteratorData_st {
 	bool binary;
 } TeeWiggleIteratorData;
 
-static void printBlock(FILE * file, BlockData * block) {
+static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 	int i, j;
 	bool pointByPoint = false;
 	bool makeHeader=false;
@@ -77,10 +78,11 @@ static void printBlock(FILE * file, BlockData * block) {
 	double * valuePtr = block->values;
 	char * lastChrom = NULL;
 	int lastFinish = -1;
+	char buffer[5000];
 
 	for (i = 0; i < block->count; i++) {
 		// Change mode
-		if (*finishPtr - *startPtr < 2 && !pointByPoint) {
+		if (!infile && *finishPtr - *startPtr < 2 && !pointByPoint) {
 			pointByPoint = true;
 			makeHeader = true;
 		} else if (*finishPtr - *startPtr > 5 && pointByPoint) {
@@ -89,12 +91,30 @@ static void printBlock(FILE * file, BlockData * block) {
 
 		if (pointByPoint) {
 			if (makeHeader || (pointByPoint && (lastChrom != *chromPtr || *startPtr > lastFinish)))
-				fprintf(file, "fixedStep chrom=%s start=%i step=1\n", *chromPtr, *startPtr);
+				fprintf(outfile, "fixedStep chrom=%s start=%i step=1\n", *chromPtr, *startPtr);
 			makeHeader = false;
 			for (j = 0; j < *finishPtr - *startPtr; j++)
-				fprintf(file, "%lf\n", *valuePtr);
-		} else
-			fprintf(file, "%s\t%i\t%i\t%lf\n", *chromPtr, *startPtr-1, *finishPtr-1, *valuePtr);
+				fprintf(outfile, "%lf\n", *valuePtr);
+		} else if (!infile)
+			fprintf(outfile, "%s\t%i\t%i\t%lf\n", *chromPtr, *startPtr-1, *finishPtr-1, *valuePtr);
+		else {
+			// Read next line in infile
+			if (!fgets(buffer, 5000, infile)) {
+				printf("Could not paste data to file lines, inconsistent number of lines.\n");
+				exit(1);
+			}
+
+			// Strip end of line symbols
+			int i;
+			for (i = strlen(buffer)-1; i >= 0; i--) {
+				if (buffer[i] == '\n' || buffer[i] == '\r')
+					buffer[i] = '\0';
+				else
+					break;
+			}
+			// Print out
+			fprintf(outfile, "%s\t%lf\n", buffer, *valuePtr);
+		}
 
 		lastChrom = *chromPtr;
 		lastFinish = *finishPtr;
@@ -105,7 +125,7 @@ static void printBlock(FILE * file, BlockData * block) {
 	}
 }
 
-static void printBinaryBlock(FILE * file, BlockData * block) {
+static void printBinaryBlock(FILE * infile, FILE * outfile, BlockData * block) {
 	int i;
 	char ** chromPtr = block->chroms;
 	int * startPtr = block->starts;
@@ -139,43 +159,43 @@ static void printBinaryBlock(FILE * file, BlockData * block) {
 		if (makeHeader) {
 			if (pointByPoint) {
 				flag = (char) 1;
-				fwrite(&flag, sizeof(char), 1, file);
+				fwrite(&flag, sizeof(char), 1, outfile);
 				if (*chromPtr == lastChrom) {
-					fwrite(emptyString, sizeof(char), 1, file);
+					fwrite(emptyString, sizeof(char), 1, outfile);
 				} else {
-					fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, file);
+					fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, outfile);
 				}
 				holder = (int32_t) *startPtr;
-				fwrite(&holder, sizeof(int32_t), 1, file);
+				fwrite(&holder, sizeof(int32_t), 1, outfile);
 			} else {
 				flag = (char) 2;
-				fwrite(&flag, sizeof(char), 1, file);
+				fwrite(&flag, sizeof(char), 1, outfile);
 				if (*chromPtr == lastChrom) {
-					fwrite(emptyString, sizeof(char), 1, file);
+					fwrite(emptyString, sizeof(char), 1, outfile);
 				} else
-					fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, file);
+					fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, outfile);
 			}
 		} else {
-			fwrite(emptyString, sizeof(char), 1, file);
+			fwrite(emptyString, sizeof(char), 1, outfile);
 		}
 
 		// Data
 		if (!pointByPoint) {
 			holder = (int32_t) *startPtr;
-			fwrite(&holder, sizeof(int32_t), 1, file);
+			fwrite(&holder, sizeof(int32_t), 1, outfile);
 			holder = (int32_t) *finishPtr;
-			fwrite(&holder, sizeof(int32_t), 1, file);
+			fwrite(&holder, sizeof(int32_t), 1, outfile);
 			holder2 = *valuePtr;
-			fwrite(&holder2, sizeof(float), 1, file);
+			fwrite(&holder2, sizeof(float), 1, outfile);
 		} else {
 			int j;
 			holder2 = *valuePtr;
-			fwrite(&holder2, sizeof(float), 1, file);
+			fwrite(&holder2, sizeof(float), 1, outfile);
 
 			for (j = 1; j < *finishPtr - *startPtr; j++) {
-				fwrite(emptyString, sizeof(char), 1, file);
+				fwrite(emptyString, sizeof(char), 1, outfile);
 				holder2 = *valuePtr;
-				fwrite(&holder2, sizeof(float), 1, file);
+				fwrite(&holder2, sizeof(float), 1, outfile);
 			}
 		}
 
@@ -225,9 +245,9 @@ static void * printToFile(void * args) {
 
 	while(data->dataBlocks) {
 		if (data->binary)
-			printBinaryBlock(data->file, data->dataBlocks);
+			printBinaryBlock(data->infile, data->outfile, data->dataBlocks);
 		else
-			printBlock(data->file, data->dataBlocks);
+			printBlock(data->infile, data->outfile, data->dataBlocks);
 		if (goToNextBlock(data))
 			return NULL;
 	}
@@ -317,28 +337,28 @@ static void killWriter(TeeWiggleIteratorData * data) {
 void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) wi->data;
 	killWriter(data);
-	fflush(data->file);
-	fseek(data->file, 0, SEEK_SET);
+	fflush(data->outfile);
+	fseek(data->outfile, 0, SEEK_SET);
 	seek(data->iter, chrom, start, finish);
 	wi->done = false;
 	launchWriter(data);
 	pop(wi);
 }
 
-WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator * i, FILE * file) {
+WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator * i, FILE * outfile) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
-	data->file = file;
+	data->outfile = outfile;
 	data->binary = true;
 	launchWriter(data);
 
 	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
 }
 
-WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * file) {
+WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
-	data->file = file;
+	data->outfile = outfile;
 	launchWriter(data);
 
 	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
@@ -366,3 +386,16 @@ void toStdout(WiggleIterator * wi) {
 	runWiggleIterator(TeeWiggleIterator(wi, stdout));
 }
 
+//////////////////////////////////////////////////////////
+// Paste Iterator
+//////////////////////////////////////////////////////////
+
+WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile) {
+	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
+	data->iter = CompressionWiggleIterator(i);
+	data->infile = infile;
+	data->outfile = outfile;
+	launchWriter(data);
+
+	return newWiggleIterator(data, &TeeWiggleIteratorPop, NULL);
+}
