@@ -230,7 +230,7 @@ typedef struct scaleWiggleIteratorData_st {
 void ScaleWiggleIteratorPop(WiggleIterator * wi) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
-	if (!data->iter->done) {
+	if (!iter->done) {
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
