@@ -49,10 +49,14 @@ void BigBedReaderPop(WiggleIterator * wi) {
 		if (*(data->blockPt++) <= 0)
 			break;
 
-	if (data->stop > 0 && wi->start > data->stop) {
-		killDownloader(data);
-		wi->done = true;
-		return;
+	if (data->stop > 0) {
+		if (wi->start >= data->stop) {
+			killDownloader(data);
+			wi->done = true;
+			return;
+		} else if (wi->finish > data->stop) {
+			wi->finish = data->stop;
+		}
 	}
 
 	if (data->blockPt == data->blockData->blockEnd)
@@ -72,6 +76,9 @@ void BigBedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int fi
 
 	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) 
 		BigBedReaderPop(wi);
+
+	if (!wi->done && strcmp(chrom, wi->chrom) == 0 && wi->start < start)
+		wi->start = start;
 }
 
 static void openBigBedFile(BigFileReaderData * data) {
@@ -87,5 +94,5 @@ WiggleIterator * BigBedReader(char * f) {
 	openBigBedFile(data);
 	launchDownloader(data);
 	BigBedReaderEnterBlock(data);
-	return UnionWiggleIterator(newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek));
+	return newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek);
 }	

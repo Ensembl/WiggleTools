@@ -297,6 +297,7 @@ void BamReaderPop(WiggleIterator * wi) {
 		waitForNextBlock(data);
 		goToNextBamBlock(data);
 		if (data->blockData == NULL) {
+			killBamDownloader(data);
 			wi->done = true;
 			return;
 		}
@@ -308,6 +309,12 @@ void BamReaderPop(WiggleIterator * wi) {
 	wi->finish = data->blockData->start[index] + 1;
 	wi->value = (double) data->blockData->value[index];
 	data->blockData->index++;
+
+	if (data->stop > 0 && wi->start >= data->stop) {
+		killBamDownloader(data);
+		wi->done = true;
+		return;
+	}
 }
 
 void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {

@@ -269,7 +269,7 @@ void regionProfile(WiggleIterator * region, WiggleIterator * wig, int width, dou
 	int centerRegion = (region->finish + region->start) / 2;
 	double scaleFactor = width / (double) (region->finish - region->start);
 
-	for (seek(wig, region->chrom, region->start, region->finish-1); !wig->done; pop(wig)) 
+	for (seek(wig, region->chrom, region->start, region->finish); !wig->done; pop(wig)) 
 		regionProfile2(wig, width, centerRes, centerRegion, scaleFactor, res);
 }
 

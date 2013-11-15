@@ -34,7 +34,7 @@ void BedReaderPop(WiggleIterator * wi) {
 
 	if (fgets(line, 5000, data->file)) {
 		sscanf(line, "%s\t%i\t%i", chrom, &wi->start, &wi->finish);
-		// I like my finishes to be non inclusive...
+		// Conversion from 0 to 1-based...
 		wi->start++;
 		wi->finish++;
 
@@ -46,8 +46,13 @@ void BedReaderPop(WiggleIterator * wi) {
 			strcpy(wi->chrom, chrom);
 		}
 
-		if (data->stop > 0 && (strcmp(wi->chrom, data->chrom) > 0 || (strcmp(data->chrom, wi->chrom) == 0 && wi->start > data->stop))) {
-			wi->done = true;
+		if (data->stop > 0) {
+			if (wi->start >= data->stop) {
+				wi->done = true;
+				return;
+			} else if (wi->finish > data->stop) {
+				wi->finish = data->stop;
+			}
 		}
 	} else {
 		fclose(data->file);
@@ -59,6 +64,9 @@ void BedReaderPop(WiggleIterator * wi) {
 void BedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	BedReaderData * data = (BedReaderData*) wi->data;
 
+	data->stop = finish;
+	data->chrom = chrom;
+
 	if (wi->done || strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
 		if (data->file)
 			fclose(data->file);
@@ -66,14 +74,15 @@ void BedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 			printf("Could not open input file %s\n", data->filename);
 			exit(1);
 		}
+		wi->done = false;
 		pop(wi);
 	}
 
-	data->chrom = chrom;
-	data->stop = finish;
-	wi->done = false;
 	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish < start))) 
 		pop(wi);
+
+	if (!wi->done && strcmp(chrom, wi->chrom) == 0 && wi->start < start)
+		wi->start = start;
 }
 
 WiggleIterator * BedReader(char * filename) {

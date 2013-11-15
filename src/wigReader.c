@@ -31,6 +31,7 @@ typedef struct wiggleReaderData_st {
 	int step;
 	int span;
 	char words[5];
+	char * chrom;
 	int stop;
 } WiggleReaderData;
 
@@ -55,7 +56,10 @@ static void WiggleReaderReadHeader(WiggleIterator * wi, WiggleReaderData * data,
 				fprintf(stderr, "Empty wi->chromosome name!\n");
 				exit(1);
 			}
-			strcpy(wi->chrom, token);
+			if (strcmp(wi->chrom, token)) {
+				wi->chrom = malloc(strlen(token) + 1);
+				strcpy(wi->chrom, token);
+			}
 		}
 		if (!strcmp(token, "start")) {
 			start_b = false;
@@ -181,8 +185,14 @@ static void WiggleReaderPop(WiggleIterator * wi) {
 
 		}
 
-		if (data->stop > 0 && wi->start > data->stop)
-			wi->done = true;
+		if (data->stop > 0) {
+			if (wi->start >= data->stop) {
+				wi->done = true;
+				return;
+			} else if (wi->finish > data->stop) {
+				wi->finish = data->stop;
+			}
+		}
 
 		return;
 
@@ -195,22 +205,25 @@ static void WiggleReaderPop(WiggleIterator * wi) {
 void WiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	WiggleReaderData * data = (WiggleReaderData*) wi->data;
 
-	wi->chrom = chrom;
 	data->stop = finish;
+	data->chrom = chrom;
 
-	if (strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
+	if (wi->done || strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
 		if (data->file)
 			fclose(data->file);
 		if (!(data->file = fopen(data->filename, "r"))) {
 			printf("Cannot open input file %s\n", data->filename);
 			exit(1);
 		}
-		WiggleReaderPop(wi);
+		wi->done = false;
+		pop(wi);
 	}
 
-	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) 
-		WiggleReaderPop(wi);
+	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(wi->chrom, chrom) == 0 && wi->finish <= start)))
+		pop(wi);
 
+	if (!wi->done && strcmp(chrom, wi->chrom) == 0 && wi->start < start)
+		wi->start = start;
 }
 
 WiggleIterator * WiggleReader(char * f) {
