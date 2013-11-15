@@ -75,7 +75,7 @@ WiggleIterator * StdDevReduction ( Multiplexer * );
 WiggleIterator * MedianReduction ( Multiplexer * );
 
 // Sets of sets iterators 
-Multiplexer * newMultiset(Multiplexer **, int);
+Multiset * newMultiset(Multiplexer **, int);
 
 // Reduction operators on sets of sets:
 WiggleIterator * TTestReduction(Multiset *);
@@ -114,7 +114,7 @@ void setMaxBlocks(int);
 void setMaxHeadStart(int);
 
 // Command line parser
-void rollYourOwn(char *);
+void rollYourOwn(int argc, char ** argv);
 void printHelp();
 
 // Deprecated
