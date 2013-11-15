@@ -39,10 +39,11 @@ void destroyBufferedWiggleIteratorData(BufferedWiggleIteratorData * data) {
 
 void BufferedWiggleIteratorPop(WiggleIterator * wi) {
 	BufferedWiggleIteratorData * data = (BufferedWiggleIteratorData *) wi->data;
-	if (data->index++ < data->length) {
+	if (data->index < data->length) {
 		wi->start = data->start + data->index;
 		wi->finish = wi->start + 1;
 		wi->value = data->values[data->index];
+		data->index++;
 	} else {
 		wi->done = true;
 	}
