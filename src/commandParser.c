@@ -39,9 +39,9 @@ puts("\twiggletools --help");
 puts("\twiggletools ' program '");
 puts("");
 puts("Program grammar:");
-puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
+puts("\tprogram = (iterator) | do (iterator) | (statistic) (output) | (extraction)");
 puts("\tstatistic = AUC (iterator) | mean (iterator) | variance (iterator) | pearson (iterator) (iterator) | isZero (iterator)");
-puts("\textraction = profile (iterator) (iterator) | profiles (iterator) (iterator)");
+puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator)");
 puts("\t\t| apply (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
 puts("\tunary_operator = unit | stdout | write (filename.wig) | smooth (int) | exp | ln | log (double) | pow (double)");
@@ -213,7 +213,7 @@ static char ** getListOfFilenames(int * count, char * first) {
 }
 
 static WiggleIterator * readCat() {
-	int count;
+	int count = 0;
 	char ** filenames = getListOfFilenames(&count, NULL);
 	return CatWiggleIterator(filenames, count);
 }
@@ -363,37 +363,44 @@ static WiggleIterator * readIteratorToken(char * token) {
 
 }
 
-static WiggleIterator ** mapUnit(int * count) {
-	WiggleIterator ** iters = readIteratorList(count);
-	int i;
-	for (i = 0; i < *count; i++)
-		iters[i] = UnitWiggleIterator(iters[i]);
-	return iters;
-}
-
-static WiggleIterator ** readMap(int * count) {
-	char * token = needNextToken();
-
-	if (strcmp(token, "unit") == 0)
-		return mapUnit(count);
-
-	printf("Mappable function %s not recognized.\n", token);
-	exit(1);
-	return NULL;
-}
-
 static void readProfile() {
+	char * filename = needNextToken();
+	FILE * file;
+
+	if (strcmp(filename, "-")) {
+		file = fopen(filename, "w");
+		if (!file) {
+			printf("Could not open file %s.\n", filename);
+			exit(1);
+		}
+	} else 
+		file = stdout;
+
 	int width = atoi(needNextToken());
 	WiggleIterator * regions = readIterator();
 	WiggleIterator * wig = readIterator();
 	double * profile = profileSum(regions, wig, width);
 	int i;
 	for (i = 0; i < width; i++)
-		printf("%f\n", profile[i]);
+		fprintf(file, "%f\n", profile[i]);
 	free(profile);
+	if (strcmp(filename, "-"))
+		fclose(file);
 }
 
 static void readProfiles() {
+	char * filename = needNextToken();
+	FILE * file;
+
+	if (strcmp(filename, "-")) {
+		file = fopen(filename, "w");
+		if (!file) {
+			printf("Could not open file %s.\n", filename);
+			exit(1);
+		}
+	} else 
+		file = stdout;
+
 	int width = atoi(needNextToken());
 	double * profile = calloc(width, sizeof(double));
 	WiggleIterator * regions = readIterator();
@@ -402,30 +409,88 @@ static void readProfiles() {
 	for (; !regions->done; pop(regions)) {
 		int i;
 		regionProfile(regions, wig, width, profile, width/2);
-		printf("%f", profile[0]);
+		fprintf(file, "%f", profile[0]);
 		profile[0] = 0;
 
 		for (i = 1; i < width; i++) {
-			printf("\t%f", profile[i]);
+			fprintf(file, "\t%f", profile[i]);
 			profile[i] = 0;
 		}
 
-		printf("\n");
+		fprintf(file, "\n");
 	}
 
 	free(profile);
+	if (strcmp(filename, "-"))
+		fclose(file);
+}
+
+static void readAUC() {
+	char * filename = needNextToken();
+	if (strcmp(filename, "-")) {
+		FILE * file = fopen(filename, "w");
+		if (!file) {
+			printf("Could not open file %s.\n", filename);
+			exit(1);
+		}
+		fprintf(file, "%lf\n", AUC(readIterator()));	
+		fclose(file);
+	} else 
+		printf("%lf\n", AUC(readIterator()));	
+}
+
+static void readMeanIntegrated() {
+	char * filename = needNextToken();
+	if (strcmp(filename, "-")) {
+		FILE * file = fopen(filename, "w");
+		if (!file) {
+			printf("Could not open file %s.\n", filename);
+			exit(1);
+		}
+		fprintf(file, "%lf\n", mean(readIterator()));	
+		fclose(file);
+	} else 
+		printf("%lf\n", mean(readIterator()));	
+}
+
+static void readVarianceIntegrated() {
+	char * filename = needNextToken();
+	if (strcmp(filename, "-")) {
+		FILE * file = fopen(filename, "w");
+		if (!file) {
+			printf("Could not open file %s.\n", filename);
+			exit(1);
+		}
+		fprintf(file, "%lf\n", variance(readIterator()));	
+		fclose(file);
+	} else 
+		printf("%lf\n", variance(readIterator()));	
+}
+
+static void readPearson() {
+	char * filename = needNextToken();
+	if (strcmp(filename, "-")) {
+		FILE * file = fopen(filename, "w");
+		if (!file) {
+			printf("Could not open file %s.\n", filename);
+			exit(1);
+		}
+		fprintf(file, "%lf\n", pearsonCorrelation(readIterator(), readIterator()));	
+		fclose(file);
+	} else 
+		printf("%lf\n", pearsonCorrelation(readIterator(), readIterator()));	
 }
 
 void rollYourOwn(int argc, char ** argv) {
 	char * token = nextToken(argc, argv);
 	if (strcmp(token, "AUC") == 0)
-		printf("%lf\n", AUC(readIterator()));	
+		readAUC();
 	else if (strcmp(token, "mean") == 0)
-		printf("%lf\n", mean(readIterator()));	
+		readMeanIntegrated();
 	else if (strcmp(token, "variance") == 0)
-		printf("%lf\n", variance(readIterator()));	
+		readVarianceIntegrated();
 	else if (strcmp(token, "pearson") == 0) 
-		printf("%lf\n", pearsonCorrelation(readIterator(), readIterator()));	
+		readPearson();
 	else if (strncmp(token, "write", 5) == 0)
 		runWiggleIterator(readIteratorToken(token));
 	else if (strcmp(token, "do") == 0)

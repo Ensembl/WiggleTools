@@ -44,13 +44,13 @@ assert test('../bin/wiggletools isZero diff smooth 1 fixedStep.wig fixedStep.wig
 assert test('../bin/wiggletools apply tmp/regional_means.txt mean overlapping.bed fixedStep.wig') == 0
 
 # Testing pearson
-assert test('../bin/wiggletools pearson fixedStep.wig variableStep.wig > tmp/pearson.txt') == 0
+assert test('../bin/wiggletools pearson tmp/pearson.txt fixedStep.wig variableStep.wig') == 0
 
 # Testing profiles
-assert test('../bin/wiggletools profiles 3 overlapping.bed fixedStep.wig > tmp/profiles.txt') == 0
+assert test('../bin/wiggletools profiles tmp/profiles.txt 3 overlapping.bed fixedStep.wig') == 0
 
 # Testing profile
-assert test('../bin/wiggletools profile 3 overlapping.bed fixedStep.wig > tmp/profile.txt') == 0
+assert test('../bin/wiggletools profile tmp/profile.txt 3 overlapping.bed fixedStep.wig') == 0
 
 assert test('diff tmp expected') == 0
 shutil.rmtree('tmp')
