@@ -34,6 +34,7 @@ typedef struct BlockData_st {
 	int finishes[BLOCK_LENGTH];
 	double values[BLOCK_LENGTH];
 	int count;
+	bool bedGraph;
 	struct BlockData_st * next;
 } BlockData;
 
@@ -49,6 +50,7 @@ typedef struct TeeWiggleIteratorData_st {
 	pthread_cond_t continue_cond;
 	bool done;
 	bool binary;
+	bool bedGraph;
 } TeeWiggleIteratorData;
 
 static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
@@ -65,7 +67,7 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 
 	for (i = 0; i < block->count; i++) {
 		// Change mode
-		if (!infile && *finishPtr - *startPtr < 2 && !pointByPoint) {
+		if (!block->bedGraph && *finishPtr - *startPtr < 2 && !pointByPoint) {
 			pointByPoint = true;
 			makeHeader = true;
 		} else if (*finishPtr - *startPtr > 5 && pointByPoint) {
@@ -79,7 +81,8 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 			for (j = 0; j < *finishPtr - *startPtr; j++)
 				fprintf(outfile, "%lf\n", *valuePtr);
 		} else if (!infile)
-			fprintf(outfile, "%s\t%i\t%i\t%lf\n", *chromPtr, *startPtr, *finishPtr-1, *valuePtr);
+			// Careful bedgraph lines are 0 based
+			fprintf(outfile, "%s\t%i\t%i\t%lf\n", *chromPtr, *startPtr-1, *finishPtr-1, *valuePtr);
 		else {
 			// Read next line in infile
 			if (!fgets(buffer, 5000, infile)) {
@@ -262,6 +265,7 @@ void TeeWiggleIteratorPop(WiggleIterator * wi) {
 
 			data->lastBlock->next = (BlockData*) calloc(1, sizeof(BlockData));
 			data->lastBlock = data->lastBlock->next;
+			data->lastBlock->bedGraph = data->bedGraph;
 		}
 		pop(iter);
 	} else {
@@ -282,6 +286,7 @@ static void launchWriter(TeeWiggleIteratorData * data) {
 	pthread_cond_init(&data->continue_cond, NULL);
 	pthread_mutex_init(&data->continue_mutex, NULL);
 	data->dataBlocks = data->lastBlock = (BlockData*) calloc(1, sizeof(BlockData));
+	data->lastBlock->bedGraph = data->bedGraph;
 
 	// Launch pthread
 	int err = pthread_create(&data->threadID, NULL, &printToFile, data);
@@ -328,45 +333,47 @@ void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, i
 	pop(wi);
 }
 
-WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator * i, FILE * outfile) {
+WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedGraph) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
 	data->outfile = outfile;
 	data->binary = true;
+	data->bedGraph = bedGraph;
 	launchWriter(data);
 
 	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
 }
 
-WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile) {
+WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedGraph) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
 	data->outfile = outfile;
+	data->bedGraph = bedGraph;
 	launchWriter(data);
 
 	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
 }
 
-void toBinaryFile(WiggleIterator * wi, char * filename) {
+void toBinaryFile(WiggleIterator * wi, char * filename, bool bedGraph) {
 	FILE * file = fopen(filename, "wb");
 	if (!file) {
 		printf("Could not open file %s\n", filename);
 		exit(1);
 	}
-	runWiggleIterator(BinaryTeeWiggleIterator(wi, file));
+	runWiggleIterator(BinaryTeeWiggleIterator(wi, file, bedGraph));
 }
 
-void toFile(WiggleIterator * wi, char * filename) {
+void toFile(WiggleIterator * wi, char * filename, bool bedGraph) {
 	FILE * file = fopen(filename, "w");
 	if (!file) {
 		printf("Could not open file %s\n", filename);
 		exit(1);
 	}
-	runWiggleIterator(TeeWiggleIterator(wi, file));
+	runWiggleIterator(TeeWiggleIterator(wi, file, bedGraph));
 }
 
-void toStdout(WiggleIterator * wi) {
-	runWiggleIterator(TeeWiggleIterator(wi, stdout));
+void toStdout(WiggleIterator * wi, bool bedGraph) {
+	runWiggleIterator(TeeWiggleIterator(wi, stdout, bedGraph));
 }
 
 //////////////////////////////////////////////////////////
@@ -377,6 +384,7 @@ WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * o
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
 	data->infile = infile;
+	data->bedGraph = true;
 	data->outfile = outfile;
 	launchWriter(data);
 

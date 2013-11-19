@@ -44,7 +44,7 @@ puts("\tstatistic = AUC (iterator) | mean (iterator) | variance (iterator) | pea
 puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator)");
 puts("\t\t| apply (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
-puts("\tunary_operator = unit | stdout | write (filename.wig) | smooth (int) | exp | ln | log (double) | pow (double)");
+puts("\tunary_operator = unit | stdout | write (filename.wig) | write_bg (filename.bg) | smooth (int) | exp | ln | log (double) | pow (double)");
 puts("\tbinary_operator = diff | ratio");
 puts("\tmultiplex = (filename_list) | map (unary_operator) (multiplex)");
 puts("\treducer = cat | sum | product | mean | var | stddev | median | min | max");
@@ -106,12 +106,22 @@ static Multiplexer * readMultiplexer() {
 
 static WiggleIterator * readTee() {
 	char * filename = needNextToken();
-	FILE * file = fopen(filename, "w");
-	if (!file) {
-		printf("Could not open %s.\n", filename);
-		exit(1);
-	}
-	return TeeWiggleIterator(readIterator(), file);
+	FILE * file;
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "w");
+	else
+		file = stdout;
+	return TeeWiggleIterator(readIterator(), file, false);
+}
+
+static WiggleIterator * readBGTee() {
+	char * filename = needNextToken();
+	FILE * file;
+	if (strcmp(filename, "-"))
+		file = fopen(filename, "w");
+	else
+		file = stdout;
+	return TeeWiggleIterator(readIterator(), file, true);
 }
 
 static WiggleIterator * readApply() {
@@ -159,7 +169,7 @@ static WiggleIterator * readBTee() {
 		printf("Could not open %s.\n", filename);
 		exit(1);
 	}
-	return BinaryTeeWiggleIterator(readIterator(), file);
+	return BinaryTeeWiggleIterator(readIterator(), file, false);
 }
 
 static WiggleIterator * readSmooth() {
@@ -184,10 +194,6 @@ static WiggleIterator * readScale() {
 
 static WiggleIterator * readExp() {
 	return NaturalExpWiggleIterator(readIterator());
-}
-
-static WiggleIterator * readStdOut() {
-	return TeeWiggleIterator(readIterator(), stdout);
 }
 
 static WiggleIterator * readSum() {
@@ -329,16 +335,12 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readMax();
 	if (strcmp(token, "seek") == 0)
 		return readSeek();
-	if (strcmp(token, "tee") == 0)
-		return readTee();
 	if (strcmp(token, "btee") == 0)
 		return readBTee();
-	if (strcmp(token, "stdout") == 0)
-		return readStdOut();
 	if (strcmp(token, "write") == 0)
 		return readTee();
-	if (strcmp(token, "writeb") == 0)
-		return readBTee();
+	if (strcmp(token, "write_bg") == 0)
+		return readBGTee();
 	if (strcmp(token, "smooth") == 0)
 		return readSmooth();
 	if (strcmp(token, "exp") == 0)
@@ -504,5 +506,5 @@ void rollYourOwn(int argc, char ** argv) {
 	else if (strcmp(token, "profiles") == 0)
 		readProfiles();
 	else
-		toStdout(readIteratorToken(token));	
+		toStdout(readIteratorToken(token), false);	
 }
