@@ -112,6 +112,44 @@ static WiggleIterator * readTee() {
 	return TeeWiggleIterator(readIterator(), file);
 }
 
+static WiggleIterator * readApply() {
+	char * outfilename = nextToken();
+	char * operation = nextToken();
+	char * infilename = nextToken();
+
+	FILE * infile = fopen(infilename, "r");
+	if (!infile) {
+		printf("Could not open %s.\n", infilename);
+		exit(1);
+	}
+
+	FILE * outfile;
+	if (strcmp(outfilename, "-"))
+		outfile = fopen(outfilename, "w");
+	else
+		outfile = stdout;
+
+	if (!outfile) {
+		printf("Could not open %s.\n", outfilename);
+		exit(1);
+	}
+
+	double (*function)(WiggleIterator *);
+
+	if (strcmp(operation, "AUC") == 0)
+		function = &AUC;
+	else if (strcmp(operation, "mean") == 0)
+		function = &mean;
+	else if (strcmp(operation, "variance") == 0)
+		function = &variance;
+	else {
+		printf("Name of function to be applied unrecognized: %s\n", operation);
+		exit(1);
+	}
+
+	return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readIterator()), infile, outfile);
+}
+
 static WiggleIterator * readBTee() {
 	char * filename = nextToken();
 	FILE * file = fopen(filename, "wb");
@@ -127,6 +165,24 @@ static WiggleIterator * readSmooth() {
 	return SmoothWiggleIterator(readIterator(), width);
 }
 
+static WiggleIterator * readPow() {
+	double base = atof(nextToken());
+	return PowerWiggleIterator(readIterator(), base);
+}
+
+static WiggleIterator * readGt() {
+	double cutoff = atof(nextToken());
+	return HighPassFilterWiggleIterator(readIterator(), cutoff);
+}
+
+static WiggleIterator * readScale() {
+	double scalar = atof(nextToken());
+	return ScaleWiggleIterator(readIterator(), scalar);
+}
+
+static WiggleIterator * readExp() {
+	return NaturalExpWiggleIterator(readIterator());
+}
 
 static WiggleIterator * readStdOut() {
 	return TeeWiggleIterator(readIterator(), stdout);
@@ -349,6 +405,10 @@ void rollYourOwn(char * str) {
 		runWiggleIterator(readIteratorToken(token));
 	else if (strcmp(token, "do") == 0)
 		runWiggleIterator(readIterator());
+	else if (strcmp(token, "isZero") == 0)
+		isZero(readIterator());	
+	else if (strcmp(token, "apply") == 0)
+		runWiggleIterator(readApply());
 	else
 		toStdout(readIteratorToken(token));	
 }
