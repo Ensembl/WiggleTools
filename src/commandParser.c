@@ -296,7 +296,6 @@ static WiggleIterator * readTTest() {
 	return TTestReduction(newMultiset(multis, 2));
 }
 
-<<<<<<< HEAD
 static WiggleIterator * readMWUTest() {
 	Multiplexer ** multis = calloc(2, sizeof(Multiplexer *));
 	multis[0] = readMultiplexer();
@@ -304,8 +303,6 @@ static WiggleIterator * readMWUTest() {
 	return MWUReduction(newMultiset(multis, 2));
 }
 
-=======
->>>>>>> 82574c8... Reviewing the command line
 static WiggleIterator * readIteratorToken(char * token) {
 	if (strcmp(token, "cat") == 0)
 		return readCat();
@@ -355,11 +352,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readGt();
 	if (strcmp(token, "ttest") == 0)
 		return readTTest();
-<<<<<<< HEAD
 	if (strcmp(token, "wilcoxon") == 0)
 		return readMWUTest();
-=======
->>>>>>> 82574c8... Reviewing the command line
 
 	return SmartReader(token);
 
