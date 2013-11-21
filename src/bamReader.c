@@ -127,10 +127,8 @@ static void waitForNextBlock(BamReaderData * data) {
 
 void goToNextBamBlock(BamReaderData * data) {
 	BlockData * prevBlockData = data->blockData;
-	waitForNextBlock(data);
 	data->blockData = data->blockData->next;
 	destroyBamBlockData(prevBlockData);
-	data->blockData = 0;
 }
 
 static bool declareNewBlock(BamReaderData * data) {
@@ -153,7 +151,7 @@ void setSamtoolsDefaultConf(BamReaderData * data) {
 	data->conf = (mplp_conf_t *) calloc(1, sizeof(mplp_conf_t));
 	memset(data->conf, 0, sizeof(mplp_conf_t));
 	data->conf->max_mq = 60;
-	data->conf->min_baseQ = 13;
+	data->conf->min_baseQ = 0;
 	data->conf->capQ_thres = 0;
 	data->conf->max_depth = 250; 
 	data->conf->max_indel_depth = 250;
@@ -174,7 +172,7 @@ static void * downloadBamFile(void * args) {
 
 		if (data->blockData == NULL) {
 			data->lastBlockData = data->blockData = createBlockData();
-			declareNewBlock(data);
+			//declareNewBlock(data);
 		} else if (data->lastBlockData->count == BLOCK_SIZE) {
 			data->lastBlockData->next = createBlockData();
 			data->lastBlockData = data->lastBlockData->next;
@@ -185,7 +183,7 @@ static void * downloadBamFile(void * args) {
 		cnt = 0;
 		const bam_pileup1_t *p = plp;
 		for (j = 0; j < n_plp; ++j) {
-			if (bam1_qual(p->b)[p->qpos] >= data->conf->min_baseQ) 
+			//if (bam1_qual(p->b)[p->qpos] >= data->conf->min_baseQ) 
 				cnt++;
 			p++;
 		}
@@ -193,8 +191,9 @@ static void * downloadBamFile(void * args) {
 		// Its a wrap:
 		char * chrom = data->data->h->target_name[tid];
 
-		if (data->stop > 0 && (strcmp(chrom, data->chrom) == 0 && pos >= data->stop)) 
+		if (data->stop > 0 && (strcmp(chrom, data->chrom) == 0 && pos >= data->stop)) {
 			break;
+		}
 
 		int index = data->lastBlockData->count;
 		data->lastBlockData->chrom[index] = chrom;
@@ -205,6 +204,7 @@ static void * downloadBamFile(void * args) {
 	}
 
 	// Signals to the reader that it can step into NULL block, hence marking the end of the download
+	declareNewBlock(data);
 	declareNewBlock(data);
 	return NULL;
 }

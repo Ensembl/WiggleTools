@@ -17,6 +17,11 @@ doc: Manual.pdf
 Manual.pdf:
 	cd doc; make
 
+test: tests
+
+tests:
+	cd test; python test.py
+
 clean:
 	cd samtools; make clean
 	cd bigwigs; make clean

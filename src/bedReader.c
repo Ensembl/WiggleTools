@@ -52,6 +52,7 @@ void BedReaderPop(WiggleIterator * wi) {
 	if (fgets(line, 5000, data->file)) {
 		sscanf(line, "%s\t%i\t%i", chrom, &wi->start, &wi->finish);
 		// I like my finishes to be non inclusive...
+		wi->start++;
 		wi->finish++;
 
 		// The reason for creating a new string instead of simply 

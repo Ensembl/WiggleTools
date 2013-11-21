@@ -58,7 +58,7 @@ void BigBedReaderPop(WiggleIterator * wi) {
 	/* Read next record into local variables. */
 	memReadBits32(&data->blockPt, data->isSwapped);	// Read and discard chromId
 	wi->chrom = data->chrom;
-	wi->start = memReadBits32(&data->blockPt, data->isSwapped);
+	wi->start = memReadBits32(&data->blockPt, data->isSwapped) + 1;
 	wi->finish = memReadBits32(&data->blockPt, data->isSwapped) + 1; 
 
 	// Skip boring stuff...

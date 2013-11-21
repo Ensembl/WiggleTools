@@ -10,7 +10,9 @@ Installation:
 	- Define the environment variable KENT_SRC to point to the /path/to/kent/src/ directory
 	- Install the GNU scientific library (GSL): http://www.gnu.org/software/gsl/
 	- In this directory type 'make'
-	- The binary file wiggletools should be produced in the ./bin directory. The underlying library and header files are in the ./lib and ./inc directories respectively.
+	- In the same directory, type 'make test'
+	- The binary file wiggletools should be produced in the ./bin directory. 
+	- The underlying library and header files are in the ./lib and ./inc directories respectively.
 	- A PDF manual should appear in doc/
 
 Running the executable:
@@ -27,13 +29,15 @@ Command line:
 	wiggletools program
 
 Program grammar:
-	program = do (command) | (command)                ## 'do' is short for 'just do it and don't print it out'
-	command = (statistic) (iterator) | (iterator)   
-	statistic = AUC | mean | variance | pearson    ## A statistic is simply a number computed across the dataset
-	iterator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex)
-	unary_operator = unit | stdout | write (filename.wig) | smooth (int)
-	binary_operator = diff
-	multiplex = (filename_list) | map (unary_operator) (multiplex)
-	reducer = cat | add | product | mean | var | stddev | median | min | max
-	filename_list = (filename) ; | (filename) (filename_list)
-	filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam
+	program 	= (iterator) | do (iterator) | (statistic) | (extraction)
+	statistic 	= AUC (iterator) | mean (iterator) | variance (iterator) | pearson (iterator) (iterator) | isZero (iterator)
+	extraction 	= profile (iterator) (iterator) | profiles (iterator) (iterator)
+	                  | apply (out_filename) (statistic) (bed_file) (iterator)
+	iterator 	= (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)
+	unary_operator 	= unit | stdout | write (filename.wig) | smooth (int)
+	binary_operator = diff | ratio
+	multiplex 	= (filename_list) | map (unary_operator) (multiplex)
+	reducer 	= cat | sum | product | mean | var | stddev | median | min | max
+	setComparison 	= ttest | wilcoxon
+	filename_list 	= (filename) : | (filename) (filename_list)
+	filename 	= *.wig | *.bw | *.bed | *.bb | *.bg | *.bam

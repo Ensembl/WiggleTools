@@ -130,9 +130,15 @@ static void WiggleReaderReadVariableStepLine(WiggleIterator * wi, char * line, i
 }
 
 static void WiggleReaderReadBedGraphLine(WiggleIterator * wi, char * line) {
-	sscanf(line, "%s\t%i\t%i\t%lf", wi->chrom, &(wi->start), &(wi->finish), &(wi->value));
-	// I prefer to keep the finish excluded of the region, BedGraphs are inclusive...
+	char * buffer = calloc(500, sizeof(char));
+	sscanf(line, "%s\t%i\t%i\t%lf", buffer, &(wi->start), &(wi->finish), &(wi->value));
+	// BedGraphs are 0 based, half open
+	wi->start++;
 	wi->finish++;
+	if (strcmp(buffer, wi->chrom))
+		wi->chrom = buffer;
+	else
+		free(buffer);
 }
 
 static int countWords(char * line) {
@@ -236,5 +242,5 @@ WiggleIterator * WiggleReader(char * f) {
 		data->file = stdin;
 	data->readingMode = BED_GRAPH;
 	data->stop = -1;
-	return newWiggleIterator(data, &WiggleReaderPop, &WiggleReaderSeek);
+	return CompressionWiggleIterator(newWiggleIterator(data, &WiggleReaderPop, &WiggleReaderSeek));
 }	
