@@ -64,8 +64,9 @@ puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) 
 puts("\tunary_operator = unit | stdout | write (filename.wig) | smooth (int) | exp | ln | log (double) | pow (double)");
 puts("\tbinary_operator = diff | ratio");
 puts("\tmultiplex = (filename_list) | map (unary_operator) (multiplex)");
-puts("\treducer = cat | add | product | mean | var | stddev | median | min | max");
-puts("\tfilename_list = (filename) ; | (filename) (filename_list)");
+puts("\treducer = cat | sum | product | mean | var | stddev | median | min | max");
+puts("\tsetComparison = ttest | wilcoxon");
+puts("\tfilename_list = (filename) : | (filename) (filename_list)");
 puts("\tfilename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam");
 
 }

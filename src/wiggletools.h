@@ -91,6 +91,13 @@ WiggleIterator * VarianceReduction ( Multiplexer * );
 WiggleIterator * StdDevReduction ( Multiplexer * );
 WiggleIterator * MedianReduction ( Multiplexer * );
 
+// Sets of sets iterators 
+Multiplexer * newMultiset(Multiplexer **, int);
+
+// Reduction operators on sets of sets:
+WiggleIterator * TTestReduction(Multiset *);
+WiggleIterator * MWUReduction(Multiset *);
+
 // Output
 void toFile (WiggleIterator *, char *);
 void toBinaryFile (WiggleIterator *, char *);
