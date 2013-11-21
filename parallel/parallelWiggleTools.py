@@ -19,6 +19,12 @@ import os.path
 import re
 import tempfile
 import subprocess
+import glob
+
+# Directory where job stdin, stdout and stderr are stored
+# Must be visible to all LSF nodes
+# By default, right on your doorstep ;P
+DUMP_DIR = '.'
 
 ################################################
 ## Splitting a wiggletools command into regional jobs
@@ -31,8 +37,10 @@ def create_dirs(command):
 			os.makedirs(path)
 
 def create_new_command(command, chr, start, finish, chrom_sizes_file):
-	substitute_cmd = re.sub(r'write\s*(\S*.bw)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
-	return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file, "'", 'do','seek',chr,start,finish,substitute_cmd, "'"]))
+	command = re.sub(r'write\s*(\S*.bw)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
+	command = re.sub(r'(apply|profile|profiles)\s*(\S*)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
+	command = re.sub(r'^(AUC|mean|variance|pearson)\s*(\S*)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
+	return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file, "'", 'do','seek',chr,start,finish,command, "'"]))
 
 def makeMapCommand(command, chrom_sizes_file, chrom_sizes, region_size):
 	create_dirs(command)
@@ -46,30 +54,54 @@ def test_makeMapCommand():
 	print makeMapCommand(cmd, chrom_sizes_file, chrom_sizes, region_size=int(3e7))
 
 ################################################
+## Merging the results of parallel wiggletools runs 
+################################################
+
+def makeReduceCommand(command):
+	mergeBigWigCommands = ['mergeBigWigDirectory.py %s' % match.group(1) for match in re.finditer(r'write\s*(\S*.bw)\s', command)]
+	mergeApplyCommand = ['mergeApplyDirectory.sh %s' % match.group(1) for match in re.finditer(r'apply\s*(\S*)\s', command)]
+	mergeProfileCommand = ['mergeProfileDirectory.py %s' % match.group(1) for match in re.finditer(r'profile\s*(\S*)\s', command)]
+	mergeProfilesCommand = ['mergeProfilesDirectory.sh %s' % match.group(1) for match in re.finditer(r'profiles\s*(\S*)\s', command)]
+	return mergeBigWigCommands + mergeApplyCommand + mergeProfileCommand + mergeProfilesCommand
+
+################################################
 ## LSF MultiJob
 ################################################
 
-def makeMultiJobCommand(filename, count):
+def makeMultiJobCommand(filename, count, dependency=None, mem=4):
 	name = os.path.basename(filename)
-	bsub_cmd = "bsub -q normal -R'select[mem>4000] rusage[mem=4000]' -M4000 -J%s[1-%s] " % (name, count)
+	bsub_cmd = "bsub -q normal -R'select[mem>%i] rusage[mem=%i]' -M%i -J'%s[1-%s]'" % (1024*mem, 1024*mem, 1024*mem, name, count)
+	if dependency is not None:
+		bsub_cmd += " -w '%s[*]'" % dependency
 	output = "-o %s_%%I.out -e %s_%%I.err" % (filename, filename)
 	jobCmd = " ".join([bsub_cmd, output, 'LSFwrapper.sh', "' multiJob.py ", filename, "'"])
 	print jobCmd
 	return jobCmd
 
-def submitMultiJobToLSF(cmds):
-	descr, filename = tempfile.mkstemp(dir="/lustre/scratch109/ensembl/dz1")
+def submitMultiJobToLSF(cmds, dependency=None, mem=4):
+	descr, filename = tempfile.mkstemp(dir='.')
 
 	fh = open(filename, 'w')
 	fh.write("\n".join(cmds))
 	fh.close()
 
-	p = subprocess.Popen(makeMultiJobCommand(filename, len(cmds)), shell=True)
+	multi_job_cmd = makeMultiJobCommand(filename, len(cmds), dependency, mem)
+	p = subprocess.Popen(multi_job_cmd, shell=True, stdout=subprocess.PIPE)
 	err = p.wait()
 	if err != 0:
-		print "Could not start job %s" % cmds
-		print line
+		print "Could not start job:"
+		print multi_job_cmd
 		sys.exit(err)
+
+	out, err = p.communicate()
+
+	for line in out.split('\n'):
+		match = re.match(r'Job <([0-9]*)>', line)
+		if match is not None:
+			return match.group(1)
+
+	raise RuntimeError
+
 
 ################################################
 ## Main function
@@ -88,7 +120,8 @@ def main():
 	chrom_file = sys.argv[1]
 	chrom_sizes = readChromSizes(chrom_file)
 	cmd = sys.argv[2]
-	submitMultiJobToLSF(makeMapCommand(cmd, chrom_file, chrom_sizes, region_size=3e8))
+	jobID = submitMultiJobToLSF(makeMapCommand(cmd, chrom_file, chrom_sizes, region_size=3e7))
+	submitMultiJobToLSF(makeReduceCommand(cmd), dependency = jobID, mem=8)
 
 if __name__ == "__main__":
 	main()

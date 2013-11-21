@@ -4,6 +4,7 @@ import sys
 import subprocess
 import os
 import re
+import os.path
 
 chrom_lengths_file = sys.argv[1]
 wiggletools_args = sys.argv[2]
@@ -18,12 +19,14 @@ def run(args):
 		sys.exit(err)
 
 def main():
-	run(['time', 'wiggletools', wiggletools_args])
+	cmd = ['wiggletools'] + filter(lambda X: len(X) > 0, wiggletools_args.split(' '))
+	run(cmd)
 
 	for match in re.finditer('write\s*(\S*.wig)\s', wiggletools_args):
 		wiggle_file = match.group(1)
-		bigwig_file = re.sub('.wig$','.bw', wiggle_file)
-		run(['time','wigToBigWig',wiggle_file,chrom_lengths_file,bigwig_file])
+		if os.path.getsize(wiggle_file) > 0:
+			bigwig_file = re.sub('.wig$','.bw', wiggle_file)
+			run(['FixedSummaryWigToBigWig',wiggle_file,chrom_lengths_file,bigwig_file])
 		os.remove(wiggle_file)
 
 if __name__ == "__main__":
