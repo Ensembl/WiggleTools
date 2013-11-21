@@ -1,5 +1,6 @@
 *.o
 *.a
+*.pdf
 wiggletools
 .*.swp
 tags

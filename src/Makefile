@@ -1,11 +1,11 @@
-SAMTOOLS=../../samtools/
 CFLAGS=-g -Wall -O3
 LIBDIR=../lib
 BINDIR=../bin
-INC=-I${KENT_SRC}/inc/ -I${SAMTOOLS}
+INC=-I${SAMTOOLS} -I${KENT_SRC}/inc
 LIB_PATHS=-L${KENT_SRC}/lib/${MACHTYPE} -L${SAMTOOLS} -L${SAMTOOLS}/bcftools -L${LIBDIR}
-LIBS=-lwiggletools -ljkweb -lbam -lbcf -lm -lz -lpthread -lssl -lcrypto -ldl
+LIBS= ${LIBDIR}/libwiggletools.a ${KENT_SRC}/lib/${MACHTYPE}/jkweb.a -lbam -lbcf -lm -lz -lpthread -lssl -lcrypto -ldl
 OPTS=-D_PBGZF_USE
+SAMTOOLS=../samtools
 
 default: lib bin
 	
@@ -17,7 +17,7 @@ ${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggletools.o
 
 lib: ${LIBDIR}/libwiggletools.a 
 
-${LIBDIR}/libwiggletools.a: wiggleIterator.o wigReader.o bigWiggleReader.o multiplexer.o reducers.o bedReader.o bigBedReader.o bamReader.o apply.o bigFileReader.o binaryFileReader.o commandParser.o wigWriter.o statistics.o unaryOps.o
+${LIBDIR}/libwiggletools.a: wiggleIterator.o wigReader.o bigWiggleReader.o multiplexer.o reducers.o bedReader.o bigBedReader.o bamReader.o apply.o bigFileReader.o binaryFileReader.o commandParser.o wigWriter.o statistics.o unaryOps.o multiSet.o setComparisons.o
 	mkdir -p ${LIBDIR}
 	ar rcs ${LIBDIR}/libwiggletools.a *.o ${SAMTOOLS}/bam_plcmd.o ${SAMTOOLS}/sample.o ${SAMTOOLS}/bam2bcf.o ${SAMTOOLS}/errmod.o ${SAMTOOLS}/bam2bcf_indel.o
 

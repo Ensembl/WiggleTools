@@ -56,12 +56,13 @@ puts("\twiggletools --help");
 puts("\twiggletools ' program '");
 puts("");
 puts("Program grammar:");
-puts("\tprogram = do (command) | (command)                ## 'do' is short for 'just do it and don't print it out'");
-puts("\tcommand = (statistic) (iterator) | (iterator)   ");
-puts("\tstatistic = AUC | mean | variance | pearson    ## A statistic is simply a number computed across the dataset");
-puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex)");
-puts("\tunary_operator = unit | stdout | write (filename.wig) | smooth (int)");
-puts("\tbinary_operator = diff");
+puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
+puts("\tstatistic = AUC (iterator) | mean (iterator) | variance (iterator) | pearson (iterator) (iterator) | isZero (iterator)");
+puts("\textraction = profile (iterator) (iterator) | profiles (iterator) (iterator)");
+puts("\t\t| apply (out_filename) (statistic) (bed_file) (iterator)");
+puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
+puts("\tunary_operator = unit | stdout | write (filename.wig) | smooth (int) | exp | ln | log (double) | pow (double)");
+puts("\tbinary_operator = diff | ratio");
 puts("\tmultiplex = (filename_list) | map (unary_operator) (multiplex)");
 puts("\treducer = cat | add | product | mean | var | stddev | median | min | max");
 puts("\tfilename_list = (filename) ; | (filename) (filename_list)");
@@ -207,6 +208,29 @@ static WiggleIterator * readSeek() {
 	return iter;
 }
 
+static WiggleIterator * readNaturalLog() {
+	return NaturalLogWiggleIterator(readIterator());
+}
+
+static WiggleIterator * readLog() {
+	double base = atof(needNextToken());
+	return LogWiggleIterator(readIterator(), base);
+}
+
+static WiggleIterator * readTTest() {
+	Multiplexer ** multis = calloc(2, sizeof(Multiplexer *));
+	multis[0] = readMultiplexer();
+	multis[1] = readMultiplexer();
+	return TTestReduction(newMultiset(multis, 2));
+}
+
+static WiggleIterator * readMWUTest() {
+	Multiplexer ** multis = calloc(2, sizeof(Multiplexer *));
+	multis[0] = readMultiplexer();
+	multis[1] = readMultiplexer();
+	return MWUReduction(newMultiset(multis, 2));
+}
+
 static WiggleIterator * readIteratorToken(char * token) {
 	if (strcmp(token, "cat") == 0)
 		return readCat();
@@ -244,6 +268,20 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readBTee();
 	if (strcmp(token, "smooth") == 0)
 		return readSmooth();
+	if (strcmp(token, "exp") == 0)
+		return readExp();
+	if (strcmp(token, "ln") == 0)
+		return readNaturalLog();
+	if (strcmp(token, "log") == 0)
+		return readLog();
+	if (strcmp(token, "pow") == 0)
+		return readPow();
+	if (strcmp(token, "gt") == 0)
+		return readGt();
+	if (strcmp(token, "ttest") == 0)
+		return readTTest();
+	if (strcmp(token, "wilcoxon") == 0)
+		return readMWUTest();
 
 	return SmartReader(token);
 

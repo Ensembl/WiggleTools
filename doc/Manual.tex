@@ -1,0 +1,351 @@
+\documentclass[12pt]{article}
+\begin{document}
+
+\title{WiggleTools 1.0}
+\author{Daniel Zerbino}
+\date{}
+\maketitle
+
+This manual describes how to use and install the WiggleTools package, which allows wiggle files to be manipulated as numerical functions, equipped with all the standard functional analysis operators (sum, product, product by a scalar, comparators), and derived statistics (mean, median, variance, stddev).
+
+\tableofcontents
+
+\section{Installation}
+
+WiggleTools requires two dependencies, the Kent and SAMtools libraries:
+
+\subsection{Installing the Kent library}
+
+First download the code:
+
+\begin{verbatim}
+git clone git://genome-source.cse.ucsc.edu/kent.git
+setenv KENT_SRC $PWD/kent/src
+\end{verbatim}
+
+Follow the instructions to compile the library, as well as the utilities \emph{wigToBigWig} and \emph{bigWigCat}.
+
+\subsection{Installing the SAMtools library}
+
+\begin{verbatim}
+wget https://github.com/samtools/samtools/archive/master.zip
+unzip master.zip
+cd samtools
+setenv SAMTOOLS $PWD
+make
+\end{verbatim}
+
+\subsection{Obtaining WiggleTools}
+
+If you didn't download WiggleTools yet:
+
+\begin{verbatim}
+git clone https://github.com/dzerbino/WiggleTools.git
+\end{verbatim}
+
+\subsection{Installing WiggleTools}
+
+Once you installed the two previous libraries and set the KENT\_SRC and SAMTOOLS environment variables, and downloaded the WiggleTools, you can compile the WiggleTools library:
+
+\begin{verbatim}
+cd wiggletools
+make
+\end{verbatim}
+
+The make process produces a number of outputs:
+
+\begin{itemize}
+\item A statically linked library in lib/
+\item A header for that library in inc/
+\item Various executables in bin/
+\item Documentation (this file) in doc/
+\end{itemize}
+
+There is not installation routine, meaning that you should copy the relevant files onto your path, library path, etc.
+
+\section{Basics}
+
+The WiggleTools library, and the derived program, are centered around the use of iterators. An iterator is a function which produces a sequence of values. The cool thing is that iterators can be built off other iterators, offering many combinations. 
+
+The wiggletools executable is run by giving it a string which describes an iterator function, which it executes, printing the output into stdout.
+
+\begin{verbatim}
+wiggletools <program>
+\end{verbatim}
+
+If you need a refresher:
+
+\begin{verbatim}
+wiggletools --help
+\end{verbatim}
+
+\section{Input files}
+
+By default, the executable recognizes the file format from the suffix of the file name:
+
+\subsection{Wiggle files}
+
+\begin{verbatim}
+wiggletools ' test/fixedStep.wig '
+\end{verbatim}
+
+\subsection{BigWig files}
+
+\begin{verbatim}
+wiggletools ' test/fixedStep.bw '
+\end{verbatim}
+
+\subsection{BedGraph files}
+
+\begin{verbatim}
+wiggletools ' test/bedfile.bg '
+\end{verbatim}
+
+\subsection{Bed files}
+
+\begin{verbatim}
+wiggletools ' test/overlapping.bed '
+\end{verbatim}
+
+\subsection{BigBed files}
+
+\begin{verbatim}
+wiggletools ' test/overlapping.bb '
+\end{verbatim}
+
+\section{Operators}
+
+However, iterators can be constructed from other iterators, allowing arbitrarily complex constructs to be built. We call these iterators \emph{operators}. In all the examples below, the iterators are built off simple file readers (for simplicity), but you are free to replace the inputs with other iterators.
+
+\subsection{Unary operators}
+
+The following operators are the most straightforward, because they only read data from a single other iterator.
+
+\subsubsection{abs}
+
+Returns the absolute value of an iterators' output:
+
+\begin{verbatim}
+wiggletools ' abs test/fixedStep.bw '
+\end{verbatim}
+
+\subsubsection{log}
+
+Returns the natural log of an iterators' output:
+
+\begin{verbatim}
+wiggletools ' log test/fixedStep.bw '
+\end{verbatim}
+
+\subsubsection{scale}
+
+Returns an iterators' output multiplied by a scalar (i.e. decimal number):
+
+\begin{verbatim}
+wiggletools ' scale 10 test/fixedStep.bw '
+\end{verbatim}
+
+
+\subsubsection{gt}
+
+Returns 1 if the operator is strictly greater than a given cutoff, 0 otherwise:
+
+\begin{verbatim}
+wiggletools gt 5 test/fixedStep.bw 
+\end{verbatim}
+
+\subsubsection{seek}
+
+Outputs only the points of an iterator within a given genomic region:
+
+\begin{verbatim}
+wiggletools ' seek chr1 2 8 test/fixedStep.bw '
+\end{verbatim}
+
+\subsection{Binary operators}
+
+The following operators read data from exactly two iterators, allowing comparisons:
+
+\subsubsection{diff}
+
+Returns the difference between two iterators' outputs:
+
+\begin{verbatim}
+wiggletools ' diff test/fixedStep.bw test/variableStep.bw '
+\end{verbatim}
+
+\subsubsection{ratio}
+
+Returns the output of the first iterator divided by the output of the second (divisions by 0 are squashed, and no result is given for those bases):
+
+\begin{verbatim}
+wiggletools ' ratio test/fixedStep.bw test/variableStep.bw '
+\end{verbatim}
+
+\subsection{Multiplexed iterators}
+
+However, sometimes you want to compute statistics across many iterators. In this case, the function is followed by an arbitrary list of iterators, separated by spaces. The list is terminated by a semi-colon (;) separated by spaces from other words. At the very end of a command string, the semi-colon can be omitted (see example in the example for \emph{add})
+
+\subsubsection{add}
+
+The add function adds all the listed iterators. The two following commands are equivalent:
+
+\begin{verbatim}
+wiggletools ' add test/fixedStep.bw test/variable Step.bw ;'
+wiggletools ' add test/fixedStep.bw test/variable Step.bw'
+\end{verbatim}
+
+However, the semi-colon can be necessary for the program string to be unambiguous, e.g.:
+
+\begin{verbatim}
+wiggletools ' diff add test/fixedStep.bw test/variable Step.bw ; \\
+test/fixedStep'
+\end{verbatim}
+
+\subsubsection{mult}
+
+Multiplies the subsequent list of iterators:
+
+\begin{verbatim}
+wiggletools ' mult test/fixedStep.bw test/variable Step.bw '
+\end{verbatim}
+
+\subsubsection{mean}
+
+Computes the mean of the subsequent list of iterators at each position:
+
+\begin{verbatim}
+wiggletools ' mean test/fixedStep.bw test/variable Step.bw '
+\end{verbatim}
+
+\subsubsection{median}
+
+Computes the median of the subsequent list of iterators at each position:
+
+\begin{verbatim}
+wiggletools ' median test/fixedStep.bw test/variable Step.bw '
+\end{verbatim}
+
+\subsubsection{variance}
+
+
+Computes the variance of the subsequent list of iterators at each position:
+
+\begin{verbatim}
+wiggletools ' variance test/fixedStep.bw test/variable Step.bw '
+\end{verbatim}
+
+\subsubsection{stddev}
+
+Computes the standard error of the subsequent list of iterators at each position:
+
+\begin{verbatim}
+wiggletools ' stddev test/fixedStep.bw test/variable Step.bw '
+\end{verbatim}
+
+\subsubsection{min}
+
+
+Computes the minimum of the subsequent list of iterators at each position:
+
+\begin{verbatim}
+wiggletools ' min test/fixedStep.bw test/variable Step.bw '
+\end{verbatim}
+
+\subsubsection{max}
+
+Computes the maximum of the subsequent list of iterators at each position:
+
+\begin{verbatim}
+wiggletools max test/fixedStep.bw test/variable Step.bw 
+\end{verbatim}
+
+\subsection{Comparing sets of sets}
+
+\subsubsection{Welch's t-test}
+
+Computes the two-tailed p-value of Welch's t-test comparing to sets of numbers, each assumed to have a normal distribution:
+
+\begin{verbatim}
+wiggletools ttest test/fixedStep.bw test/variableStep.bw test/fixedStep.wig \
+            : test/fixedStep.wig test/variableStep.bw test/fixedStep.wig
+\end{verbatim}
+
+\subsubsection{Wilcoxon's sum rank test}
+
+Non-parametric equivalent of the above:
+
+\begin{verbatim}
+wiggletools wilcoxon test/fixedStep.bw test/variableStep.bw \
+                     test/fixedStep.wig \
+            : test/fixedStep.wig test/variableStep.bw test/fixedStep.wig
+\end{verbatim}
+
+\section{Writing into files}
+
+Stdout is great and all, but sometimes you want to specify an output file on the command line without the use of pipes. This is done with the \emph{write} function. It writes the output of an iterator into a wiggle file, and simultaneously returns the same output:
+
+\begin{verbatim}
+wiggletools ' write copy.wiggle test/fixedStep.wig '
+\end{verbatim}
+
+You can store data in a file, yet keep it in memory for more computation. For example the following computes the mean of two files, stores the result in a file, and also compares that result to a third file:
+
+\begin{verbatim}
+wiggletools ' do write copy.wiggle test/fixedStep.wig '
+\end{verbatim}
+
+The reason for this double output is that you may want to store data in a file, yet keep it in memory for more computation. For example the following computes the mean of two files, stores the result in a file, and also compares that result to a third file:
+
+\begin{verbatim}
+wiggletools ' diff test/fixedStep.bw \\
+write sum.wig mean test/fixedStep.bw test/variable Step.bw '
+\end{verbatim}
+
+If you wish to write into standard output, simply use the dash - symbol.
+
+\begin{verbatim}
+wiggletools write - test/fixedStep.wig 
+\end{verbatim}
+
+If you wish to have your output in BedGraph format (takes more space but easier to parse line-by-line), use the write\_bg command:
+
+\begin{verbatim}
+wiggletools write_bg - test/fixedStep.wig 
+\end{verbatim}
+
+Note that BedGraphs and the BedGraph sections within wiggle files are 0-based, whereas the `normal' wiggle lines have 1-based coordinates.
+
+\section{Statistics}
+
+Sometimes, you just want a statistic across the genome. The following functions are linear forms, i.e. they do not return a sequence of numbers, just a single number:
+
+\subsection{AUC}
+
+Computes the area under the curve (AUC) of the an iterator:
+
+\begin{verbatim}
+wiggletools ' AUC test/fixedStep.bw test/variable Step.bw '
+\end{verbatim}
+
+\subsection{variance}
+
+Computes the variance of an iterator across all of its points:
+
+\begin{verbatim}
+wiggletools ' variance test/fixedStep.bw '
+\end{verbatim}
+
+\subsection{pearson}
+
+Computes the Pearson correlation between two iterators across all their points:
+
+\begin{verbatim}
+wiggletools ' pearson test/fixedStep.bw test/fixedStep.bw '
+\end{verbatim}
+
+\section{Apply}
+
+\section{Profiles}
+
+\end{document}

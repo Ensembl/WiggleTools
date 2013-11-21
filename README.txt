@@ -8,10 +8,10 @@ This library parses wiggle files and executes various operations on them streami
 Installation:
 	- Install Jim Kent's source code
 	- Define the environment variable KENT_SRC to point to the /path/to/kent/src/ directory
-	- Install the samtools library
-	- Define the environment variable SAMTOOLS to point to the /path/to/samtools/ directory
+	- Install the GNU scientific library (GSL): http://www.gnu.org/software/gsl/
 	- In this directory type 'make'
 	- The binary file wiggletools should be produced in the ./bin directory. The underlying library and header files are in the ./lib and ./inc directories respectively.
+	- A PDF manual should appear in doc/
 
 Running the executable:
  
@@ -20,11 +20,11 @@ Inputs:
 	Note that wiggletools assumes that every bam file has an index .bai file next to it.
 
 Outputs:
-	The program outputs a wiggle file in stdout unless the output is squashed
+	The program outputs a wiggle file in stdout unless the output is squashed with the 'do' command;
 
 Command line:
 	wiggletools --help
-	wiggletools ' program '
+	wiggletools program
 
 Program grammar:
 	program = do (command) | (command)                ## 'do' is short for 'just do it and don't print it out'

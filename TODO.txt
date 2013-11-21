@@ -1,4 +1,4 @@
-Memory tracking & cleaning
-Chrom labels (esp fixed step wiggle files?)
+Automatic conversion of overlapping to non-overlapping
+Memory tracking & cleaning of chrom labels
 VCF/BCF reader?
-HMM?
+HMM app? (requires reverse iterators...)
