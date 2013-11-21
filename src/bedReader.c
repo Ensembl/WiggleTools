@@ -28,12 +28,21 @@ void BedReaderPop(WiggleIterator * wi) {
 	BedReaderData * data = (BedReaderData *) wi->data;
 	char line[5000];
 	char chrom[1000];
+	char sign;
 
 	if (wi->done)
 		return;
 
 	if (fgets(line, 5000, data->file)) {
-		sscanf(line, "%s\t%i\t%i", chrom, &wi->start, &wi->finish);
+		sscanf(line, "%s\t%i\t%i\t%*s\t%c", chrom, &wi->start, &wi->finish, &sign);
+
+		if (sign == '+')
+			wi->strand = 1;
+		else if (sign == '-')
+			wi->strand = -1;
+		else
+			wi->strand = 0;
+
 		// Conversion from 0 to 1-based...
 		wi->start++;
 		wi->finish++;
