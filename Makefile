@@ -23,3 +23,4 @@ clean:
 	cd src; make clean
 	rm bin/*
 	rm lib/*
+	rm *.pdf

@@ -97,10 +97,17 @@ bool TTestReductionPop2(WiggleIterator * wi) {
 		}
 	}
 
+	// To avoid divisions by 0:
+	if (count1 == 0 || count2 == 0) {
+		popMultiset(multi);
+		pop(wi);	
+		return;
+	}
+
 	double mean1 = sum1 / count1;
 	double mean2 = sum2 / count2;
-	double meanSq1 = sum1 / count1;
-	double meanSq2 = sum2 / count2;
+	double meanSq1 = sumSq1 / count1;
+	double meanSq2 = sumSq2 / count2;
 	double var1 = meanSq1 - mean1 * mean1;
 	double var2 = meanSq2 - mean2 * mean2;
 
@@ -117,11 +124,11 @@ bool TTestReductionPop2(WiggleIterator * wi) {
 	if (t < 0)
 		t = -t;
 
-	// Compute the degrees of freedom
+	// Degrees of freedom
 	
 	double nu = (var1 / count1 + var2 / count2) * (var1 / count1 + var2 / count2) / ((var1 * var1) / (count1 * count1 * (count1 - 1)) + (var2 * var2) / (count2 * count2 * (count2 - 1)));
 
-	// Compute p-value
+	// P-value
 
 	wi->value = 2 * gsl_cdf_tdist_Q(t, nu);
 
