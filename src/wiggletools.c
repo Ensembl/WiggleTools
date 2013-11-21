@@ -20,27 +20,12 @@
 #include "wiggletools.h"
 
 int main(int argc, char ** argv) {
-	int i=0;
 	if (argc < 2 || strcmp(argv[1], "--help") == 0) {
 		printHelp();
 		return 0;
 	}
 
-	for (i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "-maxBlocks") == 0) {
-			i++;
-			int value;
-			sscanf(argv[i], "%i", &value);
-			setMaxBlocks(value);
-		} else if (strcmp(argv[i], "-maxHeadStart") == 0) {
-			i++;
-			int value;
-			sscanf(argv[i], "%i", &value);
-			setMaxHeadStart(value);
-		} else {
-			rollYourOwn(argv[i]);
-		}
-	}
+	rollYourOwn(argc-1, argv+1);
 
 	return 0;
 }

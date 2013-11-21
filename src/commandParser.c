@@ -54,39 +54,58 @@ puts("\tfilename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam");
 
 }
 
-static char * firstToken(char *str) {
-	char * ptr;
+static char * nextToken(int argc, char ** argv) {
+	static char ** ptr;
+	static int index = 0;
+	if (argv)
+		ptr = argv;
 
-	ptr = strtok(str, " \t");
-	if (!ptr || ptr[0] != '\0');
-		return ptr;
-
-	while (true) {
-		ptr = strtok(NULL, " \t");
-		if (!ptr || ptr[0] != '\0');
-			return ptr;
-	} 
-
-	return NULL;
+	return ptr[index++];
 }
 
-static char * nextToken() {
-	char * ptr;
-	while (true) {
-		ptr = strtok(NULL, " \t");
-		if (!ptr || ptr[0] != '\0');
-			return ptr;
-	} 
-
-	return NULL;
+static char * needNextToken() {
+	char * token = nextToken(0,0);
+	if (token) {
+		return token;
+	} else {
+		fprintf(stderr, "wiggletools: Unexpected end of command line\n");
+		abort();
+		exit(1);
+	}
 }
 
-static WiggleIterator * readIterator();
-static Multiplexer * readMultiplexer();
-static WiggleIterator ** readIteratorList(int * count);
+static WiggleIterator * readIteratorToken(char * token);
+
+static WiggleIterator * readIterator() {
+	return readIteratorToken(needNextToken());
+}
+
+static WiggleIterator ** readIteratorList(int * count) {
+	size_t buffer_size = 8;
+	char * token;
+	int i =0;
+	WiggleIterator ** iters = (WiggleIterator **) calloc(buffer_size, sizeof(WiggleIterator*));
+
+	for (token = needNextToken(); token != NULL && strcmp(token, ":"); token = nextToken(0,0)) {
+		if (i == buffer_size) {
+			buffer_size *= 2;
+			iters = (WiggleIterator **) realloc(iters, buffer_size * sizeof(WiggleIterator*));
+		}
+		iters[i++] = readIteratorToken(token);
+	}
+	*count = i;
+	return iters;
+}
+
+static Multiplexer * readMultiplexer() {
+	int count = 0; 
+	WiggleIterator ** iters = readIteratorList(&count);
+	return newMultiplexer(iters, count);
+}
+
 
 static WiggleIterator * readTee() {
-	char * filename = nextToken();
+	char * filename = needNextToken();
 	FILE * file = fopen(filename, "w");
 	if (!file) {
 		printf("Could not open %s.\n", filename);
@@ -96,9 +115,9 @@ static WiggleIterator * readTee() {
 }
 
 static WiggleIterator * readApply() {
-	char * outfilename = nextToken();
-	char * operation = nextToken();
-	char * infilename = nextToken();
+	char * outfilename = needNextToken();
+	char * operation = needNextToken();
+	char * infilename = needNextToken();
 
 	FILE * infile = fopen(infilename, "r");
 	if (!infile) {
@@ -134,7 +153,7 @@ static WiggleIterator * readApply() {
 }
 
 static WiggleIterator * readBTee() {
-	char * filename = nextToken();
+	char * filename = needNextToken();
 	FILE * file = fopen(filename, "wb");
 	if (!file) {
 		printf("Could not open %s.\n", filename);
@@ -144,22 +163,22 @@ static WiggleIterator * readBTee() {
 }
 
 static WiggleIterator * readSmooth() {
-	int width = atoi(nextToken());
+	int width = atoi(needNextToken());
 	return SmoothWiggleIterator(readIterator(), width);
 }
 
 static WiggleIterator * readPow() {
-	double base = atof(nextToken());
+	double base = atof(needNextToken());
 	return PowerWiggleIterator(readIterator(), base);
 }
 
 static WiggleIterator * readGt() {
-	double cutoff = atof(nextToken());
+	double cutoff = atof(needNextToken());
 	return HighPassFilterWiggleIterator(readIterator(), cutoff);
 }
 
 static WiggleIterator * readScale() {
-	double scalar = atof(nextToken());
+	double scalar = atof(needNextToken());
 	return ScaleWiggleIterator(readIterator(), scalar);
 }
 
@@ -183,7 +202,7 @@ static char ** getListOfFilenames(int * count, char * first) {
 		filenames[0] = first;
 		(*count)++;
 	}
-	for (token = nextToken(); token != NULL && strcmp(token, ";"); token = nextToken()) {
+	for (token = needNextToken(); token != NULL && strcmp(token, ":"); token = nextToken(0,0)) {
 		filenames[*count] = token;
 		if (++(*count) == length) {
 			length += 1000;
@@ -232,16 +251,23 @@ static WiggleIterator * readUnit() {
 }
 
 static WiggleIterator * readDifference() {
-	WiggleIterator * iters[2];
+	WiggleIterator ** iters = calloc(2, sizeof(WiggleIterator *));
 	iters[0] = readIterator();
 	iters[1] = ScaleWiggleIterator(readIterator(), -1);
 	return SumReduction(newMultiplexer(iters, 2));
 }
 
+static WiggleIterator * readRatio() {
+	WiggleIterator ** iters = calloc(2, sizeof(WiggleIterator *));
+	iters[0] = readIterator();
+	iters[1] = PowerWiggleIterator(readIterator(), -1);
+	return ProductReduction(newMultiplexer(iters, 2));
+}
+
 static WiggleIterator * readSeek() {
-	char * chrom = nextToken();
-	int start = atoi(nextToken());
-	int finish = atoi(nextToken());
+	char * chrom = needNextToken();
+	int start = atoi(needNextToken());
+	int finish = atoi(needNextToken());
 
 	WiggleIterator * iter = readIterator();
 	seek(iter, chrom, start, finish);
@@ -264,6 +290,7 @@ static WiggleIterator * readTTest() {
 	return TTestReduction(newMultiset(multis, 2));
 }
 
+<<<<<<< HEAD
 static WiggleIterator * readMWUTest() {
 	Multiplexer ** multis = calloc(2, sizeof(Multiplexer *));
 	multis[0] = readMultiplexer();
@@ -271,6 +298,8 @@ static WiggleIterator * readMWUTest() {
 	return MWUReduction(newMultiset(multis, 2));
 }
 
+=======
+>>>>>>> 82574c8... Reviewing the command line
 static WiggleIterator * readIteratorToken(char * token) {
 	if (strcmp(token, "cat") == 0)
 		return readCat();
@@ -278,12 +307,14 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readScale();
 	if (strcmp(token, "unit") == 0)
 		return readUnit();
-	if (strcmp(token, "add") == 0)
+	if (strcmp(token, "sum") == 0)
 		return readSum();
-	if (strcmp(token, "product") == 0)
+	if (strcmp(token, "mult") == 0)
 		return readProduct();
 	if (strcmp(token, "diff") == 0)
 		return readDifference();
+	if (strcmp(token, "ratio") == 0)
+		return readRatio();
 	if (strcmp(token, "mean") == 0)
 		return readMean();
 	if (strcmp(token, "var") == 0)
@@ -322,24 +353,14 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readGt();
 	if (strcmp(token, "ttest") == 0)
 		return readTTest();
+<<<<<<< HEAD
 	if (strcmp(token, "wilcoxon") == 0)
 		return readMWUTest();
+=======
+>>>>>>> 82574c8... Reviewing the command line
 
 	return SmartReader(token);
 
-}
-
-static WiggleIterator * readIterator() {
-	return readIteratorToken(nextToken());
-}
-
-static WiggleIterator ** readFileList(int * count, char * token) {
-	char ** filenames = getListOfFilenames(count, token);
-	WiggleIterator ** iters = (WiggleIterator **) calloc(*count, sizeof(WiggleIterator*));
-	int i;
-	for (i = 0; i < *count; i++)
-		iters[i] = SmartReader(filenames[i]);
-	return iters;
 }
 
 static WiggleIterator ** mapUnit(int * count) {
@@ -351,7 +372,7 @@ static WiggleIterator ** mapUnit(int * count) {
 }
 
 static WiggleIterator ** readMap(int * count) {
-	char * token = nextToken();
+	char * token = needNextToken();
 
 	if (strcmp(token, "unit") == 0)
 		return mapUnit(count);
@@ -361,26 +382,11 @@ static WiggleIterator ** readMap(int * count) {
 	return NULL;
 }
 
-static WiggleIterator ** readIteratorList(int * count) {
-	char * token = nextToken();
-
-	if (strcmp(token, "map") == 0)
-		return readMap(count);
-
-	return readFileList(count, token);
-}
-
-static Multiplexer * readMultiplexer() {
-	int count = 0; 
-	WiggleIterator ** iters = readIteratorList(&count);
-	return newMultiplexer(iters, count);
-}
-
 static void readProfile() {
-	int width = atoi(nextToken());
-	char * regions = nextToken();
+	int width = atoi(needNextToken());
+	WiggleIterator * regions = readIterator();
 	WiggleIterator * wig = readIterator();
-	double * profile = profileSum(SmartReader(regions), wig, width);
+	double * profile = profileSum(regions, wig, width);
 	int i;
 	for (i = 0; i < width; i++)
 		printf("%f\n", profile[i]);
@@ -388,7 +394,7 @@ static void readProfile() {
 }
 
 static void readProfiles() {
-	int width = atoi(nextToken());
+	int width = atoi(needNextToken());
 	double * profile = calloc(width, sizeof(double));
 	WiggleIterator * regions = readIterator();
 	WiggleIterator * wig = readIterator();
@@ -410,8 +416,8 @@ static void readProfiles() {
 	free(profile);
 }
 
-void rollYourOwn(char * str) {
-	char * token = firstToken(str);
+void rollYourOwn(int argc, char ** argv) {
+	char * token = nextToken(argc, argv);
 	if (strcmp(token, "AUC") == 0)
 		printf("%lf\n", AUC(readIterator()));	
 	else if (strcmp(token, "mean") == 0)
