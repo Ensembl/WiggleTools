@@ -375,7 +375,7 @@ static void readProfile() {
 	int width = atoi(needNextToken());
 	WiggleIterator * regions = readIterator();
 	WiggleIterator * wig = readIterator();
-	double * profile = profileSum(regions, wig, width);
+	double * profile = profileSum(regions, wig, width, false);
 	int i;
 	for (i = 0; i < width; i++)
 		fprintf(file, "%f\n", profile[i]);
@@ -404,7 +404,7 @@ static void readProfiles() {
 
 	for (; !regions->done; pop(regions)) {
 		int i;
-		regionProfile(regions, wig, width, profile, width/2);
+		regionProfile(regions, wig, width, profile, width/2, false);
 		fprintf(file, "%f", profile[0]);
 		profile[0] = 0;
 

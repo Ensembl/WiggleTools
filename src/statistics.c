@@ -251,10 +251,20 @@ double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
 // Profile summaries
 //////////////////////////////////////////////////////
 
-void regionProfile2(WiggleIterator * wig, int width, int centerRes, int centerRegion, double scaleFactor, double * res) {
-	int start = centerRes + (wig->start - centerRegion); 
-	int finish = centerRes + (wig->finish - centerRegion); 
-	int pos;
+void regionProfile2(WiggleIterator * wig, int width, int centerRes, int centerRegion, double scaleFactor, double * res, bool stranded, int strand) {
+	int start, finish, pos;
+
+	if (!stranded || strand > 0) {
+		start = centerRes + (wig->start - centerRegion); 
+		finish = centerRes + (wig->finish - centerRegion); 
+	} else if (strand < 0) {
+		start = centerRes - (wig->finish - centerRegion); 
+		finish = centerRes - (wig->start - centerRegion); 
+	} else {
+		fprintf(stderr, "Cannot provide stranded profile on non-stranded regions\n");
+		exit(1);
+	}
+
 	for (pos = start; pos < finish; pos++) {
 		int index = (int) round(pos * scaleFactor);
 		if (index < 0)
@@ -265,20 +275,20 @@ void regionProfile2(WiggleIterator * wig, int width, int centerRes, int centerRe
 	}
 }
 
-void regionProfile(WiggleIterator * region, WiggleIterator * wig, int width, double * res, int centerRes) {
+void regionProfile(WiggleIterator * region, WiggleIterator * wig, int width, double * res, int centerRes, bool stranded) {
 	int centerRegion = (region->finish + region->start) / 2;
 	double scaleFactor = width / (double) (region->finish - region->start);
 
 	for (seek(wig, region->chrom, region->start, region->finish); !wig->done; pop(wig)) 
-		regionProfile2(wig, width, centerRes, centerRegion, scaleFactor, res);
+		regionProfile2(wig, width, centerRes, centerRegion, scaleFactor, res, stranded, region->strand);
 }
 
-double * profileSum(WiggleIterator * regions, WiggleIterator * wig, int width) {
+double * profileSum(WiggleIterator * regions, WiggleIterator * wig, int width, bool stranded) {
 	double * res = calloc(width, sizeof(double));
 	int centerRes = width / 2; 
 
 	for (; !regions->done; pop(regions)) 
-		regionProfile(regions, wig, width, res, centerRes);
+		regionProfile(regions, wig, width, res, centerRes, stranded);
 
 	return res;
 }
