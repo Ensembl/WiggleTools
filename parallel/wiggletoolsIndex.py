@@ -26,7 +26,7 @@ def main():
 		wiggle_file = match.group(1)
 		if os.path.getsize(wiggle_file) > 0:
 			bigwig_file = re.sub('.wig$','.bw', wiggle_file)
-			run(['FixedSummaryWigToBigWig',wiggle_file,chrom_lengths_file,bigwig_file])
+			run(['wigToBigWig -keepAllChromosomes -fixedSummaries',wiggle_file,chrom_lengths_file,bigwig_file])
 		os.remove(wiggle_file)
 
 if __name__ == "__main__":
