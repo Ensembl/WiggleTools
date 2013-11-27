@@ -7,6 +7,7 @@ This library parses wiggle files and executes various operations on them streami
 
 Installation:
 	- Install Jim Kent's source code
+	- In Jim's git repo, checkout branch bigWigCat, re-compile the library and the wigToBigWig and bigWigCat utilities (You can revert to the master branch after that)
 	- Define the environment variable KENT_SRC to point to the /path/to/kent/src/ directory
 	- Install the GNU scientific library (GSL): http://www.gnu.org/software/gsl/
 	- In this directory type 'make'
