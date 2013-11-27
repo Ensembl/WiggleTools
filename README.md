@@ -110,11 +110,10 @@ wiggletools test/overlapping.bed
 ```
 wiggletools test/overlapping.bb 
 ```
-
 Operators
 ---------
 
-However, iterators can be constructed from other iterators, allowing arbitrarily complex constructs to be built. We call these iterators \emph{operators. In all the examples below, the iterators are built off simple file readers (for simplicity), but you are free to replace the inputs with other iterators.
+However, iterators can be constructed from other iterators, allowing arbitrarily complex constructs to be built. We call these iterators operators. In all the examples below, the iterators are built off simple file readers (for simplicity), but you are free to replace the inputs with other iterators.
 
 1 Unary operators
 
@@ -182,7 +181,7 @@ wiggletools ratio test/fixedStep.bw test/variableStep.bw
 
 3 Multiplexed iterators
 
-However, sometimes you want to compute statistics across many iterators. In this case, the function is followed by an arbitrary list of iterators, separated by spaces. The list is terminated by a colon (:) separated by spaces from other words. At the very end of a command string, the semi-colon can be omitted (see example in the example for \emph{sum)
+However, sometimes you want to compute statistics across many iterators. In this case, the function is followed by an arbitrary list of iterators, separated by spaces. The list is terminated by a colon (:) separated by spaces from other words. At the very end of a command string, the semi-colon can be omitted (see example in the example for *sum*)
 
 * sum
 
@@ -279,7 +278,7 @@ wiggletools wilcoxon test/fixedStep.bw test/variableStep.bw test/fixedStep.wig \
 Writing into files
 ------------------
 
-Stdout is great and all, but sometimes you want to specify an output file on the command line without the use of pipes. This is done with the \emph{write function. It writes the output of an iterator into a wiggle file, and simultaneously returns the same output:
+Stdout is great and all, but sometimes you want to specify an output file on the command line without the use of pipes. This is done with the *write* function. It writes the output of an iterator into a wiggle file, and simultaneously returns the same output:
 
 ```
 wiggletools write copy.wiggle test/fixedStep.wig 
@@ -292,7 +291,7 @@ wiggletools diff test/fixedStep.bw \
 write sum.wig mean test/fixedStep.bw test/variable Step.bw 
 ```
 
-For convenience, if a command starts with a write instruction, the standard output is squashed. Otherwise, if you want to silence standard out, use the \emph{do command, which simply runs an iterator and returns nothing: 
+For convenience, if a command starts with a write instruction, the standard output is squashed. Otherwise, if you want to silence standard out, use the *do* command, which simply runs an iterator and returns nothing: 
 
 ```
 wiggletools do test/fixedStep.wig 
@@ -367,7 +366,7 @@ If you just want a single profile, which sums up the results of all those profil
 Parallel processing
 -------------------
 
-To aid in running Wiggletools efficiently, a script, \emph{parallelWiggletools.py was designed to automate the batching of multiple jobs and the merging of their output. At the moment, this scripts requires an LSF job queueing system.
+To aid in running Wiggletools efficiently, a script, *parallelWiggletools.py* was designed to automate the batching of multiple jobs and the merging of their output. At the moment, this scripts requires an LSF job queueing system.
 
 To run this script, you must provide first with a tab-delimited file that specifies the names and legnths of all the chromosomes in your genome, see test/chrom\_sizes for an example.
 
