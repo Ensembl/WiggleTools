@@ -1,4 +1,4 @@
-default: Samtools Wiggletools Bigwigs Parallel doc
+default: Samtools Wiggletools Parallel doc
 
 Samtools:
 	cd samtools; make
@@ -8,9 +8,6 @@ Wiggletools:
 
 Parallel:
 	cd parallel; make
-
-Bigwigs:
-	cd bigwigs; make
 
 doc: Manual.pdf
 
@@ -24,7 +21,6 @@ tests:
 
 clean:
 	cd samtools; make clean
-	cd bigwigs; make clean
 	cd src; make clean
 	rm bin/*
 	rm lib/*
