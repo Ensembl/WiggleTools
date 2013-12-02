@@ -45,12 +45,12 @@ puts("\toutput = filename | -");
 puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator)");
 puts("\t\t| apply (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
-puts("\tunary_operator = unit | stdout | write (filename.wig) | write_bg (filename.bg) | smooth (int) | exp | ln | log (double) | pow (double)");
+puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (double) | pow (double)");
 puts("\tbinary_operator = diff | ratio");
 puts("\tmultiplex = (filename_list) | map (unary_operator) (multiplex)");
 puts("\treducer = cat | sum | product | mean | var | stddev | median | min | max");
 puts("\tsetComparison = ttest | wilcoxon");
-puts("\tfilename_list = (filename) : | (filename) (filename_list)");
+puts("\titerator_list = (iterator) : | (iterator) (iterator_list)");
 puts("\tfilename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam");
 
 }
