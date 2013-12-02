@@ -56,12 +56,17 @@ puts("\tfilename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam");
 }
 
 static char * nextToken(int argc, char ** argv) {
+	static int count;
 	static char ** ptr;
 	static int index = 0;
-	if (argv)
+	if (argv) {
 		ptr = argv;
-
-	return ptr[index++];
+		count = argc;
+	}
+	if (index == count)
+		return NULL;
+	else
+		return ptr[index++];
 }
 
 static char * needNextToken() {
