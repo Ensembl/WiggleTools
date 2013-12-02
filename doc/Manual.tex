@@ -296,6 +296,14 @@ wiggletools wilcoxon test/fixedStep.bw test/variableStep.bw test/fixedStep.wig \
             : test/fixedStep.wig test/variableStep.bw test/fixedStep.wig
 \end{verbatim}
 
+\subsection{Mapping a unary function to an iterator list}
+
+If you wish to apply the same function to a list of iterators without typing redundant keywords, you can use the \emph{map} function, which applies said operator to each element of the list:
+
+\begin{verbatim}
+wiggletools sum map ln test/fixedStep.bw test/variableStep.bw
+\end{verbatim}
+
 \section{Writing into files}
 
 Stdout is great and all, but sometimes you want to specify an output file on the command line without the use of pipes. This is done with the \emph{write} function. It writes the output of an iterator into a wiggle file, and simultaneously returns the same output:

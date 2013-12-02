@@ -291,6 +291,14 @@ wiggletools wilcoxon test/fixedStep.bw test/variableStep.bw test/fixedStep.wig \
             : test/fixedStep.wig test/variableStep.bw test/fixedStep.wig
 ```
 
+5 Mapping a unary function to an iterator list:
+
+If you wish to apply the same function to a list of iterators without typing redundant keywords, you can use the *map* function, which applies said operator to each element of the list:
+
+```
+wiggletools sum map ln test/fixedStep.bw test/variableStep.bw
+```
+
 Writing into files
 ------------------
 
