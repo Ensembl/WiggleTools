@@ -36,7 +36,7 @@ puts("\tThe program outputs a wiggle file in stdout unless the output is squashe
 puts("");
 puts("Command line:");
 puts("\twiggletools --help");
-puts("\twiggletools ' program '");
+puts("\twiggletools program");
 puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
