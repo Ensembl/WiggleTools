@@ -29,7 +29,10 @@ assert test('../bin/wiggletools isZero diff overlapping.bed overlapping.bb') == 
 assert test('../bin/wiggletools isZero diff variableStep.bw variableStep.wig') == 0
 
 # Testing sum, scale and multiplexers
-assert test('../bin/wiggletools isZero diff sum fixedStep.bw fixedStep.bw : scale 2 fixedStep.bw fixedStep.bw ') == 0
+assert test('../bin/wiggletools isZero diff sum fixedStep.bw fixedStep.bw : scale 2 fixedStep.bw') == 0
+
+# Testing open-ended lists
+assert test('../bin/wiggletools isZero diff sum fixedStep.bw fixedStep.bw : sum fixedStep.bw fixedStep.bw ') == 0
 
 # Testing map
 assert test('../bin/wiggletools isZero diff ln fixedStep.bw sum map ln fixedStep.bw ') == 0
