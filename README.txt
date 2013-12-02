@@ -1,9 +1,9 @@
 WiggleTools
 
-Copyright Daniel Zerbino, 2013.
+Copyright EMBL-EBI, 2013.
 zerbino@ebi.ac.uk
 
-This library parses wiggle files and executes various operations on them streaming through lazy evaluators.
+This library parses genomewide data files and executes various operations on them streaming through lazy evaluators (a.k.a. iterators).
 
 Installation:
 	- Install Jim Kent's source code

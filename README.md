@@ -2,8 +2,9 @@ WiggleTools 1.0
 ===============
 
 Author: [Daniel Zerbino](mailto:zerbino@ebi.ac.uk)
+Copyright holder: EMBL-EBI (Apache 2 License)
 
-The WiggleTools package, allows wiggle files to be manipulated as numerical functions, equipped with all the standard functional analysis operators (sum, product, product by a scalar, comparators), and derived statistics (mean, median, variance, stddev).
+The WiggleTools package allows genomewide data files to be manipulated as numerical functions, equipped with all the standard functional analysis operators (sum, product, product by a scalar, comparators), and derived statistics (mean, median, variance, stddev, t-test, Wilcoxon's rank sum test, etc).
 
 Installation
 ------------
