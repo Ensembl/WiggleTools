@@ -352,17 +352,7 @@ static WiggleIterator * readIteratorToken(char * token) {
 }
 
 static void readProfile() {
-	char * filename = needNextToken();
-	FILE * file;
-
-	if (strcmp(filename, "-")) {
-		file = fopen(filename, "w");
-		if (!file) {
-			printf("Could not open file %s.\n", filename);
-			exit(1);
-		}
-	} else 
-		file = stdout;
+	FILE * file = readOutputFilename();
 
 	int width = atoi(needNextToken());
 	WiggleIterator * regions = readIterator();
@@ -372,22 +362,11 @@ static void readProfile() {
 	for (i = 0; i < width; i++)
 		fprintf(file, "%f\n", profile[i]);
 	free(profile);
-	if (strcmp(filename, "-"))
-		fclose(file);
+	fclose(file);
 }
 
 static void readProfiles() {
-	char * filename = needNextToken();
-	FILE * file;
-
-	if (strcmp(filename, "-")) {
-		file = fopen(filename, "w");
-		if (!file) {
-			printf("Could not open file %s.\n", filename);
-			exit(1);
-		}
-	} else 
-		file = stdout;
+	FILE * file = readOutputFilename();
 
 	int width = atoi(needNextToken());
 	double * profile = calloc(width, sizeof(double));
@@ -409,8 +388,7 @@ static void readProfiles() {
 	}
 
 	free(profile);
-	if (strcmp(filename, "-"))
-		fclose(file);
+	fclose(file);
 }
 
 static void readAUC() {
