@@ -13,11 +13,14 @@ if not os.path.exists('tmp'):
 # Negative control
 assert test('../bin/wiggletools isZero diff fixedStep.bw variableStep.wig') == 1
 
+# Test trailing token check:
+assert test('../bin/wiggletools diff fixedStep.bw variableStep.wig fixedStep.wig') == 1
+
 # Positive control
 assert test('../bin/wiggletools isZero diff fixedStep.bw fixedStep.wig') == 0
 
 # Testing ratios
-assert test('../bin/wiggletools isZero log ratio fixedStep.bw fixedStep.wig') == 0
+assert test('../bin/wiggletools isZero ln ratio fixedStep.bw fixedStep.wig') == 0
 
 # Testing BAM & BedGraph 
 assert test('../bin/wiggletools isZero diff bam.bam pileup.bg') == 0

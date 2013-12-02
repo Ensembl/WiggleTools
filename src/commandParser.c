@@ -165,7 +165,7 @@ static FILE * readOutputFilename() {
 	if (strcmp(filename, "-")) {
 		FILE * file = fopen(filename, "w");
 		if (!file) {
-			printf("Could not open output file %s.\n", filename);
+			fprintf(stderr, "Could not open output file %s.\n", filename);
 			exit(1);
 		}
 		return file;
@@ -183,6 +183,25 @@ static WiggleIterator * readBGTee() {
 	return TeeWiggleIterator(readIterator(), file, true);
 }
 
+static WiggleIterator * readLastIteratorToken(char * token) {
+	WiggleIterator * iter = readIteratorToken(token);
+	char * remainder = nextToken(0,0);
+	if (remainder) {
+		fprintf(stderr, "Trailing tokens: the last tokens in your command were not read, check your syntax:\n...");
+		while (remainder) {
+			fprintf(stderr, " %s", remainder);
+			remainder = nextToken(0,0);
+		}
+		fprintf(stderr, "\n", remainder);
+		exit(1);
+	}
+	return iter;
+}
+
+static WiggleIterator * readLastIterator() {
+	return readLastIteratorToken(needNextToken());
+}
+
 static WiggleIterator * readApply() {
 	FILE * outfile = readOutputFilename();
 	char * operation = needNextToken();
@@ -190,7 +209,7 @@ static WiggleIterator * readApply() {
 
 	FILE * infile = fopen(infilename, "r");
 	if (!infile) {
-		printf("Could not open %s.\n", infilename);
+		fprintf(stderr, "Could not open %s.\n", infilename);
 		exit(1);
 	}
 
@@ -203,18 +222,18 @@ static WiggleIterator * readApply() {
 	else if (strcmp(operation, "variance") == 0)
 		function = &variance;
 	else {
-		printf("Name of function to be applied unrecognized: %s\n", operation);
+		fprintf(stderr, "Name of function to be applied unrecognized: %s\n", operation);
 		exit(1);
 	}
 
-	return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readIterator()), infile, outfile);
+	return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readLastIterator()), infile, outfile);
 }
 
 static WiggleIterator * readBTee() {
 	char * filename = needNextToken();
 	FILE * file = fopen(filename, "wb");
 	if (!file) {
-		printf("Could not open %s.\n", filename);
+		fprintf(stderr, "Could not open %s.\n", filename);
 		exit(1);
 	}
 	return BinaryTeeWiggleIterator(readIterator(), file, false);
@@ -412,7 +431,7 @@ static void readProfile() {
 
 	int width = atoi(needNextToken());
 	WiggleIterator * regions = readIterator();
-	WiggleIterator * wig = readIterator();
+	WiggleIterator * wig = readLastIterator();
 	double * profile = profileSum(regions, wig, width, false);
 	int i;
 	for (i = 0; i < width; i++)
@@ -427,7 +446,7 @@ static void readProfiles() {
 	int width = atoi(needNextToken());
 	double * profile = calloc(width, sizeof(double));
 	WiggleIterator * regions = readIterator();
-	WiggleIterator * wig = readIterator();
+	WiggleIterator * wig = readLastIterator();
 
 	for (; !regions->done; pop(regions)) {
 		int i;
@@ -449,25 +468,27 @@ static void readProfiles() {
 
 static void readAUC() {
 	FILE * file = readOutputFilename();
-	fprintf(file, "%lf\n", AUC(readIterator()));	
+	fprintf(file, "%lf\n", AUC(readLastIterator()));	
 	fclose(file);
 }
 
 static void readMeanIntegrated() {
 	FILE * file = readOutputFilename();
-	fprintf(file, "%lf\n", mean(readIterator()));	
+	fprintf(file, "%lf\n", mean(readLastIterator()));	
 	fclose(file);
 }
 
 static void readVarianceIntegrated() {
 	FILE * file = readOutputFilename();
-	fprintf(file, "%lf\n", variance(readIterator()));	
+	fprintf(file, "%lf\n", variance(readLastIterator()));	
 	fclose(file);
 }
 
 static void readPearson() {
 	FILE * file = readOutputFilename();
-	fprintf(file, "%lf\n", pearsonCorrelation(readIterator(), readIterator()));	
+	WiggleIterator * iter1 = readIterator();
+	WiggleIterator * iter2 = readLastIterator();
+	fprintf(file, "%lf\n", pearsonCorrelation(iter1, iter2));
 	fclose(file);
 }
 
@@ -482,11 +503,11 @@ void rollYourOwn(int argc, char ** argv) {
 	else if (strcmp(token, "pearson") == 0) 
 		readPearson();
 	else if (strncmp(token, "write", 5) == 0)
-		runWiggleIterator(readIteratorToken(token));
+		runWiggleIterator(readLastIteratorToken(token));
 	else if (strcmp(token, "do") == 0)
-		runWiggleIterator(readIterator());
+		runWiggleIterator(readLastIterator());
 	else if (strcmp(token, "isZero") == 0)
-		isZero(readIterator());	
+		isZero(readLastIterator());	
 	else if (strcmp(token, "apply") == 0)
 		runWiggleIterator(readApply());
 	else if (strcmp(token, "profile") == 0)
@@ -494,5 +515,5 @@ void rollYourOwn(int argc, char ** argv) {
 	else if (strcmp(token, "profiles") == 0)
 		readProfiles();
 	else
-		toStdout(readIteratorToken(token), false);	
+		toStdout(readLastIteratorToken(token), false);	
 }
