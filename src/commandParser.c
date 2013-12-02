@@ -39,8 +39,9 @@ puts("\twiggletools --help");
 puts("\twiggletools ' program '");
 puts("");
 puts("Program grammar:");
-puts("\tprogram = (iterator) | do (iterator) | (statistic) (output) | (extraction)");
-puts("\tstatistic = AUC (iterator) | mean (iterator) | variance (iterator) | pearson (iterator) (iterator) | isZero (iterator)");
+puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
+puts("\tstatistic = AUC (output) (iterator) | mean (output) (iterator) | variance (output) (iterator) | pearson (output) (iterator) (iterator) | isZero (iterator)");
+puts("\toutput = filename | -");
 puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator)");
 puts("\t\t| apply (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
@@ -103,46 +104,37 @@ static Multiplexer * readMultiplexer() {
 	return newMultiplexer(iters, count);
 }
 
+static FILE * readOutputFilename() {
+	char * filename = needNextToken();
+	if (strcmp(filename, "-")) {
+		FILE * file = fopen(filename, "w");
+		if (!file) {
+			printf("Could not open file %s.\n", filename);
+			exit(1);
+		}
+		return file;
+	} else 
+		return stdout;
+}
 
 static WiggleIterator * readTee() {
-	char * filename = needNextToken();
-	FILE * file;
-	if (strcmp(filename, "-"))
-		file = fopen(filename, "w");
-	else
-		file = stdout;
+	FILE * file = readOutputFilename();
 	return TeeWiggleIterator(readIterator(), file, false);
 }
 
 static WiggleIterator * readBGTee() {
-	char * filename = needNextToken();
-	FILE * file;
-	if (strcmp(filename, "-"))
-		file = fopen(filename, "w");
-	else
-		file = stdout;
+	FILE * file = readOutputFilename();
 	return TeeWiggleIterator(readIterator(), file, true);
 }
 
 static WiggleIterator * readApply() {
-	char * outfilename = needNextToken();
+	FILE * outfile = readOutputFilename();
 	char * operation = needNextToken();
 	char * infilename = needNextToken();
 
 	FILE * infile = fopen(infilename, "r");
 	if (!infile) {
 		printf("Could not open %s.\n", infilename);
-		exit(1);
-	}
-
-	FILE * outfile;
-	if (strcmp(outfilename, "-"))
-		outfile = fopen(outfilename, "w");
-	else
-		outfile = stdout;
-
-	if (!outfile) {
-		printf("Could not open %s.\n", outfilename);
 		exit(1);
 	}
 
@@ -422,59 +414,27 @@ static void readProfiles() {
 }
 
 static void readAUC() {
-	char * filename = needNextToken();
-	if (strcmp(filename, "-")) {
-		FILE * file = fopen(filename, "w");
-		if (!file) {
-			printf("Could not open file %s.\n", filename);
-			exit(1);
-		}
-		fprintf(file, "%lf\n", AUC(readIterator()));	
-		fclose(file);
-	} else 
-		printf("%lf\n", AUC(readIterator()));	
+	FILE * file = readOutputFilename();
+	fprintf(file, "%lf\n", AUC(readIterator()));	
+	fclose(file);
 }
 
 static void readMeanIntegrated() {
-	char * filename = needNextToken();
-	if (strcmp(filename, "-")) {
-		FILE * file = fopen(filename, "w");
-		if (!file) {
-			printf("Could not open file %s.\n", filename);
-			exit(1);
-		}
-		fprintf(file, "%lf\n", mean(readIterator()));	
-		fclose(file);
-	} else 
-		printf("%lf\n", mean(readIterator()));	
+	FILE * file = readOutputFilename();
+	fprintf(file, "%lf\n", mean(readIterator()));	
+	fclose(file);
 }
 
 static void readVarianceIntegrated() {
-	char * filename = needNextToken();
-	if (strcmp(filename, "-")) {
-		FILE * file = fopen(filename, "w");
-		if (!file) {
-			printf("Could not open file %s.\n", filename);
-			exit(1);
-		}
-		fprintf(file, "%lf\n", variance(readIterator()));	
-		fclose(file);
-	} else 
-		printf("%lf\n", variance(readIterator()));	
+	FILE * file = readOutputFilename();
+	fprintf(file, "%lf\n", variance(readIterator()));	
+	fclose(file);
 }
 
 static void readPearson() {
-	char * filename = needNextToken();
-	if (strcmp(filename, "-")) {
-		FILE * file = fopen(filename, "w");
-		if (!file) {
-			printf("Could not open file %s.\n", filename);
-			exit(1);
-		}
-		fprintf(file, "%lf\n", pearsonCorrelation(readIterator(), readIterator()));	
-		fclose(file);
-	} else 
-		printf("%lf\n", pearsonCorrelation(readIterator(), readIterator()));	
+	FILE * file = readOutputFilename();
+	fprintf(file, "%lf\n", pearsonCorrelation(readIterator(), readIterator()));	
+	fclose(file);
 }
 
 void rollYourOwn(int argc, char ** argv) {
