@@ -81,13 +81,13 @@ static WiggleIterator * readIterator() {
 	return readIteratorToken(needNextToken());
 }
 
-static WiggleIterator ** readIteratorList(int * count) {
+static WiggleIterator ** readFileList(int * count, char * firstToken) {
 	size_t buffer_size = 8;
 	char * token;
 	int i =0;
 	WiggleIterator ** iters = (WiggleIterator **) calloc(buffer_size, sizeof(WiggleIterator*));
 
-	for (token = needNextToken(); token != NULL && strcmp(token, ":"); token = nextToken(0,0)) {
+	for (token = firstToken; token != NULL && strcmp(token, ":"); token = nextToken(0,0)) {
 		if (i == buffer_size) {
 			buffer_size *= 2;
 			iters = (WiggleIterator **) realloc(iters, buffer_size * sizeof(WiggleIterator*));
@@ -96,6 +96,57 @@ static WiggleIterator ** readIteratorList(int * count) {
 	}
 	*count = i;
 	return iters;
+}
+
+static WiggleIterator ** readIteratorList(int * count);
+
+static WiggleIterator ** readMappedIteratorList(int * count) {
+	char * token = needNextToken();
+	WiggleIterator ** iters;
+	int i;
+
+	if (strcmp(token, "unit") == 0) {
+		iters = readIteratorList(count);
+		for (i = 0; i < *count; i++)
+			iters[i] = UnitWiggleIterator(iters[i]);
+	} else if (strcmp(token, "smooth") == 0) {
+		int width = atoi(needNextToken());
+		iters = readIteratorList(count);
+		for (i = 0; i < *count; i++)
+			iters[i] = SmoothWiggleIterator(iters[i], width);
+	} else if (strcmp(token, "exp") == 0) {
+		iters = readIteratorList(count);
+		for (i = 0; i < *count; i++)
+			iters[i] = NaturalExpWiggleIterator(iters[i]);
+	} else if (strcmp(token, "ln") == 0) {
+		iters = readIteratorList(count);
+		for (i = 0; i < *count; i++)
+			iters[i] = NaturalLogWiggleIterator(iters[i]);
+	} else if (strcmp(token, "log") == 0) {
+		double base = atof(needNextToken());
+		iters = readIteratorList(count);
+		for (i = 0; i < *count; i++)
+			iters[i] = LogWiggleIterator(iters[i], base);
+	} else if (strcmp(token, "pow") == 0) {
+		double base = atof(needNextToken());
+		iters = readIteratorList(count);
+		for (i = 0; i < *count; i++)
+			iters[i] = PowerWiggleIterator(iters[i], base);
+	} else {
+		fprintf(stderr, "Unary function unkown: %s\n", token);
+		exit(1);
+	}
+
+	return iters;
+}
+
+static WiggleIterator ** readIteratorList(int * count) {
+	char * token = needNextToken();
+
+	if (strcmp(token, "map"))
+		return readFileList(count, token);
+	else 
+		return readMappedIteratorList(count);
 }
 
 static Multiplexer * readMultiplexer() {
