@@ -109,7 +109,7 @@ static FILE * readOutputFilename() {
 	if (strcmp(filename, "-")) {
 		FILE * file = fopen(filename, "w");
 		if (!file) {
-			printf("Could not open file %s.\n", filename);
+			printf("Could not open output file %s.\n", filename);
 			exit(1);
 		}
 		return file;
