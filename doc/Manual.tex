@@ -148,10 +148,26 @@ wiggletools scale 10 test/fixedStep.bw
 
 \subsubsection{gt}
 
-Returns 1 if the operator is strictly greater than a given cutoff, 0 otherwise:
+Returns 1 if the iterator is strictly greater than a given cutoff, 0 otherwise:
 
 \begin{verbatim}
 wiggletools gt 5 test/fixedStep.bw 
+\end{verbatim}
+
+\subsubsection{unit}
+
+Returns 1 if the iterator is non-zero, 0 otherwise:
+
+\begin{verbatim}
+wiggletools unit test/fixedStep.bw 
+\end{verbatim}
+
+\subsubsection{isZero}
+
+Does not print anything, just exits with return value 1 (i.e. error) if it encounters a non-zero value:
+
+\begin{verbatim}
+wiggletools isZero test/fixedStep.bw 
 \end{verbatim}
 
 \subsubsection{seek}

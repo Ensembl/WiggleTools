@@ -145,10 +145,26 @@ wiggletools scale 10 test/fixedStep.bw
 
 * gt
 
-Returns 1 if the operator is strictly greater than a given cutoff, 0 otherwise:
+Returns 1 if the iterator is strictly greater than a given cutoff, 0 otherwise:
 
 ```
 wiggletools gt 5 test/fixedStep.bw 
+```
+
+* unit
+
+Returns 1 if the operator is non-zero, 0 otherwise:
+
+```
+wiggletools unit test/fixedStep.bw 
+```
+
+* isZero
+
+Does not print anything, just exits with return value 1 (i.e. error) if it encounters a non-zero value:
+
+```
+wiggletools isZero test/fixedStep.bw 
 ```
 
 * seek
