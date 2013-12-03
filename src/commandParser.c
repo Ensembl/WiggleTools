@@ -461,10 +461,12 @@ static void readProfiles() {
 	double * profile = calloc(width, sizeof(double));
 	WiggleIterator * regions = readIterator();
 	WiggleIterator * wig = readLastIterator();
-	WiggleIterator * profiles = ProfileWiggleIterator(regions, width, wig);
+	WiggleIterator * profiles;
 
-	for (; !profiles->done; pop(profiles))
+	for (profiles = ProfileWiggleIterator(regions, width, wig); !profiles->done; pop(profiles)) {
+		fprintf(file, "%s\t%i\t%i\t", profiles->chrom, profiles->start, profiles->finish);
 		fprintfProfile(file, (double *) profiles->valuePtr, width);
+	}
 
 	fclose(file);
 }
