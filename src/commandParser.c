@@ -192,7 +192,7 @@ static WiggleIterator * readLastIteratorToken(char * token) {
 			fprintf(stderr, " %s", remainder);
 			remainder = nextToken(0,0);
 		}
-		fprintf(stderr, "\n", remainder);
+		fprintf(stderr, "\n");
 		exit(1);
 	}
 	return iter;
