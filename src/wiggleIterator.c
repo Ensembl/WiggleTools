@@ -25,6 +25,7 @@ WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterat
 	new->chrom = calloc(1000,1);
 	new->value = 1; // Default value for non-valued bed tracks;
 	new->strand = 0; // Default value for non-stranded data;
+	new->valuePtr = NULL;
 	pop(new);
 	return new;
 }

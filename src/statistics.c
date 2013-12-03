@@ -251,44 +251,45 @@ double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
 // Profile summaries
 //////////////////////////////////////////////////////
 
-void regionProfile2(WiggleIterator * wig, int width, int centerRes, int centerRegion, double scaleFactor, double * res, bool stranded, int strand) {
+static void updateProfile(WiggleIterator * wig, double compression, double * profile, int profile_width, bool stranded) {
 	int start, finish, pos;
 
-	if (!stranded || strand > 0) {
-		start = centerRes + (wig->start - centerRegion); 
-		finish = centerRes + (wig->finish - centerRegion); 
-	} else if (strand < 0) {
-		start = centerRes - (wig->finish - centerRegion); 
-		finish = centerRes - (wig->start - centerRegion); 
+	if (!stranded || wig->strand > 0) {
+		start = (int) round(wig->start * compression);
+		finish = (int) round(wig->finish * compression); 
+	} else if (wig->strand < 0) {
+		start = (int) round(profile_width - 1 - (wig->finish * compression));
+		finish = (int) round(profile_width - 1 - (wig->start * compression)); 
 	} else {
 		fprintf(stderr, "Cannot provide stranded profile on non-stranded regions\n");
 		exit(1);
 	}
 
-	for (pos = start; pos < finish; pos++) {
-		int index = (int) round(pos * scaleFactor);
-		if (index < 0)
-			index = 0;
-		if (index >= width)
-			index = width - 1;
-		res[index] += wig->value;
-	}
+	if (start < 0)
+		start = 0;
+	if (finish <= start)
+		finish = start + 1;
+	if (finish > profile_width)
+		finish = profile_width;
+
+	for (pos = start; pos < finish; pos++)
+		profile[pos] += wig->value / compression;
 }
 
-void regionProfile(WiggleIterator * region, WiggleIterator * wig, int width, double * res, int centerRes, bool stranded) {
-	int centerRegion = (region->finish + region->start) / 2;
-	double scaleFactor = width / (double) (region->finish - region->start);
+void regionProfile(WiggleIterator * wig, double * profile, int profile_width, int region_width, bool stranded) {
+	double compression = profile_width / (double) region_width;
+	int pos;
 
-	for (seek(wig, region->chrom, region->start, region->finish); !wig->done; pop(wig)) 
-		regionProfile2(wig, width, centerRes, centerRegion, scaleFactor, res, stranded, region->strand);
+	for (pos = 0; pos < profile_width; pos++)
+		profile[pos] = 0;
+
+	for (; !wig->done; pop(wig))
+		updateProfile(wig, compression, profile, profile_width, stranded);
 }
 
-double * profileSum(WiggleIterator * regions, WiggleIterator * wig, int width, bool stranded) {
-	double * res = calloc(width, sizeof(double));
-	int centerRes = width / 2; 
+void addProfile(double * dest, double * source, int width) {
+	int i;
 
-	for (; !regions->done; pop(regions)) 
-		regionProfile(regions, wig, width, res, centerRes, stranded);
-
-	return res;
+	for (i=0; i<width; i++) 
+		dest[i] += source[i];
 }

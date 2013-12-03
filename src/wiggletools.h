@@ -90,6 +90,7 @@ WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *, bool);
 void runWiggleIterator(WiggleIterator * );
 
 WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset);
+WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, WiggleIterator * dataset);
 WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile);
 
 // Statistics
@@ -98,8 +99,8 @@ double AUC (WiggleIterator *);
 double mean (WiggleIterator *);
 double variance (WiggleIterator *);
 double isZero(WiggleIterator * wi);
-void regionProfile(WiggleIterator *, WiggleIterator *, int, double *, int, bool);
-double * profileSum(WiggleIterator *, WiggleIterator *, int, bool);
+void regionProfile(WiggleIterator *, double *, int, int, bool);
+void addProfile(double *, double *, int);
 //	Binary 
 double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 

@@ -40,7 +40,7 @@ void destroyBufferedWiggleIteratorData(BufferedWiggleIteratorData * data) {
 void BufferedWiggleIteratorPop(WiggleIterator * wi) {
 	BufferedWiggleIteratorData * data = (BufferedWiggleIteratorData *) wi->data;
 	if (data->index < data->length) {
-		wi->start = data->start + data->index;
+		wi->start = data->index;
 		wi->finish = wi->start + 1;
 		wi->value = data->values[data->index];
 		data->index++;
@@ -67,6 +67,8 @@ WiggleIterator * BufferedWiggleIterator(BufferedWiggleIteratorData * data) {
 typedef struct applyWiggleIteratorData_st {
 	WiggleIterator * regions;
 	double (*statistic)(WiggleIterator *);
+	double * valuePtr;
+	int profile_width;
 	WiggleIterator * input;
 	BufferedWiggleIteratorData * head;
 	BufferedWiggleIteratorData * tail;
@@ -92,7 +94,8 @@ static void createTarget(ApplyWiggleIteratorData * data) {
 }
 
 static void createTargets(ApplyWiggleIteratorData * data) {
-	while(!data->regions->done && (!data->head || (data->regions->start <= data->tail->finish && !strcmp(data->regions->chrom, data->tail->chrom)))) {
+	// NOTE: the 10kb added allows the system to pull neighbouring regions together 
+	while(!data->regions->done && (!data->head || (data->regions->start <= data->tail->finish + 10000 && !strcmp(data->regions->chrom, data->tail->chrom)))) {
 		createTarget(data);
 		pop(data->regions);
 	}
@@ -124,9 +127,7 @@ static void pushData(ApplyWiggleIteratorData * data) {
 			break;
 		else
 			pushDataOnBuffer(data, bufferedData);
-	
 	}
-
 }
 
 void ApplyWiggleIteratorPop(WiggleIterator * wi) {
@@ -154,7 +155,12 @@ void ApplyWiggleIteratorPop(WiggleIterator * wi) {
 	wi->chrom = data->head->chrom;
 	wi->start = data->head->start;
 	wi->finish = data->head->finish;
-	wi->value = data->statistic(BufferedWiggleIterator(data->head));
+	if (data->statistic)
+		wi->value = data->statistic(BufferedWiggleIterator(data->head));
+	else {
+		wi->valuePtr = data->valuePtr;
+		regionProfile(BufferedWiggleIterator(data->head), wi->valuePtr, data->profile_width, wi->finish - wi->start, false);
+	}
 
 	// Discard struct
 	BufferedWiggleIteratorData * bufferedData = data->head;
@@ -182,5 +188,14 @@ WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statisti
 	data->regions = regions;
 	data->statistic = statistic;
 	data->input = dataset;
+	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL);
+}
+
+WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, WiggleIterator * dataset) {
+	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) calloc(1, sizeof(ApplyWiggleIteratorData));
+	data->regions = regions;
+	data->profile_width = width;
+	data->input = dataset;
+	data->valuePtr = calloc(width, sizeof(double));
 	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL);
 }

@@ -23,6 +23,7 @@ struct wiggleIterator_st {
 	int start;
 	int finish;
 	double value;
+	void * valuePtr;
 	bool done;
 	int strand;
 	void * data;

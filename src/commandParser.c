@@ -432,12 +432,27 @@ static void readProfile() {
 	int width = atoi(needNextToken());
 	WiggleIterator * regions = readIterator();
 	WiggleIterator * wig = readLastIterator();
-	double * profile = profileSum(regions, wig, width, false);
+	WiggleIterator * profiles = ProfileWiggleIterator(regions, width, wig);
+	double * profile = calloc(width, sizeof(double));
+
+	for (; !profiles->done; pop(profiles))
+		addProfile(profile, (double *) profiles->valuePtr, width);
+
 	int i;
 	for (i = 0; i < width; i++)
-		fprintf(file, "%f\n", profile[i]);
+		fprintf(file, "%i\t%lf\n", i, profile[i]);
+
 	free(profile);
 	fclose(file);
+}
+
+static void fprintfProfile(FILE * file, double * profile, int width) {
+	int i;
+
+	fprintf(file, "%f", profile[0]);
+	for (i = 1; i < width; i++)
+		fprintf(file, "\t%f", profile[i]);
+	fprintf(file, "\n");
 }
 
 static void readProfiles() {
@@ -447,22 +462,11 @@ static void readProfiles() {
 	double * profile = calloc(width, sizeof(double));
 	WiggleIterator * regions = readIterator();
 	WiggleIterator * wig = readLastIterator();
+	WiggleIterator * profiles = ProfileWiggleIterator(regions, width, wig);
 
-	for (; !regions->done; pop(regions)) {
-		int i;
-		regionProfile(regions, wig, width, profile, width/2, false);
-		fprintf(file, "%f", profile[0]);
-		profile[0] = 0;
+	for (; !profiles->done; pop(profiles))
+		fprintfProfile(file, (double *) profiles->valuePtr, width);
 
-		for (i = 1; i < width; i++) {
-			fprintf(file, "\t%f", profile[i]);
-			profile[i] = 0;
-		}
-
-		fprintf(file, "\n");
-	}
-
-	free(profile);
 	fclose(file);
 }
 
