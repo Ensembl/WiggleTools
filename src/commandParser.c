@@ -75,7 +75,6 @@ static char * needNextToken() {
 		return token;
 	} else {
 		fprintf(stderr, "wiggletools: Unexpected end of command line\n");
-		abort();
 		exit(1);
 	}
 }
