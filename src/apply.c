@@ -95,7 +95,7 @@ static void createTarget(ApplyWiggleIteratorData * data) {
 
 static void createTargets(ApplyWiggleIteratorData * data) {
 	// NOTE: the 10kb added allows the system to pull neighbouring regions together 
-	while(!data->regions->done && (!data->head || (data->regions->start <= data->tail->finish + 100000 && !strcmp(data->regions->chrom, data->tail->chrom)))) {
+	while(!data->regions->done && (!data->head || (data->regions->start <= data->tail->finish + 1000000 && !strcmp(data->regions->chrom, data->tail->chrom)))) {
 		createTarget(data);
 		pop(data->regions);
 	}
