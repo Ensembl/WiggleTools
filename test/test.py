@@ -50,7 +50,7 @@ assert test('../bin/wiggletools isZero diff pow 2 fixedStep.bw mult fixedStep.wi
 assert test('../bin/wiggletools isZero diff smooth 1 fixedStep.wig fixedStep.wig') == 0
 
 # Testing apply
-assert test('../bin/wiggletools apply tmp/regional_means.txt mean overlapping.bed fixedStep.wig') == 0
+assert test('../bin/wiggletools apply_paste tmp/regional_means.txt mean overlapping.bed fixedStep.wig') == 0
 
 # Testing pearson
 assert test('../bin/wiggletools pearson tmp/pearson.txt fixedStep.wig variableStep.wig') == 0

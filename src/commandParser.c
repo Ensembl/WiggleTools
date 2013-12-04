@@ -43,10 +43,10 @@ puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
 puts("\tstatistic = AUC (output) (iterator) | mean (output) (iterator) | variance (output) (iterator) | pearson (output) (iterator) (iterator) | isZero (iterator)");
 puts("\toutput = filename | -");
 puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator)");
-puts("\t\t| apply (out_filename) (statistic) (bed_file) (iterator)");
+puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
-puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (double) | pow (double)");
-puts("\tbinary_operator = diff | ratio");
+puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (double) | pow (double) ");
+puts("\tbinary_operator = diff | ratio | apply (statistic)");
 puts("\treducer = cat | sum | product | mean | var | stddev | median | min | max");
 puts("\titerator_list = (iterator) : | (iterator) (iterator_list)");
 puts("\tmultiplex = (iterator_list) | map (unary_operator) (multiplex)");
@@ -201,33 +201,6 @@ static WiggleIterator * readLastIterator() {
 	return readLastIteratorToken(needNextToken());
 }
 
-static WiggleIterator * readApply() {
-	FILE * outfile = readOutputFilename();
-	char * operation = needNextToken();
-	char * infilename = needNextToken();
-
-	FILE * infile = fopen(infilename, "r");
-	if (!infile) {
-		fprintf(stderr, "Could not open %s.\n", infilename);
-		exit(1);
-	}
-
-	double (*function)(WiggleIterator *);
-
-	if (strcmp(operation, "AUC") == 0)
-		function = &AUC;
-	else if (strcmp(operation, "mean") == 0)
-		function = &mean;
-	else if (strcmp(operation, "variance") == 0)
-		function = &variance;
-	else {
-		fprintf(stderr, "Name of function to be applied unrecognized: %s\n", operation);
-		exit(1);
-	}
-
-	return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readLastIterator()), infile, outfile);
-}
-
 static WiggleIterator * readBTee() {
 	char * filename = needNextToken();
 	FILE * file = fopen(filename, "wb");
@@ -369,6 +342,28 @@ static WiggleIterator * readMWUTest() {
 	return MWUReduction(newMultiset(multis, 2));
 }
 
+static WiggleIterator * readApply() {
+	char * operation = needNextToken();
+	double (*function)(WiggleIterator *);
+
+	if (strcmp(operation, "AUC") == 0)
+		function = &AUC;
+	else if (strcmp(operation, "mean") == 0)
+		function = &mean;
+	else if (strcmp(operation, "variance") == 0)
+		function = &variance;
+	else {
+		fprintf(stderr, "Name of function to be applied unrecognized: %s\n", operation);
+		exit(1);
+	}
+
+	WiggleIterator * regions = readIterator();
+	WiggleIterator * data = readIterator();
+
+	return ApplyWiggleIterator(regions, function, data);
+}
+
+
 static WiggleIterator * readIteratorToken(char * token) {
 	if (strcmp(token, "cat") == 0)
 		return readCat();
@@ -384,6 +379,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readDifference();
 	if (strcmp(token, "ratio") == 0)
 		return readRatio();
+	if (strcmp(token, "apply") == 0)
+		return readApply();
 	if (strcmp(token, "mean") == 0)
 		return readMean();
 	if (strcmp(token, "var") == 0)
@@ -496,6 +493,33 @@ static void readPearson() {
 	fclose(file);
 }
 
+static WiggleIterator * readApplyPaste() {
+       FILE * outfile = readOutputFilename();
+       char * operation = needNextToken();
+       char * infilename = needNextToken();
+
+       FILE * infile = fopen(infilename, "r");
+       if (!infile) {
+               fprintf(stderr, "Could not open %s.\n", infilename);
+               exit(1);
+       }
+
+       double (*function)(WiggleIterator *);
+
+       if (strcmp(operation, "AUC") == 0)
+               function = &AUC;
+       else if (strcmp(operation, "mean") == 0)
+               function = &mean;
+       else if (strcmp(operation, "variance") == 0)
+               function = &variance;
+       else {
+               fprintf(stderr, "Name of function to be applied unrecognized: %s\n", operation);
+               exit(1);
+       }
+
+       return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readLastIterator()), infile, outfile);
+}
+
 void rollYourOwn(int argc, char ** argv) {
 	char * token = nextToken(argc, argv);
 	if (strcmp(token, "AUC") == 0)
@@ -512,8 +536,8 @@ void rollYourOwn(int argc, char ** argv) {
 		runWiggleIterator(readLastIterator());
 	else if (strcmp(token, "isZero") == 0)
 		isZero(readLastIterator());	
-	else if (strcmp(token, "apply") == 0)
-		runWiggleIterator(readApply());
+	else if (strcmp(token, "apply_paste") == 0)
+		runWiggleIterator(readApplyPaste());
 	else if (strcmp(token, "profile") == 0)
 		readProfile();
 	else if (strcmp(token, "profiles") == 0)

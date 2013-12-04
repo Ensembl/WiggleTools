@@ -146,19 +146,23 @@ wiggletools scale 10 test/fixedStep.bw
 
 * gt
 
-Returns 1 if the iterator is strictly greater than a given cutoff, 0 otherwise:
+Returns 1 if the iterator is strictly greater than a given cutoff, 0 otherwise, and merges contiguous positions with the same output value into blocks:
 
 ```
 wiggletools gt 5 test/fixedStep.bw 
 ```
 
+This is useful to define regions in the *apply* function (see below).
+
 * unit
 
-Returns 1 if the operator is non-zero, 0 otherwise:
+Returns 1 if the operator is non-zero, 0 otherwise, and merges contiguous positions with the same output value into blocks:
 
 ```
 wiggletools unit test/fixedStep.bw 
 ```
+
+This is useful to define regions in the *apply* function (see below).
 
 * isZero
 
@@ -368,10 +372,18 @@ wiggletools pearson results.txt test/fixedStep.bw test/fixedStep.bw
 
 * Apply
 
-The apply function reads the regions from a Bed file, computes a given statistic for a given iterator across each region, then re-prints the line of the bed file with the result appended to it.
+The apply function reads the regions from one iterator, then computes a given statistic on another iterator across those regions. It ignores regions with value 0.
 
 ```
-wiggletools apply results.txt mean test/overlapping.bed test/bam.bam 
+wiggletools apply mean unit test/variableStep.bw test/fixedStep.bw
+```
+
+* Apply and Paste
+
+This is a convenience wrapper around the above function: it reads the regions directly from a Bed file, then prints out each line of the file, with the resulting statistic appended at the end of the line. This is useful to keep identifiers and other metadata contained in the same file as the results:
+
+```
+wiggletools apply_paste output_file.txt mean test/overlapping.bed test/fixedStep.bw
 ```
 
 Profiles
