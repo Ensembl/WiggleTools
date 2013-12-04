@@ -1,4 +1,4 @@
-default: Samtools Wiggletools Parallel doc
+default: Samtools Wiggletools Parallel
 
 Samtools:
 	cd samtools; make
@@ -8,11 +8,6 @@ Wiggletools:
 
 Parallel:
 	cd parallel; make
-
-doc: Manual.pdf
-
-Manual.pdf:
-	cd doc; make
 
 test: tests
 
@@ -24,4 +19,3 @@ clean:
 	cd src; make clean
 	rm bin/*
 	rm lib/*
-	rm *.pdf
