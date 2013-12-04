@@ -458,7 +458,6 @@ static void readProfiles() {
 	FILE * file = readOutputFilename();
 
 	int width = atoi(needNextToken());
-	double * profile = calloc(width, sizeof(double));
 	WiggleIterator * regions = readIterator();
 	WiggleIterator * wig = readLastIterator();
 	WiggleIterator * profiles;
