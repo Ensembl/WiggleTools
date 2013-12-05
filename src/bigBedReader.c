@@ -94,5 +94,7 @@ WiggleIterator * BigBedReader(char * f) {
 	openBigBedFile(data);
 	launchDownloader(data);
 	BigBedReaderEnterBlock(data);
-	return newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek);
+	WiggleIterator * res = newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek);
+	res->overlaps = true;
+	return res;
 }	

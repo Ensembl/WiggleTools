@@ -129,7 +129,10 @@ Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
 	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
 	new->pop = popListMultiplexer;
 	new->count = count;
-	new->iters = iters;
+	new->iters = calloc(count, sizeof(WiggleIterator *));
+	int i;
+	for (i = 0; i < count; i++)
+		new->iters[i] = NonOverlappingWiggleIterator(iters[i]);
 	new->inplay = (bool *) calloc(count, sizeof(bool));
 	new->values = (double *) calloc(count, sizeof(double));
 	popMultiplexer(new);

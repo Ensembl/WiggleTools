@@ -26,6 +26,7 @@
 
 double AUC(WiggleIterator * wi) {
 	double total = 0;
+	wi = NonOverlappingWiggleIterator(wi);
 	for(;!wi->done; pop(wi)) 
 		total += (wi->finish - wi->start) * wi->value;
 	return total;
@@ -33,6 +34,7 @@ double AUC(WiggleIterator * wi) {
 
 double span(WiggleIterator * wi) {
 	double total = 0;
+	wi = NonOverlappingWiggleIterator(wi);
 	for(;!wi->done; pop(wi)) 
 		if (wi->value)
 			total += (wi->finish - wi->start);
@@ -42,6 +44,7 @@ double span(WiggleIterator * wi) {
 double mean(WiggleIterator * wi) {
 	double total = 0;
 	double span = 0;
+	wi = NonOverlappingWiggleIterator(wi);
 	for(;!wi->done; pop(wi)) {
 		span += (wi->finish - wi->start);
 		total += (wi->finish - wi->start) * wi->value;
@@ -56,6 +59,7 @@ double variance(WiggleIterator * wi) {
 	double mean = 0;
 	double M2 = 0;
 	double count = 0;
+	wi = NonOverlappingWiggleIterator(wi);
 
 	for(;!wi->done; pop(wi)) {
 		double weight = wi->finish - wi->start;
@@ -71,10 +75,12 @@ double variance(WiggleIterator * wi) {
 }
 
 double stddev(WiggleIterator * wi) {
+	wi = NonOverlappingWiggleIterator(wi);
 	return sqrt(variance(wi));
 }
 
 double isZero(WiggleIterator * wi) {
+	wi = NonOverlappingWiggleIterator(wi);
 	for (; !wi->done; pop(wi))
 		if (wi->value != 0)
 			exit(1);
@@ -99,8 +105,8 @@ double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
 	int halfway, width;
 	double sweep, deltaA, deltaB;
 	WiggleIterator * iters[2];
-	iters[0] = iterA;
-	iters[1] = iterB;
+	iters[0] = NonOverlappingWiggleIterator(iterA);
+	iters[1] = NonOverlappingWiggleIterator(iterB);
 	Multiplexer * multi;
 
 	for (multi=newMultiplexer(iters, 2); !multi->done; popMultiplexer(multi)) {

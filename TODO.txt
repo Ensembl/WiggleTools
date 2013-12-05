@@ -1,4 +1,3 @@
-Automatic conversion of overlapping to non-overlapping
 Memory tracking & cleaning of chrom labels
 VCF/BCF reader?
 HMM app? (requires reverse iterators...)
