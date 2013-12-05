@@ -20,7 +20,6 @@ def run(args):
 
 def main():
 	cmd = ['wiggletools'] + filter(lambda X: len(X) > 0, wiggletools_args.split(' '))
-	print cmd
 	run(cmd)
 
 	for match in re.finditer('write\s*(\S*.wig)\s', wiggletools_args):
