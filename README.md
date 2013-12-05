@@ -50,7 +50,6 @@ The make process produces a number of outputs:
 * A statically linked library in lib/
 * A header for that library in inc/
 * Various executables in bin/
-* Documentation (this file) in doc/
 
 There is not installation routine, meaning that you should copy the relevant files onto your path, library path, etc. Note that the executable does not require the libraries to be available.
 
