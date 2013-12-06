@@ -184,11 +184,13 @@ void UnitWiggleIteratorPop(WiggleIterator * wi) {
 }
 
 WiggleIterator * UnitWiggleIterator(WiggleIterator * i) {
-	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
-	data->iter = i;
-	WiggleIterator * wi = newWiggleIterator(data, &UnitWiggleIteratorPop, &UnaryWiggleIteratorSeek);
-	wi->value = 1;
-	return UnionWiggleIterator(wi);
+	if (i->overlaps) {
+		return UnionWiggleIterator(i);
+	} else {
+		UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
+		data->iter = i;
+		return UnionWiggleIterator(newWiggleIterator(data, &UnitWiggleIteratorPop, &UnaryWiggleIteratorSeek));
+	}
 }
 
 //////////////////////////////////////////////////////
@@ -225,9 +227,7 @@ WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator * i, double s) {
 	HighPassFilterWiggleIteratorData * data = (HighPassFilterWiggleIteratorData *) calloc(1, sizeof(HighPassFilterWiggleIteratorData));
 	data->iter = i;
 	data->scalar = s;
-	WiggleIterator * wi = newWiggleIterator(data, &HighPassFilterWiggleIteratorPop, &HighPassFilterWiggleIteratorSeek);
-	wi->value = 1;
-	return UnionWiggleIterator(wi);
+	return UnionWiggleIterator(newWiggleIterator(data, &HighPassFilterWiggleIteratorPop, &HighPassFilterWiggleIteratorSeek));
 }
 
 //////////////////////////////////////////////////////
