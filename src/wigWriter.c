@@ -90,6 +90,14 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 				exit(1);
 			}
 
+			// Skip empty lines and metadata lines:
+			while (! (strlen(line) && strncmp(line, "track", 5) && strncmp(line, "browser", 7))) {
+				if (!fgets(buffer, 5000, infile)) {
+					printf("Could not paste data to file lines, inconsistent number of lines.\n");
+					exit(1);
+				}
+			}
+
 			// Strip end of line symbols
 			int i;
 			for (i = strlen(buffer)-1; i >= 0; i--) {
