@@ -390,7 +390,7 @@ void toStdout(WiggleIterator * wi, bool bedGraph) {
 
 WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
-	data->iter = CompressionWiggleIterator(i);
+	data->iter = i;
 	data->infile = infile;
 	data->bedGraph = true;
 	data->outfile = outfile;
