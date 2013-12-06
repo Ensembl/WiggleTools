@@ -1,4 +1,4 @@
-The files in the /src /parallel and /bigwig directories are under the following license.
+The files in the /src and /parallel directories are under the following license.
 
 Please look into the /samtools directory for its separate license.
 
