@@ -198,7 +198,7 @@ void launchBamDownloader(BamReaderData * data) {
 
 	int err = pthread_create(&data->downloaderThreadID, NULL, &downloadBamFile, data);
 	if (err) {
-		printf("Could not create new thread %i\n", err);
+		fprintf(stderr, "Could not create new thread %i\n", err);
 		abort();
 	}
 

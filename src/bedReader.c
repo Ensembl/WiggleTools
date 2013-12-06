@@ -80,7 +80,7 @@ void BedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 		if (data->file)
 			fclose(data->file);
 		if (!(data->file = fopen(data->filename, "r"))) {
-			printf("Could not open input file %s\n", data->filename);
+			fprintf(stderr, "Could not open input file %s\n", data->filename);
 			exit(1);
 		}
 		wi->done = false;
@@ -99,7 +99,7 @@ WiggleIterator * BedReader(char * filename) {
 	data->filename = filename;
 	data->stop = -1;
 	if (!(data->file = fopen(filename, "r"))) {
-		printf("Could not open bed file %s\n", filename);
+		fprintf(stderr, "Could not open bed file %s\n", filename);
 		exit(1);
 	}
 	WiggleIterator * res = newWiggleIterator(data, &BedReaderPop, &BedReaderSeek);

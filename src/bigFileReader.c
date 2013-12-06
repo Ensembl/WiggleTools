@@ -189,7 +189,7 @@ void launchDownloader(BigFileReaderData * data) {
 
 	int err = pthread_create(&data->downloaderThreadID, NULL, &downloadBigFile, data);
 	if (err) {
-		printf("Could not create new thread %i\n", err);
+		fprintf(stderr, "Could not create new thread %i\n", err);
 		abort();
 	}
 

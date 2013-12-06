@@ -558,7 +558,7 @@ WiggleIterator * SmartReader(char * filename) {
 	else if (!strcmp(filename, "-"))
 		return WiggleReader(filename);
 	else {
-		printf("Could not recognize file format from suffix: %s\n", filename);
+		fprintf(stderr, "Could not recognize file format from suffix: %s\n", filename);
 		exit(1);
 	}
 }

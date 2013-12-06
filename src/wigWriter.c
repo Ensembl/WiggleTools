@@ -86,14 +86,14 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 		else {
 			// Read next line in infile
 			if (!fgets(buffer, 5000, infile)) {
-				printf("Could not paste data to file lines, inconsistent number of lines.\n");
+				fprintf(stderr, "Could not paste data to file lines, inconsistent number of lines.\n");
 				exit(1);
 			}
 
 			// Skip empty lines and metadata lines:
 			while (! (strlen(line) && strncmp(line, "track", 5) && strncmp(line, "browser", 7))) {
 				if (!fgets(buffer, 5000, infile)) {
-					printf("Could not paste data to file lines, inconsistent number of lines.\n");
+					fprintf(stderr, "Could not paste data to file lines, inconsistent number of lines.\n");
 					exit(1);
 				}
 			}
@@ -299,7 +299,7 @@ static void launchWriter(TeeWiggleIteratorData * data) {
 	// Launch pthread
 	int err = pthread_create(&data->threadID, NULL, &printToFile, data);
 	if (err) {
-		printf("Could not create new thread %i\n", err);
+		fprintf(stderr, "Could not create new thread %i\n", err);
 		exit(1);
 	}
 }
@@ -365,7 +365,7 @@ WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedG
 void toBinaryFile(WiggleIterator * wi, char * filename, bool bedGraph) {
 	FILE * file = fopen(filename, "wb");
 	if (!file) {
-		printf("Could not open file %s\n", filename);
+		fprintf(stderr, "Could not open file %s\n", filename);
 		exit(1);
 	}
 	runWiggleIterator(BinaryTeeWiggleIterator(wi, file, bedGraph));
@@ -374,7 +374,7 @@ void toBinaryFile(WiggleIterator * wi, char * filename, bool bedGraph) {
 void toFile(WiggleIterator * wi, char * filename, bool bedGraph) {
 	FILE * file = fopen(filename, "w");
 	if (!file) {
-		printf("Could not open file %s\n", filename);
+		fprintf(stderr, "Could not open file %s\n", filename);
 		exit(1);
 	}
 	runWiggleIterator(TeeWiggleIterator(wi, file, bedGraph));

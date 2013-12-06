@@ -73,7 +73,7 @@ static bool appendNewBlock(BinaryFileReaderData * data, BlockData * block) {
 
 static void mustRead(void * ptr, size_t size, size_t nelem, FILE * file) {
 	if (fread(ptr, size, nelem, file) < nelem) {
-		printf("Incomplete binary file\n");
+		fprintf(stderr, "Incomplete binary file\n");
 		exit(1);
 	}
 }
@@ -194,7 +194,7 @@ static void launchDownloader(BinaryFileReaderData * data) {
 
 	int err = pthread_create(&data->threadID, NULL, &readBinaryFile, data);
 	if (err) {
-		printf("Could not create new thread %i\n", err);
+		fprintf(stderr, "Could not create new thread %i\n", err);
 		exit(1);
 	}
 }
@@ -309,7 +309,7 @@ WiggleIterator * BinaryFileReader(char * f) {
 	BinaryFileReaderData * data = (BinaryFileReaderData *) calloc(1, sizeof(BinaryFileReaderData));
 	data->file = fopen(f, "rb");
 	if (!data->file) {
-		printf("Could not open %s\n", f);
+		fprintf(stderr, "Could not open %s\n", f);
 		exit(1);
 	}
 	launchDownloader(data);

@@ -212,7 +212,7 @@ void WiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int fi
 		if (data->file)
 			fclose(data->file);
 		if (!(data->file = fopen(data->filename, "r"))) {
-			printf("Cannot open input file %s\n", data->filename);
+			fprintf(stderr, "Cannot open input file %s\n", data->filename);
 			exit(1);
 		}
 		wi->done = false;
@@ -231,7 +231,7 @@ WiggleIterator * WiggleReader(char * f) {
 	data->filename = f;
 	if (strcmp(f, "-")) {
 		if (!(data->file = fopen(f, "r"))) {
-			printf("Could not open input file %s\n", f);
+			fprintf(stderr, "Could not open input file %s\n", f);
 			exit(1);
 		}
 	} else
