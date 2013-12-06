@@ -7,7 +7,7 @@ import re
 import os.path
 
 chrom_lengths_file = sys.argv[1]
-wiggletools_args = sys.argv[2]
+wiggletools_args = sys.argv[2:]
 
 def run(args):
 	p = subprocess.Popen(" ".join(args), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -19,7 +19,7 @@ def run(args):
 		sys.exit(err)
 
 def main():
-	cmd = ['wiggletools'] + filter(lambda X: len(X) > 0, wiggletools_args.split(' '))
+	cmd = ['wiggletools'] + wiggletools_args
 	run(cmd)
 
 	for match in re.finditer('write\s*(\S*.wig)\s', wiggletools_args):

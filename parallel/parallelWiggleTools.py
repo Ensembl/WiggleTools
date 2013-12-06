@@ -40,7 +40,7 @@ def create_new_command(command, chr, start, finish, chrom_sizes_file):
 	command = re.sub(r'write\s*(\S*.bw)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
 	command = re.sub(r'(apply|profile|profiles)\s*(\S*)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
 	command = re.sub(r'^(AUC|mean|variance|pearson)\s*(\S*)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
-	return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file, "'", 'do','seek',chr,start,finish,command, "'"]))
+	return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file, 'do','seek',chr,start,finish,command]))
 
 def makeMapCommand(command, chrom_sizes_file, chrom_sizes, region_size):
 	create_dirs(command)

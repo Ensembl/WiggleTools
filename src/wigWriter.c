@@ -91,7 +91,7 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 			}
 
 			// Skip empty lines and metadata lines:
-			while (! (strlen(line) && strncmp(line, "track", 5) && strncmp(line, "browser", 7))) {
+			while (! (strlen(buffer) && strncmp(buffer, "track", 5) && strncmp(buffer, "browser", 7))) {
 				if (!fgets(buffer, 5000, infile)) {
 					fprintf(stderr, "Could not paste data to file lines, inconsistent number of lines.\n");
 					exit(1);
