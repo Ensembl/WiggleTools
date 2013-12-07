@@ -1,11 +1,11 @@
 // Copyright 2013 EMBL-EBI
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 // http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,7 @@ void popMultiplexer(Multiplexer * multi) {
 }
 
 static void chooseCoords(Multiplexer * multi) {
-	int i; 
+	int i;
 	char * lastChrom = multi->chrom;
 	int lastFinish = multi->finish;
 	int clipping = -1;
@@ -53,21 +53,26 @@ static void chooseCoords(Multiplexer * multi) {
 			*inplayPtr = false;
 		} else {
 			int start = (*wiPtr)->start;
-			*inplayPtr = true;
-			if (multi->start > clipping && start < multi->start) {
-				multi->finish = multi->start;
-				if (start < clipping)
-					multi->start = clipping;
-				else
-					multi->start = start;
-				first = i;
-			} else if (start > multi->start) {
+			if (start > multi->start) {
 				*inplayPtr = false;
-			} 
-			
-			if ((*wiPtr)->finish < multi->finish) {
-				multi->finish = (*wiPtr)->finish;
-			} 
+				if (start < multi->finish)
+					multi->finish = start;
+			} else {
+
+				*inplayPtr = true;
+
+				if (multi->start > clipping && start < multi->start) {
+					multi->finish = multi->start;
+					if (start < clipping)
+						multi->start = clipping;
+					else
+						multi->start = start;
+					first = i;
+				}
+
+				if ((*wiPtr)->finish < multi->finish)
+					multi->finish = (*wiPtr)->finish;
+			}
 		}
 
 		inplayPtr++;
@@ -79,13 +84,13 @@ static void chooseCoords(Multiplexer * multi) {
 		return;
 	}
 
-	for (i = 0; i < first; i++) 
+	for (i = 0; i < first; i++)
 		multi->inplay[i] = false;
 
 }
 
 static void readValues(Multiplexer * multi) {
-	int i; 
+	int i;
 	bool * inplayPtr = multi->inplay;
 	WiggleIterator ** wiPtr = multi->iters;
 	double * valuePtr = multi->values;
@@ -109,7 +114,7 @@ void popListMultiplexer(Multiplexer * multi) {
 
 	chooseCoords(multi);
 
-	if (multi->done) 
+	if (multi->done)
 		return;
 
 	readValues(multi);
