@@ -19,8 +19,8 @@ assert test('../bin/wiggletools diff fixedStep.bw variableStep.wig fixedStep.wig
 # Positive control
 assert test('../bin/wiggletools isZero diff fixedStep.bw fixedStep.wig') == 0
 
-# Testing ratios
-assert test('../bin/wiggletools isZero ln ratio fixedStep.bw fixedStep.wig') == 0
+# Testing ratios and shift
+assert test('../bin/wiggletools isZero shift -1 ratio variableStep.bw variableStep.wig') == 0
 
 # Testing BAM & BedGraph 
 assert test('../bin/wiggletools isZero diff bam.bam pileup.bg') == 0

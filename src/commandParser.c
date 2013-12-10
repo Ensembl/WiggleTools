@@ -231,6 +231,11 @@ static WiggleIterator * readScale() {
 	return ScaleWiggleIterator(readIterator(), scalar);
 }
 
+static WiggleIterator * readShift() {
+	double scalar = atof(needNextToken());
+	return ShiftWiggleIterator(readIterator(), scalar);
+}
+
 static WiggleIterator * readExp() {
 	return NaturalExpWiggleIterator(readIterator());
 }
@@ -369,6 +374,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readCat();
 	if (strcmp(token, "scale") == 0)
 		return readScale();
+	if (strcmp(token, "shift") == 0)
+		return readShift();
 	if (strcmp(token, "unit") == 0)
 		return readUnit();
 	if (strcmp(token, "sum") == 0)
