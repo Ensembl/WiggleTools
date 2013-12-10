@@ -117,11 +117,22 @@ def readChromSizes(file):
 	return chrom_sizes
 
 def main():
-	chrom_file = sys.argv[1]
-	chrom_sizes = readChromSizes(chrom_file)
-	cmd = sys.argv[2]
-	jobID = submitMultiJobToLSF(makeMapCommand(cmd, chrom_file, chrom_sizes, region_size=3e7))
-	submitMultiJobToLSF(makeReduceCommand(cmd), dependency = jobID, mem=8)
+	if len(sys.argv) == 2:
+		chrom_file = sys.argv[1]
+		chrom_sizes = readChromSizes(chrom_file)
+		cmd = sys.argv[2]
+		jobID = submitMultiJobToLSF(makeMapCommand(cmd, chrom_file, chrom_sizes, region_size=3e7))
+		submitMultiJobToLSF(makeReduceCommand(cmd), dependency = jobID, mem=8)
+	else:
+		print """
+parallelWiggletools.py: wrapper script to run wiggletools in parallel on LSF
+
+Usage: parallelWiggletools.py chrom_sizes.txt ' command '
+
+Where:
+chrom_sizes.txt is a tab-delimited text file with the chromosome names and lengths	
+command is a valid wiggletools command, between single quotes.
+		"""
 
 if __name__ == "__main__":
 	main()
