@@ -31,15 +31,17 @@ DUMP_DIR = '.'
 ################################################
 
 def create_dirs(command):
-	for match in re.finditer(r'write\s*(\S*.bw)\s', command):
-		path = match.group(1) + "x"
+	for match in re.finditer(r'(write|write_bg|apply|profile|profiles|AUC|mean|variance|pearson)\s+(\S+)\s', command):
+		path = match.group(2) + "x"
 		if not os.path.exists(path):
 			os.makedirs(path)
 
 def create_new_command(command, chr, start, finish, chrom_sizes_file):
-	command = re.sub(r'write\s*(\S*.bw)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
-	command = re.sub(r'(apply|profile|profiles)\s*(\S*)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
-	command = re.sub(r'^(AUC|mean|variance|pearson)\s*(\S*)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
+	command = re.sub(r'write\s+(\S+.bw)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
+	command = re.sub(r'write\s+(\S+.wig)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
+	command = re.sub(r'write_bg\s+(\S+)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
+	command = re.sub(r'(apply|profile|profiles)\s+(\S+)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
+	command = re.sub(r'^(AUC|mean|variance|pearson)\s+(\S+)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
 	return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file, 'do','seek',chr,start,finish,command]))
 
 def makeMapCommand(command, chrom_sizes_file, chrom_sizes, region_size):
@@ -58,11 +60,13 @@ def test_makeMapCommand():
 ################################################
 
 def makeReduceCommand(command):
-	mergeBigWigCommands = ['mergeBigWigDirectory.py %s' % match.group(1) for match in re.finditer(r'write\s*(\S*.bw)\s', command)]
-	mergeApplyCommand = ['mergeApplyDirectory.sh %s' % match.group(1) for match in re.finditer(r'apply\s*(\S*)\s', command)]
-	mergeProfileCommand = ['mergeProfileDirectory.py %s' % match.group(1) for match in re.finditer(r'profile\s*(\S*)\s', command)]
-	mergeProfilesCommand = ['mergeProfilesDirectory.sh %s' % match.group(1) for match in re.finditer(r'profiles\s*(\S*)\s', command)]
-	return mergeBigWigCommands + mergeApplyCommand + mergeProfileCommand + mergeProfilesCommand
+	mergeBigWigCommands = ['mergeBigWigDirectory.py %s' % match.group(1) for match in re.finditer(r'write\s+(\S+.bw)\s', command)]
+	mergeApplyCommand = ['mergeBedLikeDirectory.sh %s' % match.group(1) for match in re.finditer(r'apply\s+(\S+)\s', command)]
+	mergeProfileCommand = ['mergeProfileDirectory.py %s' % match.group(1) for match in re.finditer(r'profile\s+(\S+)\s', command)]
+	mergeProfilesCommand = ['mergeBedLikeDirectory.sh %s' % match.group(1) for match in re.finditer(r'profiles\s+(\S+)\s', command)]
+	mergeWigglesCommand = ['mergeBedLikeDirectory.sh %s' % match.group(1) for match in re.finditer(r'write\s+(\S+.wig)\s', command)]
+	mergeBedGraphsCommand = ['mergeBedLikeDirectory.sh %s' % match.group(1) for match in re.finditer(r'write_bg\s+(\S+.bg)\s', command)]
+	return mergeBigWigCommands + mergeApplyCommand + mergeProfileCommand + mergeProfilesCommand + mergeWigglesCommand + mergeBedGraphsCommand
 
 ################################################
 ## LSF MultiJob
@@ -79,6 +83,9 @@ def makeMultiJobCommand(filename, count, dependency=None, mem=4):
 	return jobCmd
 
 def submitMultiJobToLSF(cmds, dependency=None, mem=4):
+	if len(cmds) == 0:
+		return
+
 	descr, filename = tempfile.mkstemp(dir='.')
 
 	fh = open(filename, 'w')
@@ -117,7 +124,7 @@ def readChromSizes(file):
 	return chrom_sizes
 
 def main():
-	if len(sys.argv) == 2:
+	if len(sys.argv) == 3:
 		chrom_file = sys.argv[1]
 		chrom_sizes = readChromSizes(chrom_file)
 		cmd = sys.argv[2]
