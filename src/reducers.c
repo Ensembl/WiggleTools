@@ -183,6 +183,8 @@ void SumReductionPop(WiggleIterator * wi) {
 	for (i = 0; i < multi->count; i++)
 		if (multi->inplay[i])
 			wi->value += multi->values[i];
+		else
+			wi->value += multi->iters[i]->default_value;
 	popMultiplexer(multi);
 }
 
@@ -217,10 +219,8 @@ void ProductReductionPop(WiggleIterator * wi) {
 	for (i = 0; i < multi->count; i++) {
 		if (multi->inplay[i])
 			wi->value *= multi->values[i];
-		else {
-			wi->value = 0;
-			break;
-		}
+		else
+			wi->value *= multi->iters[i]->default_value;
 	}
 	popMultiplexer(multi);
 }

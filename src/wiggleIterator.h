@@ -30,6 +30,7 @@ struct wiggleIterator_st {
 	void (*pop)(WiggleIterator *);
 	void (*seek)(WiggleIterator *, const char *, int, int);
 	bool overlaps;
+	double default_value;
 };
 
 WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int));

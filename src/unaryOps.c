@@ -263,7 +263,9 @@ WiggleIterator * ScaleWiggleIterator(WiggleIterator * i, double s) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) calloc(1, sizeof(ScaleWiggleIteratorData));
 	data->iter = NonOverlappingWiggleIterator(i);
 	data->scalar = s;
-	return newWiggleIterator(data, &ScaleWiggleIteratorPop, &ScaleWiggleIteratorSeek);
+	WiggleIterator * wi = newWiggleIterator(data, &ScaleWiggleIteratorPop, &ScaleWiggleIteratorSeek);
+	wi->default_value = i->default_value * s;
+	return wi;
 }
 
 //////////////////////////////////////////////////////
@@ -288,7 +290,9 @@ WiggleIterator * ShiftWiggleIterator(WiggleIterator * i, double s) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) calloc(1, sizeof(ScaleWiggleIteratorData));
 	data->iter = NonOverlappingWiggleIterator(i);
 	data->scalar = s;
-	return newWiggleIterator(data, &ShiftWiggleIteratorPop, &ScaleWiggleIteratorSeek);
+	WiggleIterator * wi = newWiggleIterator(data, &ShiftWiggleIteratorPop, &ScaleWiggleIteratorSeek);
+	wi->default_value = i->default_value + s;
+	return wi;
 }
 
 //////////////////////////////////////////////////////
