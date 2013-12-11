@@ -174,6 +174,10 @@ void UnitWiggleIteratorPop(WiggleIterator * wi) {
 	if (!data->iter->done) {
 		while (!data->iter->done && data->iter->value == 0)
 			pop(iter);
+		if (data->iter->done) {
+			wi->done = true;
+			return;
+		}
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
@@ -208,6 +212,10 @@ void HighPassFilterWiggleIteratorPop(WiggleIterator * wi) {
 	if (!data->iter->done) {
 		while (!data->iter->done && data->iter->value <= data->scalar)
 			pop(data->iter);
+		if (data->iter->done) {
+			wi->done = true;
+			return;
+		}
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
