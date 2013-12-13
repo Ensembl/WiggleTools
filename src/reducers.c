@@ -97,13 +97,13 @@ void MaxReductionPop(WiggleIterator * wi) {
 		wi->value = 0;
 
 	for (i = 1; i < multi->count; i++) {
-		if (multi->inplay[i]) {
-			if (wi->value < multi->values[i])
-				wi->value = multi->values[i];
-		} else {
-			if (wi->value < 0)
-				wi->value = 0;
-		}
+		double value;
+		if (multi->inplay[i])
+			value = multi->values[i];
+		else
+			value = multi->iters[i]->default_value;
+		if (wi->value < value)
+			wi->value = value;
 	}
 	popMultiplexer(multi);
 }
@@ -141,13 +141,13 @@ void MinReductionPop(WiggleIterator * wi) {
 		wi->value = 0;
 
 	for (i = 1; i < multi->count; i++) {
-		if (multi->inplay[i]) {
-			if (wi->value > multi->values[i])
-				wi->value = multi->values[i];
-		} else {
-			if (wi->value > 0)
-				wi->value = 0;
-		}
+		double value;
+		if (multi->inplay[i])
+			value = multi->values[i];
+		else
+			value = multi->iters[i]->default_value;
+		if (wi->value > value)
+			wi->value = value;
 	}
 	popMultiplexer(multi);
 }
@@ -256,6 +256,8 @@ void MeanReductionPop(WiggleIterator * wi) {
 	for (i = 0; i < multi->count; i++)
 		if (multi->inplay[i])
 			wi->value += multi->values[i];
+		else
+			wi->value += multi->iters[i]->default_value;
 	wi->value /= multi->count;
 	popMultiplexer(multi);
 }
@@ -296,12 +298,11 @@ void VarianceReductionPop(WiggleIterator * wi) {
 	
 	wi->value = 0;
 	for (i = 0; i < multi->count; i++) {
-		if (multi->inplay[i]) {
-			diff = (mean - multi->values[i]);
-			wi->value += diff * diff;
-		} else {
-			wi->value += mean * mean;
-		}
+		if (multi->inplay[i])
+			diff = mean - multi->values[i];
+		else
+			diff = mean - multi->iters[i]->default_value;
+		wi->value += diff * diff;
 	}
 	wi->value /= multi->count;
 	
@@ -344,12 +345,11 @@ void StdDevReductionPop(WiggleIterator * wi) {
 	
 	wi->value = 0;
 	for (i = 0; i < multi->count; i++) {
-		if (multi->inplay[i]) {
-			diff = (mean - multi->values[i]);
-			wi->value += diff * diff;
-		} else {
-			wi->value += mean * mean;
-		}
+		if (multi->inplay[i])
+			diff = mean - multi->values[i];
+		else
+			diff = mean - multi->iters[i]->default_value;
+		wi->value += diff * diff;
 	}
 	wi->value /= multi->count;
 	wi->value = sqrt(wi->value);
@@ -472,7 +472,7 @@ void MedianReductionPop(WiggleIterator * wi) {
 		if (multi->inplay[i])
 			data->vals[i] = multi->values[i];
 		else
-			data->vals[i] = 0;
+			data->vals[i] = multi->iters[i]->default_value;
 	}
 	qsort(data->vals, multi->count, sizeof(double), &compDoubles);
 	wi->value = data->vals[multi->count / 2];
