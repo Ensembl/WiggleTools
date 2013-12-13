@@ -364,6 +364,69 @@ WiggleIterator * StdDevReduction(Multiplexer * multi) {
 }
 
 ////////////////////////////////////////////////////////
+// CV
+////////////////////////////////////////////////////////
+
+bool CVReductionPop2(WiggleIterator * wi) {
+	int i;
+	double mean, diff;
+
+	if (wi->done)
+		return true;
+
+	WiggleReducerData * data = (WiggleReducerData *) wi->data;
+	Multiplexer * multi = data->multi;
+
+	if (multi->done) {
+		wi->done = true;
+		return false;
+	}
+
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
+	mean = 0;
+	for (i = 0; i < multi->count; i++)
+		if (multi->inplay[i])
+			mean += multi->values[i];
+	mean /= multi->count;
+
+	if (mean == 0) {
+		popMultiplexer(multi);
+		return true;
+	}
+	
+	wi->value = 0;
+	for (i = 0; i < multi->count; i++) {
+		if (multi->inplay[i])
+			diff = mean - multi->values[i];
+		else
+			diff = mean - multi->iters[i]->default_value;
+		wi->value += diff * diff;
+	}
+	wi->value /= multi->count;
+	wi->value = sqrt(wi->value) / mean;
+	
+	popMultiplexer(multi);
+	return false;
+}
+
+void CVReductionPop(WiggleIterator * wi) {
+	if (wi->done)
+		return;
+
+	while(CVReductionPop2(wi))
+		;
+}
+
+WiggleIterator * CVReduction(Multiplexer * multi) {
+	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
+	data->multi = multi;
+	return newWiggleIterator(data, &CVReductionPop, &WiggleReducerSeek);
+}
+
+
+////////////////////////////////////////////////////////
 // Median
 ////////////////////////////////////////////////////////
 

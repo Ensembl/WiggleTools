@@ -74,6 +74,7 @@ WiggleIterator * ProductReduction ( Multiplexer * );
 WiggleIterator * MeanReduction ( Multiplexer * );
 WiggleIterator * VarianceReduction ( Multiplexer * );
 WiggleIterator * StdDevReduction ( Multiplexer * );
+WiggleIterator * CVReduction ( Multiplexer * );
 WiggleIterator * MedianReduction ( Multiplexer * );
 
 // Sets of sets iterators 

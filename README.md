@@ -259,6 +259,14 @@ Computes the standard error of the subsequent list of iterators at each position
 wiggletools stddev test/fixedStep.bw test/variable Step.bw 
 ```
 
+* CV
+
+Computes the coefficient of variation ( = standard deviation / mean) of the subsequent list of iterators at each position:
+
+```
+wiggletools CV test/fixedStep.bw test/variable Step.bw 
+```
+
 * min
 
 Computes the minimum of the subsequent list of iterators at each position:
