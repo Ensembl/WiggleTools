@@ -2,6 +2,7 @@ WiggleTools 1.0
 ===============
 
 Author: [Daniel Zerbino](mailto:zerbino@ebi.ac.uk)
+
 Copyright holder: EMBL-EBI (Apache 2 License)
 
 The WiggleTools package allows genomewide data files to be manipulated as numerical functions, equipped with all the standard functional analysis operators (sum, product, product by a scalar, comparators), and derived statistics (mean, median, variance, stddev, t-test, Wilcoxon's rank sum test, etc).
@@ -19,12 +20,9 @@ First download the code:
 git clone git://genome-source.cse.ucsc.edu/kent.git
 setenv KENT_SRC $PWD/kent/src
 cd $KENT_SRC
-git checkout bigWigCat
 ```
 
 Follow the instructions to compile the library, as well as the utilities *wigToBigWig* and *bigWigCat*.
-
-You can checkout the master branch if you wish after creating these utilities. 
 
 Obtaining WiggleTools
 ---------------------
