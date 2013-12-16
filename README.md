@@ -125,12 +125,20 @@ Returns the absolute value of an iterators output:
 wiggletools abs test/fixedStep.bw 
 ```
 
-* log
+* ln
 
 Returns the natural log of an iterators output:
 
 ```
-wiggletools log test/fixedStep.bw 
+wiggletools ln test/fixedStep.bw 
+```
+
+* log
+
+Returns the logarithm in an arbitrary base of an iterators output:
+
+```
+wiggletools log 10 test/fixedStep.bw 
 ```
 
 * scale
