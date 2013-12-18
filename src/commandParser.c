@@ -45,7 +45,7 @@ puts("\toutput = filename | -");
 puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator)");
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
-puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (double) | pow (double) ");
+puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | shift (float) | scale (float) | gt (float)");
 puts("\tbinary_operator = diff | ratio | apply (statistic)");
 puts("\treducer = cat | sum | product | mean | var | stddev | CV | median | min | max");
 puts("\titerator_list = (iterator) : | (iterator) (iterator_list)");
@@ -136,6 +136,21 @@ static WiggleIterator ** readMappedIteratorList(int * count) {
 		iters = readIteratorList(count);
 		for (i = 0; i < *count; i++)
 			iters[i] = PowerWiggleIterator(iters[i], base);
+	} else if (strcmp(token, "scale") == 0) {
+		double scalar = atof(needNextToken());
+		iters = readIteratorList(count);
+		for (i = 0; i < *count; i++)
+			iters[i] = ScaleWiggleIterator(iters[i], scalar);
+	} else if (strcmp(token, "shift") == 0) {
+		double scalar = atof(needNextToken());
+		iters = readIteratorList(count);
+		for (i = 0; i < *count; i++)
+			iters[i] = ShiftWiggleIterator(iters[i], scalar);
+	} else if (strcmp(token, "gt") == 0) {
+		double scalar = atof(needNextToken());
+		iters = readIteratorList(count);
+		for (i = 0; i < *count; i++)
+			iters[i] = HighPassFilterWiggleIterator(iters[i], scalar);
 	} else {
 		fprintf(stderr, "Unary function unkown: %s\n", token);
 		exit(1);
