@@ -143,11 +143,20 @@ wiggletools log 10 test/fixedStep.bw
 
 * scale
 
-Returns an iterators output multiplied by a scalar (i.e. decimal number):
+Returns an iterator's output multiplied by a scalar (i.e. decimal number):
 
 ```
 wiggletools scale 10 test/fixedStep.bw 
 ```
+
+* offset
+
+Returns an iterator's output added to a scalar (i.e. decimal number):
+
+```
+wiggletools offset 10 test/fixedStep.bw 
+```
+
 
 * gt
 
