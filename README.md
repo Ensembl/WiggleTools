@@ -108,6 +108,15 @@ wiggletools test/overlapping.bed
 ```
 wiggletools test/overlapping.bb 
 ```
+
+* Bam files
+
+Requires a .bai index file in the same directory
+
+```
+wiggletools test/bam.bam
+```
+
 Operators
 ---------
 
