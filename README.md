@@ -274,6 +274,15 @@ Computes the standard error of the subsequent list of iterators at each position
 wiggletools stddev test/fixedStep.bw test/variableStep.bw 
 ```
 
+* entropy
+
+Computes the Shannon entropy of the subsequent list of iterators at each position, separating 0 from non-0 values. This is probably most useful with the gt (greater than) filter:
+
+```
+wiggletools entropy gt 5 test/fixedStep.bw test/overlapping.bb
+```
+
+
 * CV
 
 Computes the coefficient of variation ( = standard deviation / mean) of the subsequent list of iterators at each position:

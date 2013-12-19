@@ -364,6 +364,49 @@ WiggleIterator * StdDevReduction(Multiplexer * multi) {
 }
 
 ////////////////////////////////////////////////////////
+// Shannon entropy
+////////////////////////////////////////////////////////
+
+void EntropyReductionPop(WiggleIterator * wi) {
+	int i;
+	float count = 0;
+
+	if (wi->done)
+		return;
+
+	WiggleReducerData * data = (WiggleReducerData *) wi->data;
+	Multiplexer * multi = data->multi;
+
+	if (multi->done) {
+		wi->done = true;
+		return;
+	}
+
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
+
+	for (i = 0; i < multi->count; i++)
+		if ((multi->inplay[i] && multi->values[i] != 0) || (!multi->inplay[i] && multi->iters[i]->default_value != 0))
+			count++;
+
+	if (count == 0 || count == multi->count)
+		wi->value = 0;
+	else {
+		double p = count / multi->count;
+		wi->value = - p * log(p) - (1-p) * log(1 - p);
+	}
+	
+	popMultiplexer(multi);
+}
+
+WiggleIterator * EntropyReduction(Multiplexer * multi) {
+	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
+	data->multi = multi;
+	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek);
+}
+
+////////////////////////////////////////////////////////
 // CV
 ////////////////////////////////////////////////////////
 

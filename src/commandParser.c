@@ -47,7 +47,7 @@ puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
 puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float)");
 puts("\tbinary_operator = diff | ratio | apply (statistic)");
-puts("\treducer = cat | sum | product | mean | var | stddev | CV | median | min | max");
+puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
 puts("\titerator_list = (iterator) : | (iterator) (iterator_list)");
 puts("\tmultiplex = (iterator_list) | map (unary_operator) (multiplex)");
 puts("\tsetComparison = ttest | wilcoxon");
@@ -307,6 +307,10 @@ static WiggleIterator * readStdDev() {
 	return StdDevReduction(readMultiplexer());
 }
 
+static WiggleIterator * readEntropy() {
+	return EntropyReduction(readMultiplexer());
+}
+
 static WiggleIterator * readCV() {
 	return CVReduction(readMultiplexer());
 }
@@ -413,6 +417,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readVariance();
 	if (strcmp(token, "stddev") == 0)
 		return readStdDev();
+	if (strcmp(token, "entropy") == 0)
+		return readEntropy();
 	if (strcmp(token, "CV") == 0)
 		return readCV();
 	if (strcmp(token, "median") == 0)
