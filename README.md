@@ -223,14 +223,14 @@ However, sometimes you want to compute statistics across many iterators. In this
 The sum function sums all the listed iterators. The two following commands are equivalent:
 
 ```
-wiggletools sum test/fixedStep.bw test/variable Step.bw :
-wiggletools sum test/fixedStep.bw test/variable Step.bw
+wiggletools sum test/fixedStep.bw test/variableStep.bw :
+wiggletools sum test/fixedStep.bw test/variableStep.bw
 ```
 
 However, the semi-colon can be necessary for the program string to be unambiguous, e.g.:
 
 ```
-wiggletools diff sum test/fixedStep.bw test/variable Step.bw \
+wiggletools diff sum test/fixedStep.bw test/variableStep.bw \
             : test/fixedStep
 ```
 
@@ -239,7 +239,7 @@ wiggletools diff sum test/fixedStep.bw test/variable Step.bw \
 Multiplies the subsequent list of iterators:
 
 ```
-wiggletools mult test/fixedStep.bw test/variable Step.bw 
+wiggletools mult test/fixedStep.bw test/variableStep.bw 
 ```
 
 * mean
@@ -247,7 +247,7 @@ wiggletools mult test/fixedStep.bw test/variable Step.bw
 Computes the mean of the subsequent list of iterators at each position:
 
 ```
-wiggletools mean test/fixedStep.bw test/variable Step.bw 
+wiggletools mean test/fixedStep.bw test/variableStep.bw 
 ```
 
 * median
@@ -255,7 +255,7 @@ wiggletools mean test/fixedStep.bw test/variable Step.bw
 Computes the median of the subsequent list of iterators at each position:
 
 ```
-wiggletools median test/fixedStep.bw test/variable Step.bw 
+wiggletools median test/fixedStep.bw test/variableStep.bw 
 ```
 
 * variance
@@ -263,7 +263,7 @@ wiggletools median test/fixedStep.bw test/variable Step.bw
 Computes the variance of the subsequent list of iterators at each position:
 
 ```
-wiggletools variance test/fixedStep.bw test/variable Step.bw 
+wiggletools variance test/fixedStep.bw test/variableStep.bw 
 ```
 
 * stddev
@@ -271,7 +271,7 @@ wiggletools variance test/fixedStep.bw test/variable Step.bw
 Computes the standard error of the subsequent list of iterators at each position:
 
 ```
-wiggletools stddev test/fixedStep.bw test/variable Step.bw 
+wiggletools stddev test/fixedStep.bw test/variableStep.bw 
 ```
 
 * CV
@@ -279,7 +279,7 @@ wiggletools stddev test/fixedStep.bw test/variable Step.bw
 Computes the coefficient of variation ( = standard deviation / mean) of the subsequent list of iterators at each position:
 
 ```
-wiggletools CV test/fixedStep.bw test/variable Step.bw 
+wiggletools CV test/fixedStep.bw test/variableStep.bw 
 ```
 
 * min
@@ -287,7 +287,7 @@ wiggletools CV test/fixedStep.bw test/variable Step.bw
 Computes the minimum of the subsequent list of iterators at each position:
 
 ```
-wiggletools min test/fixedStep.bw test/variable Step.bw 
+wiggletools min test/fixedStep.bw test/variableStep.bw 
 ```
 
 * max
@@ -295,7 +295,7 @@ wiggletools min test/fixedStep.bw test/variable Step.bw
 Computes the maximum of the subsequent list of iterators at each position:
 
 ```
-wiggletools max test/fixedStep.bw test/variable Step.bw 
+wiggletools max test/fixedStep.bw test/variableStep.bw 
 ```
 
 4 Comparing sets of sets
@@ -340,7 +340,7 @@ The write instruction is itself an iterator, such that you can store data in a f
 
 ```
 wiggletools diff test/fixedStep.bw \
-write sum.wig mean test/fixedStep.bw test/variable Step.bw 
+write sum.wig mean test/fixedStep.bw test/variableStep.bw 
 ```
 
 For convenience, if a command starts with a write instruction, the standard output is squashed. Otherwise, if you want to silence standard out, use the *do* command, which simply runs an iterator and returns nothing: 
@@ -374,7 +374,7 @@ Sometimes, you just want a statistic across the genome. The following functions 
 Computes the area under the curve (AUC) of the an iterator:
 
 ```
-wiggletools AUC results.txt test/fixedStep.bw test/variable Step.bw 
+wiggletools AUC results.txt test/fixedStep.bw test/variableStep.bw 
 ```
 
 * variance
