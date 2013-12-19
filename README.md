@@ -324,6 +324,7 @@ If you wish to apply the same function to a list of iterators without typing red
 
 ```
 wiggletools sum map ln test/fixedStep.bw test/variableStep.bw
+wiggletools sum scale -1 test/fixedStep.bw test/variableStep.bw
 ```
 
 Writing into files
