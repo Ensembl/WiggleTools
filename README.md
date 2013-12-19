@@ -175,7 +175,7 @@ Returns 1 if the iterator is strictly greater than a given cutoff, 0 otherwise, 
 wiggletools gt 5 test/fixedStep.bw 
 ```
 
-This is useful to define regions in the *apply* function (see below).
+This is useful to define regions in the *apply* function, or to compute information content (see below).
 
 * unit
 
