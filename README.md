@@ -51,6 +51,8 @@ The make process produces a number of outputs:
 
 There is not installation routine, meaning that you should copy the relevant files onto your path, library path, etc. Note that the executable does not require the libraries to be available.
 
+If the system complains that it cannot find -lssl or -lcrypto then you need to install the [libssl runtime and development packages](http://www.openssl.org/)
+
 Just to check, you can launch the tests:
 
 ```
