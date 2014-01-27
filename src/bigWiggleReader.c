@@ -108,9 +108,9 @@ void BigWiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int
 	killDownloader(data);
 	data->chrom = chrom;
 	data->stop = finish;
+	wi->done = false;
 	launchDownloader(data);
 	BigWiggleReaderEnterBlock(data);
-	wi->done = false;
 	BigWiggleReaderPop(wi);
 
 	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start)))

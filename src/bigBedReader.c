@@ -15,9 +15,8 @@
 #include "bigFileReader.h"
 
 static void BigBedReaderEnterBlock(BigFileReaderData * data) {
-	if (!data->blockData)
-		abort();
-	enterBlock(data);
+	if (data->blockData)
+		enterBlock(data);
 }
 
 void BigBedReaderGoToNextBlock(BigFileReaderData * data) {
@@ -69,9 +68,9 @@ void BigBedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int fi
 	killDownloader(data);
 	data->chrom = chrom;
 	data->stop = finish;
-	launchDownloader(data);
-	enterBlock(data);
 	wi->done = false;
+	launchDownloader(data);
+	BigBedReaderEnterBlock(data);
 	BigBedReaderPop(wi);
 
 	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) 
