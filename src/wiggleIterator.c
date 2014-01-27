@@ -49,5 +49,6 @@ void runWiggleIterator(WiggleIterator * wi) {
 }
 
 void seek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	wi->done = false;
 	(*(wi->seek))(wi, chrom, start, finish);
 }

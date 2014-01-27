@@ -109,6 +109,7 @@ void popListMultiset(Multiset * multi) {
 
 void seekMultiset(Multiset * multi, const char * chrom, int start, int finish) {
 	int i;
+	multi->done = false;
 	for (i=0; i<multi->count; i++)
 		seekMultiplexer(multi->multis[i], chrom, start, finish);
 	multi->chrom = NULL;

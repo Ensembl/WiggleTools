@@ -123,6 +123,7 @@ void popListMultiplexer(Multiplexer * multi) {
 
 void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
 	int i;
+	multi->done = false;
 	for (i=0; i<multi->count; i++)
 		seek(multi->iters[i], chrom, start, finish);
 	multi->chrom = NULL;
