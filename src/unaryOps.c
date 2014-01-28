@@ -239,6 +239,62 @@ WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator * i, double s) {
 }
 
 //////////////////////////////////////////////////////
+// Overlaps operator
+//////////////////////////////////////////////////////
+
+typedef struct overlapWiggleIteratorData_st {
+	WiggleIterator * source;
+	WiggleIterator * mask;
+} OverlapWiggleIteratorData;
+
+void OverlapWiggleIteratorPop(WiggleIterator * wi) {
+	OverlapWiggleIteratorData * data = (OverlapWiggleIteratorData *) wi->data;
+	WiggleIterator * source = data->source;
+	WiggleIterator * mask = data->mask;
+
+	while (!source->done && !mask->done) {
+		int chrom_cmp = strcmp(mask->chrom, source->chrom);
+		if (chrom_cmp < 0)
+			pop(mask);
+		else if (chrom_cmp > 0)
+			pop(source);
+		else if (mask->finish <= source->start)
+			pop(mask);
+		else if (source->finish <= mask->start)
+			pop(source);
+		else
+			break;
+	} 
+	
+	if (source->done || mask->done)
+		wi->done = true;
+	else {
+		wi->chrom = source->chrom;
+		wi->start = source->start;
+		wi->finish = source->finish;
+		wi->value = source->value;
+		pop(source);
+	}
+}
+
+void OverlapWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	OverlapWiggleIteratorData * data = (OverlapWiggleIteratorData *) wi->data;
+	seek(data->source, chrom, start, finish);
+	seek(data->mask, chrom, start, finish);
+	pop(wi);
+}
+
+WiggleIterator * OverlapWiggleIterator(WiggleIterator * source, WiggleIterator * mask) {
+	OverlapWiggleIteratorData * data = (OverlapWiggleIteratorData *) calloc(1, sizeof(OverlapWiggleIteratorData));
+	data->source = source;
+	data->mask = mask;
+	WiggleIterator * wi = newWiggleIterator(data, &OverlapWiggleIteratorPop, &OverlapWiggleIteratorSeek);
+	wi->default_value = source->default_value;
+	wi->overlaps = source->overlaps;
+	return wi;
+}
+
+//////////////////////////////////////////////////////
 // Scaling operator
 //////////////////////////////////////////////////////
 

@@ -46,7 +46,7 @@ puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (ou
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
 puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float)");
-puts("\tbinary_operator = diff | ratio | apply (statistic)");
+puts("\tbinary_operator = diff | ratio | overlaps | apply (statistic)");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
 puts("\titerator_list = (iterator) : | (iterator) (iterator_list)");
 puts("\tmultiplex = (iterator_list) | map (unary_operator) (multiplex)");
@@ -234,6 +234,12 @@ static WiggleIterator * readSmooth() {
 static WiggleIterator * readPow() {
 	double base = atof(needNextToken());
 	return PowerWiggleIterator(readIterator(), base);
+}
+
+static WiggleIterator * readOverlap() {
+	WiggleIterator * source = readIterator();
+	WiggleIterator * mask = readIterator();
+	return OverlapWiggleIterator(source, mask);
 }
 
 static WiggleIterator * readGt() {
@@ -447,6 +453,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readPow();
 	if (strcmp(token, "gt") == 0)
 		return readGt();
+	if (strcmp(token, "overlaps") == 0)
+		return readOverlap();
 	if (strcmp(token, "ttest") == 0)
 		return readTTest();
 	if (strcmp(token, "wilcoxon") == 0)

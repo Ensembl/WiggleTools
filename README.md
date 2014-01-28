@@ -225,6 +225,14 @@ Returns the output of the first iterator divided by the output of the second (di
 wiggletools ratio test/fixedStep.bw test/variableStep.bw 
 ```
 
+* overlaps
+
+Returns the output of the second iterator that overlaps regions of the first.
+
+```
+wiggletools overlaps test/fixedStep.bw test/variableStep.bw 
+```
+
 3 Multiplexed iterators
 
 However, sometimes you want to compute statistics across many iterators. In this case, the function is followed by an arbitrary list of iterators, separated by spaces. The list is terminated by a colon (:) separated by spaces from other words. At the very end of a command string, the semi-colon can be omitted (see example in the example for *sum*)

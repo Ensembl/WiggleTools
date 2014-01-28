@@ -53,6 +53,7 @@ WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
 WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator * );
 WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator *, double);
 WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator *);
+WiggleIterator * OverlapWiggleIterator(WiggleIterator * source, WiggleIterator * mask);
 	// Scalar operations
 WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
 WiggleIterator * ShiftWiggleIterator(WiggleIterator *, double);

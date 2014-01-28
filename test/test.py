@@ -61,6 +61,9 @@ assert test('../bin/wiggletools profiles tmp/profiles.txt 3 overlapping.bed fixe
 # Testing profile
 assert test('../bin/wiggletools profile tmp/profile.txt 3 overlapping.bed fixedStep.wig') == 0
 
+# Test overlap
+assert test('../bin/wiggletools isZero diff fixedStep.wig overlaps fixedStep.wig fixedStep.wig') == 0
+
 assert test('diff tmp expected') == 0
 shutil.rmtree('tmp')
 
