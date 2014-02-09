@@ -16,23 +16,12 @@
 #include "sam.h"
 #include "faidx.h"
 #include "wiggleIterator.h"
-#include <pthread.h>
+#include "bufferedReader.h"
 
 #define MPLP_NO_ORPHAN 0x40
 #define MPLP_REALN   0x80
 
-static int MAX_HEAD_START = 30;
-static int BLOCK_SIZE = 10000;
 extern int mplp_func(void *data, bam1_t *b);
-
-typedef struct blockData_st {
-	char **chrom;
-	int * start;
-	int * value;
-	int index;
-	int count;
-	struct blockData_st * next;
-} BlockData;
 
 typedef struct {
 	int max_mq, min_mq, flag, min_baseQ, capQ_thres, max_depth, max_indel_depth, fmt_flag;
@@ -65,13 +54,7 @@ typedef struct bamFileReaderData_st {
 	char * filename;
 	char * chrom;
 	int start, stop;
-	pthread_t downloaderThreadID;
-
-	// Output of downloader
-	BlockData * blockData, *lastBlockData;
-	pthread_mutex_t count_mutex;
-	pthread_cond_t count_cond;
-	int blockCount;
+	BufferedReaderData * bufferedReaderData;
 
 	// BAM stuff
 	mplp_conf_t * conf;
@@ -80,55 +63,6 @@ typedef struct bamFileReaderData_st {
 	int ref_tid;
 	bam_mplp_t iter;
 } BamReaderData;
-
-static BlockData * createBlockData() {
-	BlockData * new = (BlockData * ) calloc(1, sizeof(BlockData));
-	new->chrom = (char **) calloc(BLOCK_SIZE, sizeof(char*));
-	new->start = (int *) calloc(BLOCK_SIZE, sizeof(int));
-	new->value = (int *) calloc(BLOCK_SIZE, sizeof(int));
-	return new;
-}
-
-void destroyBamBlockData(BlockData * data) {
-	free(data->chrom);
-	free(data->start);
-	free(data->value);
-	free(data);
-}
-
-static void waitForNextBlock(BamReaderData * data) {
-	pthread_mutex_lock(&data->count_mutex);
-	// Check whether allowed to step forward
-	if (data->blockCount == 0) {
-		pthread_cond_wait(&data->count_cond, &data->count_mutex);
-	}
-	// Signal freed memory
-	data->blockCount--;
-	pthread_cond_signal(&data->count_cond);
-	pthread_mutex_unlock(&data->count_mutex);
-}
-
-void goToNextBamBlock(BamReaderData * data) {
-	BlockData * prevBlockData = data->blockData;
-	data->blockData = data->blockData->next;
-	destroyBamBlockData(prevBlockData);
-}
-
-static bool declareNewBlock(BamReaderData * data) {
-	pthread_mutex_lock(&data->count_mutex);
-
-	if (data->blockCount > MAX_HEAD_START) {
-		pthread_cond_wait(&data->count_cond, &data->count_mutex);
-	} 
-	if (data->blockCount < 0) {
-		pthread_mutex_unlock(&data->count_mutex);
-		return true;
-	}
-	data->blockCount++;
-	pthread_cond_signal(&data->count_cond);
-	pthread_mutex_unlock(&data->count_mutex);
-	return false;
-}
 
 void setSamtoolsDefaultConf(BamReaderData * data) {
 	data->conf = (mplp_conf_t *) calloc(1, sizeof(mplp_conf_t));
@@ -152,16 +86,6 @@ static void * downloadBamFile(void * args) {
 	const bam_pileup1_t *plp;
 
 	while (bam_mplp_auto(data->iter, &tid, &pos, &n_plp, &plp) > 0) {
-
-		if (data->blockData == NULL) {
-			data->lastBlockData = data->blockData = createBlockData();
-			//declareNewBlock(data);
-		} else if (data->lastBlockData->count == BLOCK_SIZE) {
-			data->lastBlockData->next = createBlockData();
-			data->lastBlockData = data->lastBlockData->next;
-			declareNewBlock(data);
-		}
-
 		// Count reads in pileup
 		cnt = 0;
 		const bam_pileup1_t *p = plp;
@@ -174,64 +98,19 @@ static void * downloadBamFile(void * args) {
 		// Its a wrap:
 		char * chrom = data->data->h->target_name[tid];
 
-		if (data->stop > 0 && (strcmp(chrom, data->chrom) == 0 && pos >= data->stop)) {
+		if (data->stop > 0 && (strcmp(chrom, data->chrom) == 0 && pos >= data->stop))
 			break;
-		}
 
-		int index = data->lastBlockData->count;
-		data->lastBlockData->chrom[index] = chrom;
 		// +1 to account for 0-based indexing in BAMs:
-		data->lastBlockData->start[index] = pos + 1;
-		data->lastBlockData->value[index] = cnt;
-		data->lastBlockData->count++;
+		pushValuesToBuffer(data->bufferedReaderData, chrom, pos+1, pos+2, cnt);
 	}
 
-	// Signals to the reader that it can step into NULL block, hence marking the end of the download
-	declareNewBlock(data);
-	declareNewBlock(data);
+	endBufferedSignal(data->bufferedReaderData);
 	return NULL;
 }
 
-void launchBamDownloader(BamReaderData * data) {
-	pthread_mutex_init(&data->count_mutex, NULL);
-	pthread_cond_init(&data->count_cond, NULL);
-
-	int err = pthread_create(&data->downloaderThreadID, NULL, &downloadBamFile, data);
-	if (err) {
-		fprintf(stderr, "Could not create new thread %i\n", err);
-		abort();
-	}
-
-	waitForNextBlock(data);
-}
-
-void killBamDownloader(BamReaderData * data) {
-	pthread_mutex_lock(&data->count_mutex);
-	data->blockCount = -1;
-	// Send a signal in case the slave is waiting somewhere
-	pthread_cond_signal(&data->count_cond);
-	pthread_mutex_unlock(&data->count_mutex);
-	pthread_join(data->downloaderThreadID, NULL);
-
-	pthread_mutex_destroy(&data->count_mutex);
-	pthread_cond_destroy(&data->count_cond);
-
-	if (data->data->iter) 
-		bam_iter_destroy(data->data->iter);
-
-	while (data->blockData) {
-		BlockData * prevData = data->blockData;
-		data->blockData = data->blockData->next;
-		destroyBamBlockData(prevData);
-	}
-
-	data->lastBlockData = NULL;
-	data->blockCount = 0;
-}
-
-
 void seekRegion(BamReaderData * data) {
-	int max_depth, tid, beg, end;
+	int tid, beg, end;
 
 	if (data->conf->reg) {
 		// Create BAM iterator at region
@@ -274,6 +153,11 @@ void OpenBamFile(BamReaderData * data, char * filename) {
 	seekRegion(data);
 }
 
+void killBamReader(BamReaderData * data) {
+	if (data->data->iter) 
+		bam_iter_destroy(data->data->iter);
+}
+
 void closeBamFile(BamReaderData * data) {
 	// Seriously, does samtools not provide any convience destructors!??
 	bam_mplp_destroy(data->iter);
@@ -287,40 +171,13 @@ void closeBamFile(BamReaderData * data) {
 
 void BamReaderPop(WiggleIterator * wi) {
 	BamReaderData * data = (BamReaderData *) wi->data;
-
-	if (wi->done)
-		return;
-	else if (data->blockData == NULL) {
-		wi->done = true;
-		return;
-	} else if (data->blockData->index == data->blockData->count) {
-		waitForNextBlock(data);
-		goToNextBamBlock(data);
-		if (data->blockData == NULL) {
-			killBamDownloader(data);
-			wi->done = true;
-			return;
-		}
-	} 
-
-	int index = data->blockData->index;
-	wi->chrom = data->blockData->chrom[index];
-	wi->start = data->blockData->start[index];
-	wi->finish = data->blockData->start[index] + 1;
-	wi->value = (double) data->blockData->value[index];
-	data->blockData->index++;
-
-	if (data->stop > 0 && wi->start >= data->stop) {
-		killBamDownloader(data);
-		wi->done = true;
-		return;
-	}
+	BufferedReaderPop(wi, data->bufferedReaderData);
 }
 
 void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	char region[1000];
 
-	killBamDownloader(wi->data);
+	killBufferedReader(wi->data);
 
 	sprintf(region, "%s:%i-%i", chrom, start, finish);
 	BamReaderData * data = (BamReaderData *) wi->data;
@@ -328,7 +185,7 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 		free(data->conf->reg);
 	data->conf->reg = region;
 	seekRegion(data);
-	launchBamDownloader(data);
+	launchBufferedReader(&downloadBamFile, &killBamReader, data, &(data->bufferedReaderData));
 	wi->done = false;
 	BamReaderPop(wi);
 
@@ -343,6 +200,6 @@ WiggleIterator * BamReader(char * filename) {
 	BamReaderData * data = (BamReaderData *) calloc(1, sizeof(BamReaderData));
 	setSamtoolsDefaultConf(data);
 	OpenBamFile(data, filename);
-	launchBamDownloader(data);
+	launchBufferedReader(&downloadBamFile, &killBamReader, data, &(data->bufferedReaderData));
 	return newWiggleIterator(data, &BamReaderPop, &BamReaderSeek);
 }
