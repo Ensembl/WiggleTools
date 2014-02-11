@@ -37,6 +37,8 @@ WiggleIterator * BedReader (char *);
 WiggleIterator * BigBedReader (char *);
 WiggleIterator * BamReader (char *);
 WiggleIterator * BinaryFileReader (char *);
+WiggleIterator * VcfReader (char *);
+WiggleIterator * BcfReader (char *);
 
 // Generic class functions 
 void seek(WiggleIterator *, const char *, int, int);

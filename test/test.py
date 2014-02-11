@@ -31,6 +31,9 @@ assert test('../bin/wiggletools isZero diff overlapping.bed overlapping.bb') == 
 # Testing Wig and BigWig
 assert test('../bin/wiggletools isZero diff variableStep.bw variableStep.wig') == 0
 
+# Testing VCF and BCF
+assert test('../bin/wiggletools isZero diff vcf.vcf bcf.bcf') == 0
+
 # Testing sum, scale and multiplexers
 assert test('../bin/wiggletools isZero diff sum fixedStep.bw fixedStep.bw : scale 2 fixedStep.bw') == 0
 

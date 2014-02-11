@@ -10,7 +10,7 @@ The WiggleTools package allows genomewide data files to be manipulated as numeri
 Installation
 ------------
 
-WiggleTools requires two dependencies, the Kent and GSL (GNU scientific) libraries:
+WiggleTools requires three dependencies, the Kent and GSL (GNU scientific) libraries:
 
 Installing the Kent library
 
@@ -23,6 +23,15 @@ cd $KENT_SRC
 ```
 
 Follow the instructions to compile the library, as well as the utilities *wigToBigWig* and *bigWigCat*.
+
+Installing the Tabix library
+
+```
+git clone https://github.com/samtools/tabix.git
+setenv TABIX_SRC $PWD/tabix
+cd tabix
+make
+```
 
 Obtaining WiggleTools
 ---------------------
@@ -117,6 +126,20 @@ Requires a .bai index file in the same directory
 
 ```
 wiggletools test/bam.bam
+```
+
+* VCF files
+
+```
+wiggletools test/vcf.vcf
+```
+
+* BCF files
+
+Requires a .tbi index file in the same directory
+
+```
+wiggletools test/bcf.bcf
 ```
 
 Operators

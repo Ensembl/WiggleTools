@@ -648,6 +648,10 @@ WiggleIterator * SmartReader(char * filename) {
 		return BamReader(filename);
 	else if (!strcmp(filename + length - 4, ".bin"))
 		return BinaryFileReader(filename);
+	else if (!strcmp(filename + length - 4, ".vcf"))
+		return VcfReader(filename);
+	else if (!strcmp(filename + length - 4, ".bcf"))
+		return BcfReader(filename);
 	else if (!strcmp(filename, "-"))
 		return WiggleReader(filename);
 	else {
