@@ -84,7 +84,7 @@ bool TTestReductionPop2(WiggleIterator * wi) {
 	if (count1 == 0 || count2 == 0) {
 		popMultiset(multi);
 		pop(wi);	
-		return;
+		return false;
 	}
 
 	double mean1 = sum1 / count1;
