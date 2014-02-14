@@ -15,124 +15,85 @@
 // Local header
 #include "bigFileReader.h"
 
-static void BigWiggleReaderEnterBlock(BigFileReaderData * data) {
-	if (data->blockData) {
-		enterBlock(data);
-		bwgSectionHeadFromMem(&(data->blockPt), &(data->head), data->isSwapped);
-		data->i = 0;
-	}
-}
+bool readBigWigBuffer(BigFileReaderData * data) {
+	int i;
+	int start, finish;
+	double value;
+	char *blockPt = data->uncompressBuf;
+	struct bwgSectionHead head;
+	
+	bwgSectionHeadFromMem(&(blockPt), &(head), data->isSwapped);
 
-void BigWiggleReaderGoToNextBlock(BigFileReaderData * data) {
-	goToNextBlock(data);
-	BigWiggleReaderEnterBlock(data);
-}
-
-void BigWiggleReaderPop(WiggleIterator * wi) {
-	BigFileReaderData * data;
-
-	if (wi->done)
-		return;
-
-	data = (BigFileReaderData*) wi->data;
-
-	if (!data->blockData) {
-		killDownloader(data);
-		wi->done = true;
-		return;
-	}
-		
-	wi->chrom = data->chrom;
-
-	switch (data->head.type)
-	    {
-	    case bwgTypeBedGraph:
-		{
-		// +1 because BigWig coords are 0-based...
-		wi->start = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
-		wi->finish = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
-		wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
-		break;
-		}
-	    case bwgTypeVariableStep:
-		{
-		// +1 because BigWig coords are 0-based...
-		wi->start = memReadBits32(&(data->blockPt), data->isSwapped) + 1;
-		wi->finish = wi->start + data->head.itemSpan;
-		wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
-		break;
-		}
-	    case bwgTypeFixedStep:
-		{
-		if (data->i==0) 
+        for (i = 0; i < head.itemCount; i++) {
+		switch (head.type)
 		    {
-	 	    // +1 because BigWig coords are 0-based...
-		    wi->start = data->head.start + 1;
-		    wi->finish = wi->start + data->head.itemSpan;
-		    wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
+		    case bwgTypeBedGraph:
+			{
+			// +1 because BigWig coords are 0-based...
+			start = memReadBits32(&(blockPt), data->isSwapped) + 1;
+			finish = memReadBits32(&(blockPt), data->isSwapped) + 1;
+			value = memReadFloat(&(blockPt), data->isSwapped);
+			break;
+			}
+		    case bwgTypeVariableStep:
+			{
+			// +1 because BigWig coords are 0-based...
+			start = memReadBits32(&(blockPt), data->isSwapped) + 1;
+			finish = start + head.itemSpan;
+			value = memReadFloat(&(blockPt), data->isSwapped);
+			break;
+			}
+		    case bwgTypeFixedStep:
+			{
+			if (i==0) 
+			    {
+			    // +1 because BigWig coords are 0-based...
+			    start = head.start + 1;
+			    finish = start + head.itemSpan;
+			    value = memReadFloat(&(blockPt), data->isSwapped);
+			    }
+			else
+			    {
+			    start += head.itemStep;
+			    finish += head.itemStep;
+			    value = memReadFloat(&(blockPt), data->isSwapped);
+			    }
+			break;
+			}
+		    default:
+			{
+			fprintf(stderr, "Unrecognized head type in Wiggle file\n");
+			exit(1);
+			}
 		    }
-		else
-		    {
-		    wi->start += data->head.itemStep;
-		    wi->finish += data->head.itemStep;
-		    wi->value = memReadFloat(&(data->blockPt), data->isSwapped);
-		    }
-		break;
+		if (data->stop > 0) {
+			if (start >= data->stop) {
+				return true;
+			} else if (finish > data->stop) {
+				finish = data->stop;
+			}
 		}
-	    default:
-		{
-		fprintf(stderr, "Unrecognized head type in Wiggle file\n");
-		killDownloader(data);
-		exit(1);
-		break;
-		}
-	    }
-	if (data->stop > 0) {
-		if (wi->start >= data->stop) {
-			killDownloader(data);
-			wi->done = true;
-			return;
-		} else if (wi->finish > data->stop) {
-			wi->finish = data->stop;
-		}
+
+		if (pushValuesToBuffer(data->bufferedReaderData, data->chrom, start, finish, value))
+			return true;
 	}
 
-        if (++(data->i) == data->head.itemCount)
-	    BigWiggleReaderGoToNextBlock(data);
-
+	return false;
 }
 
-void BigWiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	BigFileReaderData * data = (BigFileReaderData *) wi->data; 
-
-	killDownloader(data);
-	data->chrom = chrom;
-	data->stop = finish;
-	wi->done = false;
-	launchDownloader(data);
-	BigWiggleReaderEnterBlock(data);
-	BigWiggleReaderPop(wi);
-
-	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start)))
-		BigWiggleReaderPop(wi);
-
-	if (!wi->done && strcmp(chrom, wi->chrom) == 0 && wi->start < start)
-		wi->start = start;
-}
-
-static void openBigWigFile(BigFileReaderData * data) {
+static void openBigWigFile(BigFileReaderData * data, char * filename) {
+	data->filename = filename;
 	data->bwf = bigWigFileOpen(data->filename);
 	data->isSwapped = data->bwf->isSwapped;
 	bbiAttachUnzoomedCir(data->bwf);
 	data->udc = data->bwf->udc;
+	data->readBuffer = &readBigWigBuffer;
+	data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
+	launchBufferedReader(&downloadBigFile, data, &(data->bufferedReaderData));
 }
 
 WiggleIterator * BigWiggleReader(char * f) {
 	BigFileReaderData * data = (BigFileReaderData *) calloc(1, sizeof(BigFileReaderData));
-	data->filename = f;
-	openBigWigFile(data);
-	launchDownloader(data);
-	BigWiggleReaderEnterBlock(data);
-
-	return newWiggleIterator(data, &BigWiggleReaderPop, &BigWiggleReaderSeek);
+	openBigWigFile(data, f);
+	return newWiggleIterator(data, &BigFileReaderPop, &BigFileReaderSeek);
 }	

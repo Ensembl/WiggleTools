@@ -16,9 +16,9 @@
 #define _BIG_WIGGLE_READER_H_
 
 #include <stdio.h>
-#include <pthread.h>
 
 #include "wiggleIterator.h"
+#include "bufferedReader.h"
 
 // Kent library headers
 #include "common.h"
@@ -30,40 +30,29 @@
 #include "udc.h"
 #include "bwgInternal.h"
 
-typedef struct blockData_st {
-	char *uncompressBuf;
-	char *blockEnd;
-	struct blockData_st * next;
-	boolean duplicate;
-	char *chrom;
-} BlockData;
-
 typedef struct bigFileReaderData_st {
 	// Arguments to downloader
 	char * filename;
 	char * chrom;
 	int start, stop;
-	pthread_t downloaderThreadID;
+	bool (*readBuffer)(struct bigFileReaderData_st *);
 
 	// Output of downloader
+	BufferedReaderData * bufferedReaderData;
+
+	// BigFile variables
 	struct bbiFile* bwf;
 	struct udcFile *udc;
-	BlockData * blockData, *lastBlockData;
-	pthread_mutex_t count_mutex;
-	pthread_cond_t count_cond;
-	int blockCount;
-
-	// Items within block
-	struct bwgSectionHead head;
 	boolean isSwapped;
-	char *blockPt;
-	bits16 i;
 
+	// Buffer data
+	char *uncompressBuf;
+	char *blockEnd;
 } BigFileReaderData;
 
-void launchDownloader(BigFileReaderData * data);
+void openBigFile(BigFileReaderData * data);
+void * downloadBigFile(void * data);
+void BigFileReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish);
+void BigFileReaderPop(WiggleIterator * wi);
 void killDownloader(BigFileReaderData * data);
-void destroyBlockData(BlockData * data);
-void enterBlock(BigFileReaderData * data);
-void goToNextBlock(BigFileReaderData * data);
 #endif

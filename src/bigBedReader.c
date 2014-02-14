@@ -14,86 +14,48 @@
 
 #include "bigFileReader.h"
 
-static void BigBedReaderEnterBlock(BigFileReaderData * data) {
-	if (data->blockData)
-		enterBlock(data);
-}
-
-void BigBedReaderGoToNextBlock(BigFileReaderData * data) {
-	goToNextBlock(data);
-	if (data->blockData)
-		BigBedReaderEnterBlock(data);
-}
-
-void BigBedReaderPop(WiggleIterator * wi) {
-	if (wi->done)
-		return;
-
-	BigFileReaderData * data = (BigFileReaderData*) wi->data;
-
-	if (!data->blockData) {
-		killDownloader(data);
-		wi->done = true;
-		return;
-	}
+bool readBigBedBuffer(BigFileReaderData * data) {
+	char *blockPt;
 
 	/* Read next record into local variables. */
-	memReadBits32(&data->blockPt, data->isSwapped);	// Read and discard chromId
-	wi->chrom = data->chrom;
-	wi->start = memReadBits32(&data->blockPt, data->isSwapped) + 1;
-	wi->finish = memReadBits32(&data->blockPt, data->isSwapped) + 1; 
+	for (blockPt = data->uncompressBuf; blockPt != data->blockEnd; ) {
+		memReadBits32(&blockPt, data->isSwapped);	// Read and discard chromId
+		int start = memReadBits32(&blockPt, data->isSwapped) + 1;
+		int finish = memReadBits32(&blockPt, data->isSwapped) + 1; 
 
-	// Skip boring stuff...
-	for (;;)
-		if (*(data->blockPt++) <= 0)
-			break;
+		// Skip boring stuff...
+		for (;;)
+			if (*(blockPt++) <= 0)
+				break;
 
-	if (data->stop > 0) {
-		if (wi->start >= data->stop) {
-			killDownloader(data);
-			wi->done = true;
-			return;
-		} else if (wi->finish > data->stop) {
-			wi->finish = data->stop;
+		if (data->stop > 0) {
+			if (start >= data->stop)
+				return true;
+			else if (finish > data->stop)
+				finish = data->stop;
 		}
+		if (pushValuesToBuffer(data->bufferedReaderData, data->chrom, start, finish, 1))
+			return true;
 	}
 
-	if (data->blockPt == data->blockData->blockEnd)
-		BigBedReaderGoToNextBlock(data);
+	return false;
 }
 
-void BigBedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	BigFileReaderData * data = (BigFileReaderData *) wi->data; 
-
-	killDownloader(data);
-	data->chrom = chrom;
-	data->stop = finish;
-	wi->done = false;
-	launchDownloader(data);
-	BigBedReaderEnterBlock(data);
-	BigBedReaderPop(wi);
-
-	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) 
-		BigBedReaderPop(wi);
-
-	if (!wi->done && strcmp(chrom, wi->chrom) == 0 && wi->start < start)
-		wi->start = start;
-}
-
-static void openBigBedFile(BigFileReaderData * data) {
+void openBigBedFile(BigFileReaderData * data, char * filename) {
+	data->filename = filename;
 	data->bwf = bigBedFileOpen(data->filename);
 	data->isSwapped = data->bwf->isSwapped;
 	bbiAttachUnzoomedCir(data->bwf);
 	data->udc = data->bwf->udc;
+	data->readBuffer = &readBigBedBuffer;
+	data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
+	launchBufferedReader(&downloadBigFile, data, &(data->bufferedReaderData));
 }
 
 WiggleIterator * BigBedReader(char * f) {
 	BigFileReaderData * data = (BigFileReaderData *) calloc(1, sizeof(BigFileReaderData));
-	data->filename = f;
-	openBigBedFile(data);
-	launchDownloader(data);
-	BigBedReaderEnterBlock(data);
-	WiggleIterator * res = newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek);
+	openBigBedFile(data, f);
+	WiggleIterator * res = newWiggleIterator(data, &BigFileReaderPop, &BigFileReaderSeek);
 	res->overlaps = true;
 	return res;
 }	
