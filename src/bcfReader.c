@@ -35,9 +35,9 @@ typedef struct bamFileReaderData_st {
 
 	// Gzip file
 	gzFile gz_file;
-} VCFReaderData;
+} BCFReaderData;
 
-static char * nextLine(VCFReaderData * data) {
+static char * nextLine(BCFReaderData * data) {
 	if (data->tabix_iterator)
 		return ti_read(data->tabix_file, data->tabix_iterator, 0);
 	else
@@ -45,7 +45,7 @@ static char * nextLine(VCFReaderData * data) {
 }
 
 static void * downloadTabixFile(void * args) {
-	VCFReaderData * data = (VCFReaderData *) args;
+	BCFReaderData * data = (BCFReaderData *) args;
 	char * line;
 	char * last_chrom = "";
 
@@ -69,45 +69,45 @@ static void * downloadTabixFile(void * args) {
 	return NULL;
 }
 
-void OpenTabixFile(VCFReaderData * data, char * filename) {
+void OpenTabixFile(BCFReaderData * data, char * filename) {
 	data->tabix_file = ti_open(filename, NULL);
 	data->gz_file = gzopen(filename, "r");
 }
 
-void killVCFReader(VCFReaderData * data) {
+void killBCFReader(BCFReaderData * data) {
 	if (data->tabix_iterator) 
 		ti_iter_destroy(data->tabix_iterator);
 }
 
-void closeTabixFile(VCFReaderData * data) {
+void closeTabixFile(BCFReaderData * data) {
 	ti_close(data->tabix_file);
 	gzclose(data->gz_file);
 }
 
-void VCFReaderPop(WiggleIterator * wi) {
-	VCFReaderData * data = (VCFReaderData *) wi->data;
+void BCFReaderPop(WiggleIterator * wi) {
+	BCFReaderData * data = (BCFReaderData *) wi->data;
 	BufferedReaderPop(wi, data->bufferedReaderData);
 }
 
 void BcfReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	killBufferedReader(wi->data);
+	BCFReaderData * data = (BCFReaderData *) wi->data;
 
-	VCFReaderData * data = (VCFReaderData *) wi->data;
+	killBufferedReader(data->bufferedReaderData);
 	data->tabix_iterator = ti_query(data->tabix_file, chrom, start, finish);
-	launchBufferedReader(&downloadTabixFile, &killVCFReader, data, &(data->bufferedReaderData));
+	launchBufferedReader(&downloadTabixFile, &killBCFReader, data, &(data->bufferedReaderData));
 	wi->done = false;
-	VCFReaderPop(wi);
+	BCFReaderPop(wi);
 
-	while (strcmp(wi->chrom, chrom) < 0 || wi->finish <= start)
-		VCFReaderPop(wi);
+	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) 
+		BCFReaderPop(wi);
 
 	data->chrom = chrom;
 	data->stop = finish;
 }
 
 WiggleIterator * BcfReader(char * filename) {
-	VCFReaderData * data = (VCFReaderData *) calloc(1, sizeof(VCFReaderData));
+	BCFReaderData * data = (BCFReaderData *) calloc(1, sizeof(BCFReaderData));
 	OpenTabixFile(data, filename);
-	launchBufferedReader(&downloadTabixFile, &killVCFReader, data, &(data->bufferedReaderData));
-	return newWiggleIterator(data, &VCFReaderPop, &BcfReaderSeek);
+	launchBufferedReader(&downloadTabixFile, &killBCFReader, data, &(data->bufferedReaderData));
+	return newWiggleIterator(data, &BCFReaderPop, &BcfReaderSeek);
 }
