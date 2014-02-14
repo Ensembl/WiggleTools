@@ -22,8 +22,8 @@
 
 typedef struct bufferedReaderData_st BufferedReaderData;
 
-void launchBufferedReader(void * (* readFileFunction)(void *), void (*killReader)(), void * f_data, BufferedReaderData ** buf_data);
-void pushValuesToBuffer(BufferedReaderData * data, char * chrom, int start, int finish, double value);
+void launchBufferedReader(void * (* readFileFunction)(void *), void * f_data, BufferedReaderData ** buf_data);
+bool pushValuesToBuffer(BufferedReaderData * data, char * chrom, int start, int finish, double value);
 void endBufferedSignal(BufferedReaderData * data);
 void killBufferedReader(BufferedReaderData * data);
 void BufferedReaderPop(WiggleIterator * wi, BufferedReaderData * data);

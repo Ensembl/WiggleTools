@@ -102,9 +102,11 @@ static void * downloadBamFile(void * args) {
 			break;
 
 		// +1 to account for 0-based indexing in BAMs:
-		pushValuesToBuffer(data->bufferedReaderData, chrom, pos+1, pos+2, cnt);
+		if (pushValuesToBuffer(data->bufferedReaderData, chrom, pos+1, pos+2, cnt))
+			break;
 	}
 
+	bam_iter_destroy(data->data->iter);
 	endBufferedSignal(data->bufferedReaderData);
 	return NULL;
 }
@@ -153,11 +155,6 @@ void OpenBamFile(BamReaderData * data, char * filename) {
 	seekRegion(data);
 }
 
-void killBamReader(BamReaderData * data) {
-	if (data->data->iter) 
-		bam_iter_destroy(data->data->iter);
-}
-
 void closeBamFile(BamReaderData * data) {
 	// Seriously, does samtools not provide any convience destructors!??
 	bam_mplp_destroy(data->iter);
@@ -185,7 +182,7 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 		free(data->conf->reg);
 	data->conf->reg = region;
 	seekRegion(data);
-	launchBufferedReader(&downloadBamFile, &killBamReader, data, &(data->bufferedReaderData));
+	launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));
 	wi->done = false;
 	BamReaderPop(wi);
 
@@ -200,6 +197,6 @@ WiggleIterator * BamReader(char * filename) {
 	BamReaderData * data = (BamReaderData *) calloc(1, sizeof(BamReaderData));
 	setSamtoolsDefaultConf(data);
 	OpenBamFile(data, filename);
-	launchBufferedReader(&downloadBamFile, &killBamReader, data, &(data->bufferedReaderData));
+	launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));
 	return newWiggleIterator(data, &BamReaderPop, &BamReaderSeek);
 }

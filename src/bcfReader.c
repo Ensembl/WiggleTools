@@ -60,10 +60,15 @@ static void * downloadTabixFile(void * args) {
 		}
 		int pos = atoi(strtok(NULL, "\t"));
 
-		pushValuesToBuffer(data->bufferedReaderData, last_chrom, pos, pos+1, 1);
 		if (data->tabix_iterator)
 			free(line);
+
+		if (pushValuesToBuffer(data->bufferedReaderData, last_chrom, pos, pos+1, 1))
+			break;
 	}
+
+	if (data->tabix_iterator) 
+		ti_iter_destroy(data->tabix_iterator);
 
 	endBufferedSignal(data->bufferedReaderData);
 	return NULL;
@@ -72,11 +77,6 @@ static void * downloadTabixFile(void * args) {
 void OpenTabixFile(BCFReaderData * data, char * filename) {
 	data->tabix_file = ti_open(filename, NULL);
 	data->gz_file = gzopen(filename, "r");
-}
-
-void killBCFReader(BCFReaderData * data) {
-	if (data->tabix_iterator) 
-		ti_iter_destroy(data->tabix_iterator);
 }
 
 void closeTabixFile(BCFReaderData * data) {
@@ -94,7 +94,7 @@ void BcfReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 
 	killBufferedReader(data->bufferedReaderData);
 	data->tabix_iterator = ti_query(data->tabix_file, chrom, start, finish);
-	launchBufferedReader(&downloadTabixFile, &killBCFReader, data, &(data->bufferedReaderData));
+	launchBufferedReader(&downloadTabixFile, data, &(data->bufferedReaderData));
 	wi->done = false;
 	BCFReaderPop(wi);
 
@@ -108,6 +108,6 @@ void BcfReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 WiggleIterator * BcfReader(char * filename) {
 	BCFReaderData * data = (BCFReaderData *) calloc(1, sizeof(BCFReaderData));
 	OpenTabixFile(data, filename);
-	launchBufferedReader(&downloadTabixFile, &killBCFReader, data, &(data->bufferedReaderData));
+	launchBufferedReader(&downloadTabixFile, data, &(data->bufferedReaderData));
 	return newWiggleIterator(data, &BCFReaderPop, &BcfReaderSeek);
 }

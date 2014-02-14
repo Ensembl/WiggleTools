@@ -14,7 +14,7 @@
 
 #include "bufferedReader.h"
 
-static int MAX_HEAD_START = 30;
+static int MAX_HEAD_START = 3;
 static int BLOCK_SIZE = 10000;
 
 typedef struct blockData_st {
@@ -34,7 +34,6 @@ struct bufferedReaderData_st {
 	int blockCount;
 	int readIndex;
 	void * readerData;
-	void (*killReader)(void *);
 };
 
 static bool declareNewBlock(BufferedReaderData * data) {
@@ -62,23 +61,24 @@ static BlockData * createBlockData() {
 	return new;
 }
 
-void pushValuesToBuffer(BufferedReaderData * data, char * chrom, int start, int finish, double value) {
+bool pushValuesToBuffer(BufferedReaderData * data, char * chrom, int start, int finish, double value) {
 
 	if (data->blockData == NULL)
 		data->lastBlockData = data->blockData = createBlockData();
 	else if (data->lastBlockData->count == BLOCK_SIZE) {
 		data->lastBlockData->next = createBlockData();
 		data->lastBlockData = data->lastBlockData->next;
-		declareNewBlock(data);
+		if (declareNewBlock(data))
+			return true;
 	}
 
 	int index = data->lastBlockData->count;
 	data->lastBlockData->chrom[index] = chrom;
-	// +1 to account for 0-based indexing in BAMs:
 	data->lastBlockData->start[index] = start;
 	data->lastBlockData->finish[index] = finish;
 	data->lastBlockData->value[index] = value;
 	data->lastBlockData->count++;
+	return false;
 }
 
 void endBufferedSignal(BufferedReaderData * data) {
@@ -89,6 +89,7 @@ void endBufferedSignal(BufferedReaderData * data) {
 static void destroyBlockData(BlockData * data) {
 	free(data->chrom);
 	free(data->start);
+	free(data->finish);
 	free(data->value);
 	free(data);
 }
@@ -112,12 +113,11 @@ static void goToNextBlock(BufferedReaderData * data) {
 	destroyBlockData(prevBlockData);
 }
 
-void launchBufferedReader(void * (* readFileFunction)(void *), void (*killReader)(), void * f_data, BufferedReaderData ** buf_data) {
+void launchBufferedReader(void * (* readFileFunction)(void *), void * f_data, BufferedReaderData ** buf_data) {
 	BufferedReaderData * data = calloc(1, sizeof(BufferedReaderData));
 	*buf_data = data;
 	data->readIndex = 0;
 	data->readerData = f_data;
-	data->killReader = killReader;
 
 	pthread_mutex_init(&data->count_mutex, NULL);
 	pthread_cond_init(&data->count_cond, NULL);
@@ -141,8 +141,6 @@ void killBufferedReader(BufferedReaderData * data) {
 
 	pthread_mutex_destroy(&data->count_mutex);
 	pthread_cond_destroy(&data->count_cond);
-
-	data->killReader(data->readerData);
 
 	while (data->blockData) {
 		BlockData * prevData = data->blockData;
@@ -173,7 +171,7 @@ void BufferedReaderPop(WiggleIterator * wi, BufferedReaderData * data) {
 	int index = data->readIndex;
 	wi->chrom = data->blockData->chrom[index];
 	wi->start = data->blockData->start[index];
-	wi->finish = data->blockData->start[index] + 1;
+	wi->finish = data->blockData->finish[index];
 	wi->value = (double) data->blockData->value[index];
 	data->readIndex++;
 }
