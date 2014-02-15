@@ -21,7 +21,7 @@ typedef struct blockData_st {
 	char **chrom;
 	int * start;
 	int * finish;
-	int * value;
+	double * value;
 	int count;
 	struct blockData_st * next;
 } BlockData;
@@ -57,7 +57,7 @@ static BlockData * createBlockData() {
 	new->chrom = (char **) calloc(BLOCK_SIZE, sizeof(char*));
 	new->start = (int *) calloc(BLOCK_SIZE, sizeof(int));
 	new->finish = (int *) calloc(BLOCK_SIZE, sizeof(int));
-	new->value = (int *) calloc(BLOCK_SIZE, sizeof(int));
+	new->value = (int *) calloc(BLOCK_SIZE, sizeof(double));
 	return new;
 }
 
