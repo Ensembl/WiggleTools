@@ -623,7 +623,7 @@ void SmoothWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start
 WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int width) {
 	SmoothWiggleIteratorData * data = (SmoothWiggleIteratorData *) calloc(1, sizeof(SmoothWiggleIteratorData));
 	data->iter = NonOverlappingWiggleIterator(i);
-	data->buffer = (double*) calloc(1, width);
+	data->buffer = (double*) calloc(sizeof(double), width);
 	data->width = width;
 	return newWiggleIterator(data, &SmoothWiggleIteratorPop, &SmoothWiggleIteratorSeek);
 }
