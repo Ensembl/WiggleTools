@@ -466,13 +466,13 @@ Profiles
 To generate a fixed width summary of an iterator across a collection of regions, you can request the profiles function. This will print out the profiles, one for each region:
 
 ```
-wiggletools profiles 3 test/overlapping.bed test/fixedStep.wig
+wiggletools profiles results.txt 3 test/overlapping.bed test/fixedStep.wig
 ```
 
 If you just want a single profile, which sums up the results of all those profiles, you simply do:
 
 ```
-wiggletools profile 3 test/overlapping.bed test/fixedStep.wig
+wiggletools profile results.txt 3 test/overlapping.bed test/fixedStep.wig
 ```
 
 Parallel processing
