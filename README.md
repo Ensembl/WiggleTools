@@ -475,6 +475,22 @@ If you just want a single profile, which sums up the results of all those profil
 wiggletools profile results.txt 3 test/overlapping.bed test/fixedStep.wig
 ```
 
+As above, the output file name can be replaced by a dash (-) to print to standard output.
+
+Histograms
+----------
+
+To generate a histogram of values across the iterator, simply use the *histogram* command. The number of bins must be pre-defined:
+
+```
+wiggletools histogram results.txt 10 test/fixedStep.wig
+```
+
+The format of the output is hopefully rather self explanatory: each line starts with the lower bound of a bin, and the value for that bin. The last line contains the upper bound of the last bin. 
+
+The algorithm used to compute these histograms is approximate: it adapts the width of the bins to the data received, and requires very little memory or computation. However, the values of the bins is not quite exact, as some points might be counted in a neighbouring bin to the one they should belong to. Normally, over a large datasets, these approximations should roughly even out. 
+
+
 Parallel processing
 -------------------
 

@@ -42,7 +42,7 @@ puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
 puts("\tstatistic = AUC (output) (iterator) | mean (output) (iterator) | variance (output) (iterator) | pearson (output) (iterator) (iterator) | isZero (iterator)");
 puts("\toutput = filename | -");
-puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator)");
+puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator) | histogram (output) (width)");
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
 puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float)");
@@ -514,6 +514,14 @@ static void readAUC() {
 	fprintf(file, "%lf\n", AUC(readLastIterator()));	
 	fclose(file);
 }
+ 
+static void readHistogram() {
+	FILE * file = readOutputFilename();
+	int width = atoi(needNextToken());
+	Histogram * hist = histogram(readLastIterator(), width);	
+	print_histogram(hist, file);
+	fclose(file);
+}
 
 static void readMeanIntegrated() {
 	FILE * file = readOutputFilename();
@@ -566,6 +574,8 @@ void rollYourOwn(int argc, char ** argv) {
 	char * token = nextToken(argc, argv);
 	if (strcmp(token, "AUC") == 0)
 		readAUC();
+	else if (strcmp(token, "histogram") == 0)
+		readHistogram();
 	else if (strcmp(token, "mean") == 0)
 		readMeanIntegrated();
 	else if (strcmp(token, "variance") == 0)

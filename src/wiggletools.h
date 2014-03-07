@@ -26,6 +26,7 @@ typedef int bool;
 typedef struct wiggleIterator_st WiggleIterator;
 typedef struct multiplexer_st Multiplexer;
 typedef struct multiset_st Multiset;
+typedef struct histogram_st Histogram;
 
 // Creators
 WiggleIterator * SmartReader (char *);
@@ -110,6 +111,10 @@ void regionProfile(WiggleIterator *, double *, int, int, bool);
 void addProfile(double *, double *, int);
 //	Binary 
 double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
+//	Histograms
+Histogram * histogram(WiggleIterator *, int);
+void normalize_histogram(Histogram *);
+void print_histogram(Histogram *, FILE *);
 
 // Regional statistics
 WiggleIterator * apply(WiggleIterator * , double (*statistic)(WiggleIterator *), WiggleIterator *);
