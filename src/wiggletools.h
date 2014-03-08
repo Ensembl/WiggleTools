@@ -37,7 +37,6 @@ WiggleIterator * BigWiggleReader (char *);
 WiggleIterator * BedReader (char *);
 WiggleIterator * BigBedReader (char *);
 WiggleIterator * BamReader (char *);
-WiggleIterator * BinaryFileReader (char *);
 WiggleIterator * VcfReader (char *);
 WiggleIterator * BcfReader (char *);
 
@@ -129,11 +128,5 @@ void setMaxHeadStart(int);
 // Command line parser
 void rollYourOwn(int argc, char ** argv);
 void printHelp();
-
-// Deprecated
-Multiplexer * newStreamingMultiplexer(FILE * input);
-Multiplexer * newIteratorMultiplexer(WiggleIterator *, int, int);
-void streamWiggleIteratorAtIndex(FILE * , WiggleIterator * , int , int );
-void streamMultiplexer(FILE *, Multiplexer *);
 
 #endif
