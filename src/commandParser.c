@@ -216,16 +216,6 @@ static WiggleIterator * readLastIterator() {
 	return readLastIteratorToken(needNextToken());
 }
 
-static WiggleIterator * readBTee() {
-	char * filename = needNextToken();
-	FILE * file = fopen(filename, "wb");
-	if (!file) {
-		fprintf(stderr, "Could not open %s.\n", filename);
-		exit(1);
-	}
-	return BinaryTeeWiggleIterator(readIterator(), file, false);
-}
-
 static WiggleIterator * readSmooth() {
 	int width = atoi(needNextToken());
 	return SmoothWiggleIterator(readIterator(), width);
@@ -435,8 +425,6 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readMax();
 	if (strcmp(token, "seek") == 0)
 		return readSeek();
-	if (strcmp(token, "btee") == 0)
-		return readBTee();
 	if (strcmp(token, "write") == 0)
 		return readTee();
 	if (strcmp(token, "write_bg") == 0)
