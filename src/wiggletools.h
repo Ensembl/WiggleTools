@@ -90,9 +90,7 @@ WiggleIterator * MWUReduction(Multiset *);
 
 // Output
 void toFile (WiggleIterator *, char *, bool);
-void toBinaryFile (WiggleIterator *, char *, bool);
 void toStdout (WiggleIterator *, bool);
-WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator *, FILE *, bool);
 WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *, bool);
 void runWiggleIterator(WiggleIterator * );
 

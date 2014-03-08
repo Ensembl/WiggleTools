@@ -49,7 +49,6 @@ typedef struct TeeWiggleIteratorData_st {
 	pthread_mutex_t continue_mutex;
 	pthread_cond_t continue_cond;
 	bool done;
-	bool binary;
 	bool bedGraph;
 } TeeWiggleIteratorData;
 
@@ -119,89 +118,6 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 	}
 }
 
-static void printBinaryBlock(FILE * infile, FILE * outfile, BlockData * block) {
-	int i;
-	char ** chromPtr = block->chroms;
-	int * startPtr = block->starts;
-	int * finishPtr = block->finishes;
-	double * valuePtr = block->values;
-	char * emptyString = "";
-	char * lastChrom = NULL;
-	int lastFinish = -1;
-	bool pointByPoint = false;
-	bool makeHeader;
-	char flag;
-	int32_t holder;
-	float holder2;
-
-	for (i = 0; i < block->count; i++) {
-		// Change mode
-		if (*finishPtr - *startPtr < 2 && !pointByPoint) {
-			pointByPoint = true;
-			makeHeader = true;
-		} else if (*finishPtr - *startPtr > 5 && pointByPoint) {
-			pointByPoint = false;
-			makeHeader = true;
-		} else 
-			makeHeader = false;
-
-		// Detect discontinuity
-		if (lastChrom != *chromPtr || (pointByPoint && *startPtr > lastFinish))
-			makeHeader = true;
-
-		// Make header
-		if (makeHeader) {
-			if (pointByPoint) {
-				flag = (char) 1;
-				fwrite(&flag, sizeof(char), 1, outfile);
-				if (*chromPtr == lastChrom) {
-					fwrite(emptyString, sizeof(char), 1, outfile);
-				} else {
-					fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, outfile);
-				}
-				holder = (int32_t) *startPtr;
-				fwrite(&holder, sizeof(int32_t), 1, outfile);
-			} else {
-				flag = (char) 2;
-				fwrite(&flag, sizeof(char), 1, outfile);
-				if (*chromPtr == lastChrom) {
-					fwrite(emptyString, sizeof(char), 1, outfile);
-				} else
-					fwrite(*chromPtr, sizeof(char), strlen(*chromPtr) + 1, outfile);
-			}
-		} else {
-			fwrite(emptyString, sizeof(char), 1, outfile);
-		}
-
-		// Data
-		if (!pointByPoint) {
-			holder = (int32_t) *startPtr;
-			fwrite(&holder, sizeof(int32_t), 1, outfile);
-			holder = (int32_t) *finishPtr;
-			fwrite(&holder, sizeof(int32_t), 1, outfile);
-			holder2 = *valuePtr;
-			fwrite(&holder2, sizeof(float), 1, outfile);
-		} else {
-			int j;
-			holder2 = *valuePtr;
-			fwrite(&holder2, sizeof(float), 1, outfile);
-
-			for (j = 1; j < *finishPtr - *startPtr; j++) {
-				fwrite(emptyString, sizeof(char), 1, outfile);
-				holder2 = *valuePtr;
-				fwrite(&holder2, sizeof(float), 1, outfile);
-			}
-		}
-
-		lastChrom = *chromPtr;
-		lastFinish = *finishPtr;
-		chromPtr++;
-		startPtr++;
-		finishPtr++;
-		valuePtr++;
-	}
-}
-
 static bool goToNextBlock(TeeWiggleIteratorData * data) {
 	BlockData * ptr = data->dataBlocks;
 	static int i = 0;
@@ -238,10 +154,7 @@ static void * printToFile(void * args) {
 		return NULL;
 
 	while(data->dataBlocks) {
-		if (data->binary)
-			printBinaryBlock(data->infile, data->outfile, data->dataBlocks);
-		else
-			printBlock(data->infile, data->outfile, data->dataBlocks);
+		printBlock(data->infile, data->outfile, data->dataBlocks);
 		if (goToNextBlock(data))
 			return NULL;
 	}
@@ -341,17 +254,6 @@ void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, i
 	pop(wi);
 }
 
-WiggleIterator * BinaryTeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedGraph) {
-	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
-	data->iter = CompressionWiggleIterator(i);
-	data->outfile = outfile;
-	data->binary = true;
-	data->bedGraph = bedGraph;
-	launchWriter(data);
-
-	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
-}
-
 WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedGraph) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
@@ -360,15 +262,6 @@ WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedG
 	launchWriter(data);
 
 	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
-}
-
-void toBinaryFile(WiggleIterator * wi, char * filename, bool bedGraph) {
-	FILE * file = fopen(filename, "wb");
-	if (!file) {
-		fprintf(stderr, "Could not open file %s\n", filename);
-		exit(1);
-	}
-	runWiggleIterator(BinaryTeeWiggleIterator(wi, file, bedGraph));
 }
 
 void toFile(WiggleIterator * wi, char * filename, bool bedGraph) {
