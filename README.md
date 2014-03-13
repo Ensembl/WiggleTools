@@ -17,18 +17,25 @@ Installing the Kent library
 First download the code:
 
 ```
-git clone git://genome-source.cse.ucsc.edu/kent.git
+git archive --format=zip -9 --remote=git://genome-source.cse.ucsc.edu/kent.git beta src/userApps > userApps.zip
+unzip -d userApps -j userApps.zip
+rm userApps.zip
+cd userApps
+make fetchSource
+make
 setenv KENT_SRC $PWD/kent/src
-cd $KENT_SRC
+# or, if you use bash...
+export KENT_SRC=$PWD/kent/src
 ```
-
-Follow the instructions to compile the library, as well as the utilities *wigToBigWig* and *bigWigCat*.
+Ensure that your path points to the userApps/bin directory.
 
 Installing the Tabix library
 
 ```
 git clone https://github.com/samtools/tabix.git
 setenv TABIX_SRC $PWD/tabix
+# or, if you use bash...
+export TABIX_SRC=$PWD/tabix
 cd tabix
 make
 ```
