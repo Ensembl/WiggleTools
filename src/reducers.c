@@ -317,6 +317,7 @@ void VarianceReductionPop(WiggleIterator * wi) {
 		wi->value /= count;
 		
 		popMultiplexer(multi);
+		break;
 	}
 }
 
