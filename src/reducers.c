@@ -274,7 +274,6 @@ WiggleIterator * MeanReduction(Multiplexer * multi) {
 
 void VarianceReductionPop(WiggleIterator * wi) {
 	int i;
-	double mean, diff;
 
 	if (wi->done)
 		return;
@@ -282,31 +281,43 @@ void VarianceReductionPop(WiggleIterator * wi) {
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
-	if (multi->done) {
-		wi->done = true;
-		return;
-	}
+	while (true) {
+		if (multi->done) {
+			wi->done = true;
+			return;
+		}
 
-	wi->chrom = multi->chrom;
-	wi->start = multi->start;
-	wi->finish = multi->finish;
-	mean = 0;
-	for (i = 0; i < multi->count; i++)
-		if (multi->inplay[i])
-			mean += multi->values[i];
-	mean /= multi->count;
-	
-	wi->value = 0;
-	for (i = 0; i < multi->count; i++) {
-		if (multi->inplay[i])
-			diff = mean - multi->values[i];
-		else
-			diff = mean - multi->iters[i]->default_value;
-		wi->value += diff * diff;
+		wi->chrom = multi->chrom;
+		wi->start = multi->start;
+		wi->finish = multi->finish;
+
+		double mean = 0;
+		double count = 0;
+		for (i = 0; i < multi->count; i++) {
+			if (multi->inplay[i]) {
+				mean += multi->values[i];
+				count++;
+			}	
+		}
+
+		if (count < 2) {
+			popMultiplexer(multi);
+			continue;
+		}
+
+		mean /= count;
+		
+		wi->value = 0;
+		for (i = 0; i < multi->count; i++) {
+			if (multi->inplay[i]) {
+				double diff = mean - multi->values[i];
+				wi->value += diff * diff;
+			}
+		}
+		wi->value /= count;
+		
+		popMultiplexer(multi);
 	}
-	wi->value /= multi->count;
-	
-	popMultiplexer(multi);
 }
 
 WiggleIterator * VarianceReduction(Multiplexer * multi) {
