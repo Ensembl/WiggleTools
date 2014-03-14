@@ -40,7 +40,7 @@ puts("\twiggletools program");
 puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
-puts("\tstatistic = AUC (output) (iterator) | mean (output) (iterator) | variance (output) (iterator) | pearson (output) (iterator) (iterator) | isZero (iterator)");
+puts("\tstatistic = AUC (output) (iterator) | meanI (output) (iterator) | varI (output) (iterator) | pearson (output) (iterator) (iterator) | isZero (iterator)");
 puts("\toutput = filename | -");
 puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator) | histogram (output) (width)");
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
@@ -564,9 +564,9 @@ void rollYourOwn(int argc, char ** argv) {
 		readAUC();
 	else if (strcmp(token, "histogram") == 0)
 		readHistogram();
-	else if (strcmp(token, "mean") == 0)
+	else if (strcmp(token, "meanI") == 0)
 		readMeanIntegrated();
-	else if (strcmp(token, "variance") == 0)
+	else if (strcmp(token, "varI") == 0)
 		readVarianceIntegrated();
 	else if (strcmp(token, "pearson") == 0) 
 		readPearson();
