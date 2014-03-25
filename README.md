@@ -69,6 +69,8 @@ There is not installation routine, meaning that you should copy the relevant fil
 
 If the system complains that it cannot find -lssl or -lcrypto then you need to install the [libssl runtime and development packages](http://www.openssl.org/)
 
+If the system cannot find 'gsl/gsl_cdf.h' then you need to install the [GNU scientific library](http://www.gnu.org/software/gsl/)
+
 Just to check, you can launch the tests:
 
 ```
