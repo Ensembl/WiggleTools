@@ -122,10 +122,21 @@ def submitMultiJobToLSF(cmds, dependency=None, mem=4):
 	for line in out.split('\n'):
 		match = re.match(r'Job <([0-9]*)>', line)
 		if match is not None:
-			return match.group(1)
+			return match.group(1), filename
 
 	raise RuntimeError
 
+################################################
+## File hygiene
+################################################
+
+def clean_temp_file(file):
+	os.remove(file)
+	for file2 in glob.glob("%s_[0-9]*.out" % file) + glob.glob("%s_[0-9]*.err" % file):
+		os.remove(file2)
+
+def clean_temp_files(files):
+	map(clean_temp_file, files)
 
 ################################################
 ## Main function
