@@ -4,6 +4,8 @@ import os
 import sys
 import tempfile
 import subprocess
+import re
+import glob
 
 output = tempfile.TemporaryFile()
 error = tempfile.TemporaryFile()
