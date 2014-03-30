@@ -73,118 +73,140 @@ void addProfile(double * dest, double * source, int width) {
 
 struct histogram_st {
 	int width;
-	double * values;
+	int count;
+	double ** values;
 	double min;
 	double max;
 };
 
-static void reassignColumnRight(Histogram * hist, double ratio, int column) {
+static void reassignColumnRight(Histogram * hist, double ratio, int column, int row) {
 	double start = hist->width - (hist->width - column) * ratio;
 	int int_start = (int) start;
 	double end = hist->width - (hist->width - column - 1) * ratio;
 	int int_end = (int) end;
-	double value = hist->values[column];
+	double value = hist->values[row][column];
 	if (int_start == int_end) {
-		hist->values[int_start] += value;
+		hist->values[row][int_start] += value;
 	} else {
 		double split =  (end - int_end) / ratio;
-		hist->values[int_end] += value * split;
-		hist->values[int_start] += value * (1 - split); 
+		hist->values[row][int_end] += value * split;
+		hist->values[row][int_start] += value * (1 - split); 
 	}
-	hist->values[column] -= value;
+	hist->values[row][column] -= value;
 }
 
-static void lowerMin(Histogram * hist, double value) {
+static void lowerMinNRows(Histogram * hist, double value, int row) {
 	if (hist->max != hist->min) {
 		double ratio = (hist->max - hist->min) / (hist->max - value);
 		int column;
-		for (column = 0; column < hist->width - 1 ; column++) {
-			reassignColumnRight(hist, ratio, column);
-		}
+		int i;
+		for (i = 0; i <= row; i++)
+			for (column = 0; column < hist->width - 1 ; column++)
+				reassignColumnRight(hist, ratio, column, row);
 	} else {
-		hist->values[hist->width - 1] = hist->values[0];
-		hist->values[0] = 0;
+		int i;
+		for (i = 0; i < row; i++) {
+			hist->values[row][hist->width - 1] = hist->values[row][0];
+			hist->values[row][0] = 0;
+		}
 	}
 	hist->min = value;
 }
 
-static void reassignColumnLeft(Histogram * hist, double ratio, int column) {
+static void reassignColumnLeft(Histogram * hist, double ratio, int column, int row) {
 	double start = column * ratio;
 	int int_start = (int) start;
 	double end = (column + 1) * ratio;
 	int int_end = (int) end;
-	double value = hist->values[column];
+	double value = hist->values[row][column];
 	if (int_start == int_end) {
-		hist->values[int_start] += value;
+		hist->values[row][int_start] += value;
 	} else {
 		double split =  (end - int_end) / ratio;
-		hist->values[int_end] += value * split;
-		hist->values[int_start] += value * (1 - split); 
+		hist->values[row][int_end] += value * split;
+		hist->values[row][int_start] += value * (1 - split); 
 	}
-	hist->values[column] -= value;
+	hist->values[row][column] -= value;
 }
 
-static void raiseMax(Histogram * hist, double value) {
+static void raiseMaxNRows(Histogram * hist, double value, int row) {
 	if (hist->max != hist->min) {
 		double ratio = (hist->max - hist->min) / (value - hist->min);
-		int column;
-		for (column = 1; column < hist->width; column++) {
-			reassignColumnLeft(hist, ratio, column);
-		}
+		int i, column;
+		for (i = 0; i <= row; i++)
+			for (column = 1; column < hist->width; column++)
+				reassignColumnLeft(hist, ratio, column, row);
 	}
 	hist->max = value;
 }
 
-static void insertIntoHistogram(Histogram * hist, WiggleIterator * wig) {
-	int column = (int) ((wig->value - hist->min) * (hist->width - 1) / (hist->max - hist->min));
-	hist->values[column] += wig->finish - wig->start;
+static void insertIntoHistogram(Histogram * hist, WiggleIterator * wig, int row) {
+	int column = (int) ((wig->value - hist->min) * hist->width / (hist->max - hist->min));
+	if (column == hist->width)
+		column--;
+	hist->values[row][column] += wig->finish - wig->start;
 }
 
-static void updateHistogram(Histogram * hist, WiggleIterator * wig) {
+static void updateHistogram(Histogram * hist, WiggleIterator * wig, int row) {
 	if (wig->value > hist->max)
-		raiseMax(hist, wig->value);
+		raiseMaxNRows(hist, wig->value, row);
 	else if (wig->value < hist->min)
-		lowerMin(hist, wig->value);
+		lowerMinNRows(hist, wig->value, row);
 
 	if (hist->min != hist->max)
-		insertIntoHistogram(hist, wig);
+		insertIntoHistogram(hist, wig, row);
 	else 
-		hist->values[0] += wig->finish - wig->start;
+		hist->values[row][0] += wig->finish - wig->start;
 }
 
-Histogram * histogram(WiggleIterator * wig, int width) {
+Histogram * histogram(WiggleIterator ** wigs, int count, int width) {
 	Histogram * hist = calloc(1, sizeof(Histogram));
 	hist->width = width;
-	hist->values = calloc(width, sizeof(double));
-	hist->min = hist->max = wig->value;
-	hist->values[0] = wig->finish - wig->start;
-	pop(wig);
+	hist->values = calloc(count, sizeof(double*));
+	int row;
+	for (row = 0; row < count; row++) {
+		hist->values[row] = calloc(width, sizeof(double));
+		hist->count++;
+		WiggleIterator * wig = wigs[row];
+		
+		if (row == 0) {
+			hist->min = hist->max = wig->value;
+			hist->values[0][0] = wig->finish - wig->start;
+			pop(wig);
+		}
 
-	for (; !wig->done; pop(wig))
-		updateHistogram(hist, wig);
+		for (; !wig->done; pop(wig))
+			updateHistogram(hist, wig, row);
+	}
 
 	return hist;
 }
 
 void normalize_histogram(Histogram * hist) {
-	double sum = 0;
-	int column;
+	double sum;
+	int column, row;
 
-	for (column = 0; column < hist->width; column++)
-		sum += hist->values[column];
+	for (row = 0; row < hist->count; row++) {
+		sum = 0;
+		for (column = 0; column < hist->width; column++)
+			sum += hist->values[row][column];
 
-	for (column = 0; column < hist->width; column++)
-		hist->values[column] /= sum;
+		for (column = 0; column < hist->width; column++)
+			hist->values[row][column] /= sum;
+	}
 }
 
 void print_histogram(Histogram * hist, FILE * file) {
 	double step = (hist->max - hist->min) / hist->width;
 	double position = hist->min;
-	int column;
+	int column, row;
 
 	for (column = 0; column < hist->width; column++) {
-		fprintf(file, "%f\t%f\n", position, hist->values[column]);
+		fprintf(file, "%f", position + step/2);
+		for (row = 0; row < hist->count; row++) {
+			fprintf(file, "\t%f", hist->values[row][column]);
+		}
+		fprintf(file, "\n");
 		position += step;
 	}
-	fprintf(file, "%f\t.\n", position);
 }

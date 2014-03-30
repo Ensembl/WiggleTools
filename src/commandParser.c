@@ -42,7 +42,7 @@ puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
 puts("\tstatistic = AUC (output) (iterator) | meanI (output) (iterator) | varI (output) (iterator) | pearson (output) (iterator) (iterator) | isZero (iterator)");
 puts("\toutput = filename | -");
-puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator) | histogram (output) (width)");
+puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator) | histogram (output) (width) (iterator_list)");
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
 puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float)");
@@ -166,6 +166,21 @@ static WiggleIterator ** readIteratorList(int * count) {
 		return readFileList(count, token);
 	else 
 		return readMappedIteratorList(count);
+}
+
+static WiggleIterator ** readLastIteratorList(int * count) {
+	WiggleIterator ** res = readIteratorList(count);
+	char * remainder = nextToken(0,0);
+	if (remainder) {
+		fprintf(stderr, "Trailing tokens: the last tokens in your command were not read, check your syntax:\n...");
+		while (remainder) {
+			fprintf(stderr, " %s", remainder);
+			remainder = nextToken(0,0);
+		}
+		fprintf(stderr, "\n");
+		exit(1);
+	}
+	return res;
 }
 
 static Multiplexer * readMultiplexer() {
@@ -506,7 +521,9 @@ static void readAUC() {
 static void readHistogram() {
 	FILE * file = readOutputFilename();
 	int width = atoi(needNextToken());
-	Histogram * hist = histogram(readLastIterator(), width);	
+	int count = 0; 
+	WiggleIterator ** iters = readLastIteratorList(&count);
+	Histogram * hist = histogram(iters, count, width);	
 	print_histogram(hist, file);
 	fclose(file);
 }

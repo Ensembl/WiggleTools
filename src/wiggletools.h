@@ -109,7 +109,7 @@ void addProfile(double *, double *, int);
 //	Binary 
 double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
 //	Histograms
-Histogram * histogram(WiggleIterator *, int);
+Histogram * histogram(WiggleIterator **, int, int);
 void normalize_histogram(Histogram *);
 void print_histogram(Histogram *, FILE *);
 
