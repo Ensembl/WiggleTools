@@ -4,6 +4,7 @@
 *.log
 *.toc
 *.aux
+*.pyc
 wiggletools
 .*.swp
 tags
