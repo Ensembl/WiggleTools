@@ -7,7 +7,7 @@ Wiggletools:
 	cd src; make
 
 Parallel:
-	cd parallel; make
+	cd python/wiggletools; make
 
 test: tests
 
