@@ -5,7 +5,6 @@
 *.toc
 *.aux
 *.pyc
-wiggletools
 .*.swp
 tags
 test*.sh
