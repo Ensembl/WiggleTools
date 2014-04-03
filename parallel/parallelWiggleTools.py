@@ -31,7 +31,7 @@ DUMP_DIR = '.'
 ################################################
 
 def create_dirs(command):
-	for match in re.finditer(r'(write|write_bg|apply|profile|profiles|AUC|mean|variance|pearson)\s+(\S+)\s', command):
+	for match in re.finditer(r'(write|write_bg|profile|profiles|AUC|mean|variance|pearson)\s+(\S+)\s', command):
 		path = match.group(2) + "x"
 		if not os.path.exists(path):
 			os.makedirs(path)
@@ -41,9 +41,26 @@ def create_new_command(command, chr, start, finish, chrom_sizes_file):
 	# Careful: the following line has to be AFTER the one above, else they overwrite each other
 	command = re.sub(r'write\s+(\S+.bw)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
 	command = re.sub(r'write_bg\s+(\S+)\s',r'write \1x/%s_%i_%i.wig ' % (chr, start, finish), command)
-	command = re.sub(r'(apply|profile|profiles)\s+(\S+)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
+	command = re.sub(r'(profile|profiles)\s+(\S+)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
 	command = re.sub(r'^(AUC|mean|variance|pearson)\s+(\S+)\s',r'\1 \2x/%s_%i_%i ' % (chr, start, finish), command)
-	return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file, 'do','seek',chr,start,finish,command]))
+	
+	m = re.match(r'(profile|profiles)\s+(\S+)\s(\S+)\s+(.*)', command)
+	m2 = re.match(r'(AUC|mean|variance|pearson)\s+(\S+)\s+(.*)', command)
+	if m is not None:
+		plot = m.group(1)
+		output = m.group(2)
+		width = m.group(3)
+		iterator = m.group(4)
+		return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file, plot, output, width,'seek',chr,start,finish,iterator]))
+	elif m2 is not None:
+		plot = m.group(1)
+		output = m.group(2)
+		iterators = m.group(3)
+		return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file, plot, output,'seek',chr,start,finish,iterators]))
+	else :
+		# Command does not start with extraction function:
+		return " ".join(map(str, ['wiggletoolsIndex.py', chrom_sizes_file,'do','seek',chr,start,finish,command]))
+
 
 def makeMapCommand(command, chrom_sizes_file, chrom_sizes, region_size):
 	create_dirs(command)
@@ -62,12 +79,11 @@ def test_makeMapCommand():
 
 def makeReduceCommand(command):
 	mergeBigWigCommands = ['mergeBigWigDirectory.py %s' % match.group(1) for match in re.finditer(r'write\s+(\S+.bw)\s', command)]
-	mergeApplyCommand = ['mergeBedLikeDirectory.sh %s' % match.group(1) for match in re.finditer(r'apply\s+(\S+)\s', command)]
 	mergeProfileCommand = ['mergeProfileDirectory.py %s' % match.group(1) for match in re.finditer(r'profile\s+(\S+)\s', command)]
-	mergeProfilesCommand = ['mergeBedLikeDirectory.sh %s' % match.group(1) for match in re.finditer(r'profiles\s+(\S+)\s', command)]
+	mergeProfilesCommand = ['mergeProfilesDirectory.py %s' % match.group(1) for match in re.finditer(r'profiles\s+(\S+)\s', command)]
 	mergeWigglesCommand = ['mergeBedLikeDirectory.sh %s' % match.group(1) for match in re.finditer(r'write\s+(\S+.wig)\s', command)]
 	mergeBedGraphsCommand = ['mergeBedLikeDirectory.sh %s' % match.group(1) for match in re.finditer(r'write_bg\s+(\S+.bg)\s', command)]
-	return mergeBigWigCommands + mergeApplyCommand + mergeProfileCommand + mergeProfilesCommand + mergeWigglesCommand + mergeBedGraphsCommand
+	return mergeBigWigCommands + mergeProfileCommand + mergeProfilesCommand + mergeWigglesCommand + mergeBedGraphsCommand
 
 ################################################
 ## LSF MultiJob
@@ -124,22 +140,32 @@ def readChromSizes(file):
 	fh.close()
 	return chrom_sizes
 
+def run(cmds, chrom_file):
+	for cmd in cmds:
+		if re.search('(apply_paste|histogram)', cmd) is not None:
+			print "Cannot parallelize the computation of histograms or apply_paste operations"
+			sys.exit(1)
+	chrom_sizes = readChromSizes(chrom_file)
+	mapCommands = sum((makeMapCommand(cmd, chrom_file, chrom_sizes, region_size=3e7) for cmd in cmds), [])
+	jobID1, filename1 = multiJob.submit(mapCommands)
+	reduceCommands = sum((makeReduceCommands(cmd) for cmd in cmds), [])
+	jobID2, filename2 = multiJob.submit(reduceCommands, dependency = jobID1, mem=8)
+	return jobID2, [filename1, filename2]
+
 def main():
 	if len(sys.argv) == 3:
 		chrom_file = sys.argv[1]
-		chrom_sizes = readChromSizes(chrom_file)
-		cmd = sys.argv[2]
-		jobID = submitMultiJobToLSF(makeMapCommand(cmd, chrom_file, chrom_sizes, region_size=3e7))
-		submitMultiJobToLSF(makeReduceCommand(cmd), dependency = jobID, mem=8)
+		cmds = sys.argv[2:]
+		run(cmds, chrom_file)
 	else:
 		print """
 parallelWiggletools.py: wrapper script to run wiggletools in parallel on LSF
 
-Usage: parallelWiggletools.py chrom_sizes.txt ' command '
+Usage: parallelWiggletools.py chrom_sizes.txt 'command1' ['command2' [...]]
 
 Where:
-chrom_sizes.txt is a tab-delimited text file with the chromosome names and lengths	
-command is a valid wiggletools command, between single quotes.
+* chrom_sizes.txt is a tab-delimited text file with the chromosome names and lengths	
+* command* is a valid wiggletools command, without histogram or apply_paste keywords.
 		"""
 
 if __name__ == "__main__":
