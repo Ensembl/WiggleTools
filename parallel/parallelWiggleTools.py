@@ -20,6 +20,7 @@ import re
 import tempfile
 import subprocess
 import glob
+import multiJob
 
 # Directory where job stdin, stdout and stderr are stored
 # Must be visible to all LSF nodes
@@ -77,7 +78,7 @@ def test_makeMapCommand():
 ## Merging the results of parallel wiggletools runs 
 ################################################
 
-def makeReduceCommand(command):
+def makeReduceCommands(command):
 	mergeBigWigCommands = ['mergeBigWigDirectory.py %s' % match.group(1) for match in re.finditer(r'write\s+(\S+.bw)\s', command)]
 	mergeProfileCommand = ['mergeProfileDirectory.py %s' % match.group(1) for match in re.finditer(r'profile\s+(\S+)\s', command)]
 	mergeProfilesCommand = ['mergeProfilesDirectory.py %s' % match.group(1) for match in re.finditer(r'profiles\s+(\S+)\s', command)]
@@ -85,58 +86,6 @@ def makeReduceCommand(command):
 	mergeBedGraphsCommand = ['mergeBedLikeDirectory.sh %s' % match.group(1) for match in re.finditer(r'write_bg\s+(\S+.bg)\s', command)]
 	return mergeBigWigCommands + mergeProfileCommand + mergeProfilesCommand + mergeWigglesCommand + mergeBedGraphsCommand
 
-################################################
-## LSF MultiJob
-################################################
-
-def makeMultiJobCommand(filename, count, dependency=None, mem=4):
-	name = os.path.basename(filename)
-	bsub_cmd = "bsub -q normal -R'select[mem>%i] rusage[mem=%i]' -M%i -J'%s[1-%s]'" % (1024*mem, 1024*mem, 1024*mem, name, count)
-	if dependency is not None:
-		bsub_cmd += " -w '%s[*]'" % dependency
-	output = "-o %s_%%I.out -e %s_%%I.err" % (filename, filename)
-	jobCmd = " ".join([bsub_cmd, output, 'LSFwrapper.sh', "' multiJob.py ", filename, "'"])
-	print jobCmd
-	return jobCmd
-
-def submitMultiJobToLSF(cmds, dependency=None, mem=4):
-	if len(cmds) == 0:
-		return
-
-	descr, filename = tempfile.mkstemp(dir='.')
-
-	fh = open(filename, 'w')
-	fh.write("\n".join(cmds))
-	fh.close()
-
-	multi_job_cmd = makeMultiJobCommand(filename, len(cmds), dependency, mem)
-	p = subprocess.Popen(multi_job_cmd, shell=True, stdout=subprocess.PIPE)
-	err = p.wait()
-	if err != 0:
-		print "Could not start job:"
-		print multi_job_cmd
-		sys.exit(err)
-
-	out, err = p.communicate()
-
-	for line in out.split('\n'):
-		match = re.match(r'Job <([0-9]*)>', line)
-		if match is not None:
-			return match.group(1), filename
-
-	raise RuntimeError
-
-################################################
-## File hygiene
-################################################
-
-def clean_temp_file(file):
-	os.remove(file)
-	for file2 in glob.glob("%s_[0-9]*.out" % file) + glob.glob("%s_[0-9]*.err" % file):
-		os.remove(file2)
-
-def clean_temp_files(files):
-	map(clean_temp_file, files)
 
 ################################################
 ## Main function
