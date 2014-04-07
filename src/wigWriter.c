@@ -170,26 +170,28 @@ void TeeWiggleIteratorPop(WiggleIterator * wi) {
 		wi->finish = iter->finish;
 		wi->value = iter->value;
 
-		int index = data->lastBlock->count;
-		data->lastBlock->chroms[index] =  iter->chrom;
-		data->lastBlock->starts[index] =  iter->start;
-		data->lastBlock->finishes[index] =  iter->finish;
-		data->lastBlock->values[index] =  iter->value;
-		if (++data->lastBlock->count >= BLOCK_LENGTH) {
-			// Communications
-			pthread_mutex_lock(&data->continue_mutex);
-			data->count++;
-			pthread_cond_signal(&data->continue_cond);
-			if (data->count > MAX_OUT_BLOCKS)
-				pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
-			pthread_mutex_unlock(&data->continue_mutex);
+		if (data->threadID) {
+			int index = data->lastBlock->count;
+			data->lastBlock->chroms[index] =  iter->chrom;
+			data->lastBlock->starts[index] =  iter->start;
+			data->lastBlock->finishes[index] =  iter->finish;
+			data->lastBlock->values[index] =  iter->value;
+			if (++data->lastBlock->count >= BLOCK_LENGTH) {
+				// Communications
+				pthread_mutex_lock(&data->continue_mutex);
+				data->count++;
+				pthread_cond_signal(&data->continue_cond);
+				if (data->count > MAX_OUT_BLOCKS)
+					pthread_cond_wait(&data->continue_cond, &data->continue_mutex);
+				pthread_mutex_unlock(&data->continue_mutex);
 
-			data->lastBlock->next = (BlockData*) calloc(1, sizeof(BlockData));
-			data->lastBlock = data->lastBlock->next;
-			data->lastBlock->bedGraph = data->bedGraph;
+				data->lastBlock->next = (BlockData*) calloc(1, sizeof(BlockData));
+				data->lastBlock = data->lastBlock->next;
+				data->lastBlock->bedGraph = data->bedGraph;
+			}
 		}
 		pop(iter);
-	} else {
+	} else if (data->threadID) {
 		pthread_mutex_lock(&data->continue_mutex);
 		data->count++;
 		data->done = true;
@@ -219,6 +221,9 @@ static void launchWriter(TeeWiggleIteratorData * data) {
 
 static void killWriter(TeeWiggleIteratorData * data) {
 	BlockData * block;
+	
+	if (!data->threadID)
+		return;
 
 	// Set trap
 	pthread_mutex_lock(&data->continue_mutex);
@@ -247,47 +252,50 @@ void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, i
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) wi->data;
 	killWriter(data);
 	fflush(data->outfile);
-	fseek(data->outfile, 0, SEEK_SET);
 	seek(data->iter, chrom, start, finish);
 	wi->done = false;
 	launchWriter(data);
 	pop(wi);
 }
 
-WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedGraph) {
+WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedGraph, bool holdFire) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
 	data->outfile = outfile;
 	data->bedGraph = bedGraph;
-	launchWriter(data);
+	// Hold fire means that you wait for the first seek before doing any writing
+	if (!holdFire)
+		launchWriter(data);
 
 	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
 }
 
-void toFile(WiggleIterator * wi, char * filename, bool bedGraph) {
+void toFile(WiggleIterator * wi, char * filename, bool bedGraph, bool holdFire) {
 	FILE * file = fopen(filename, "w");
 	if (!file) {
 		fprintf(stderr, "Could not open file %s\n", filename);
 		exit(1);
 	}
-	runWiggleIterator(TeeWiggleIterator(wi, file, bedGraph));
+	runWiggleIterator(TeeWiggleIterator(wi, file, bedGraph, holdFire));
 }
 
-void toStdout(WiggleIterator * wi, bool bedGraph) {
-	runWiggleIterator(TeeWiggleIterator(wi, stdout, bedGraph));
+void toStdout(WiggleIterator * wi, bool bedGraph, bool holdFire) {
+	runWiggleIterator(TeeWiggleIterator(wi, stdout, bedGraph, holdFire));
 }
 
 //////////////////////////////////////////////////////////
 // Paste Iterator
 //////////////////////////////////////////////////////////
 
-WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile) {
+WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile, bool holdFire) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = i;
 	data->infile = infile;
 	data->bedGraph = true;
 	data->outfile = outfile;
-	launchWriter(data);
+	// Hold fire means that you wait for the first seek before doing any writing
+	if (!holdFire)
+		launchWriter(data);
 
 	return newWiggleIterator(data, &TeeWiggleIteratorPop, NULL);
 }

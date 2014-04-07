@@ -89,14 +89,14 @@ WiggleIterator * TTestReduction(Multiset *);
 WiggleIterator * MWUReduction(Multiset *);
 
 // Output
-void toFile (WiggleIterator *, char *, bool);
-void toStdout (WiggleIterator *, bool);
-WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *, bool);
+void toFile (WiggleIterator *, char *, bool, bool);
+void toStdout (WiggleIterator *, bool, bool);
+WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *, bool, bool);
 void runWiggleIterator(WiggleIterator * );
 
 WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset);
 WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, WiggleIterator * dataset);
-WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile);
+WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile, bool);
 
 // Statistics
 // 	Unary

@@ -18,6 +18,8 @@
 // Local header
 #include "multiplexer.h"
 
+bool holdFire = false;
+
 void printHelp() {
 
 puts("WiggleTools");
@@ -204,12 +206,12 @@ static FILE * readOutputFilename() {
 
 static WiggleIterator * readTee() {
 	FILE * file = readOutputFilename();
-	return TeeWiggleIterator(readIterator(), file, false);
+	return TeeWiggleIterator(readIterator(), file, false, holdFire);
 }
 
 static WiggleIterator * readBGTee() {
 	FILE * file = readOutputFilename();
-	return TeeWiggleIterator(readIterator(), file, true);
+	return TeeWiggleIterator(readIterator(), file, true, holdFire);
 }
 
 static WiggleIterator * readLastIteratorToken(char * token) {
@@ -352,6 +354,7 @@ static WiggleIterator * readSeek() {
 	char * chrom = needNextToken();
 	int start = atoi(needNextToken());
 	int finish = atoi(needNextToken());
+	holdFire = true;
 
 	WiggleIterator * iter = readIterator();
 	seek(iter, chrom, start, finish);
@@ -572,7 +575,7 @@ static WiggleIterator * readApplyPaste() {
                exit(1);
        }
 
-       return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readLastIterator()), infile, outfile);
+       return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readLastIterator()), infile, outfile, false);
 }
 
 void rollYourOwn(int argc, char ** argv) {
@@ -599,6 +602,8 @@ void rollYourOwn(int argc, char ** argv) {
 		readProfile();
 	else if (strcmp(token, "profiles") == 0)
 		readProfiles();
+	else if (strcmp(token, "seek") == 0)
+		readSeek();
 	else
-		toStdout(readLastIteratorToken(token), false);	
+		toStdout(readLastIteratorToken(token), false, false);	
 }
