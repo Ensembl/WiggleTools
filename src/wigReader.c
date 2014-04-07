@@ -208,7 +208,7 @@ void WiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int fi
 	data->stop = finish;
 	data->chrom = chrom;
 
-	if (wi->done || strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
+	if (!data->file || strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
 		if (data->file)
 			fclose(data->file);
 		if (!(data->file = fopen(data->filename, "r"))) {
