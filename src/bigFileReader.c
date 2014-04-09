@@ -118,6 +118,10 @@ void BigFileReaderSeek(WiggleIterator * wi, const char * chrom, int start, int f
 	BigFileReaderData * data = (BigFileReaderData *) wi->data; 
 
 	killBufferedReader(data->bufferedReaderData);
+	if (data->bufferedReaderData) {
+		free(data->bufferedReaderData);
+		data->bufferedReaderData = NULL;
+	}
 	data->chrom = chrom;
 	data->stop = finish;
 	launchBufferedReader(&downloadBigFile, data, &(data->bufferedReaderData));

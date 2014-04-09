@@ -34,6 +34,7 @@ struct bufferedReaderData_st {
 	int blockCount;
 	int readIndex;
 	void * readerData;
+	bool killed;
 };
 
 static bool declareNewBlock(BufferedReaderData * data) {
@@ -132,6 +133,9 @@ void launchBufferedReader(void * (* readFileFunction)(void *), void * f_data, Bu
 }
 
 void killBufferedReader(BufferedReaderData * data) {
+	if (data->killed)
+		return;
+
 	pthread_mutex_lock(&data->count_mutex);
 	data->blockCount = -1;
 	// Send a signal in case the slave is waiting somewhere
@@ -150,6 +154,7 @@ void killBufferedReader(BufferedReaderData * data) {
 
 	data->lastBlockData = NULL;
 	data->blockCount = 0;
+	data->killed = true;
 }
 
 void BufferedReaderPop(WiggleIterator * wi, BufferedReaderData * data) {

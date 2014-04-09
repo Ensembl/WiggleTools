@@ -172,12 +172,16 @@ void BamReaderPop(WiggleIterator * wi) {
 }
 
 void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	BamReaderData * data = (BamReaderData *) wi->data;
 	char region[1000];
 
 	killBufferedReader(wi->data);
+	if (data->bufferedReaderData) {
+		free(data->bufferedReaderData);
+		data->bufferedReaderData = NULL;
+	}
 
 	sprintf(region, "%s:%i-%i", chrom, start, finish);
-	BamReaderData * data = (BamReaderData *) wi->data;
 	if (data->conf->reg)
 		free(data->conf->reg);
 	data->conf->reg = region;
