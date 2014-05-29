@@ -267,7 +267,7 @@ wiggletools overlaps test/fixedStep.bw test/variableStep.bw
 
 3 Multiplexed iterators
 
-However, sometimes you want to compute statistics across many iterators. In this case, the function is followed by an arbitrary list of iterators, separated by spaces. The list is terminated by a colon (:) separated by spaces from other words. At the very end of a command string, the semi-colon can be omitted (see example in the example for *sum*)
+However, sometimes you want to compute statistics across many iterators. In this case, the function is followed by an arbitrary list of iterators, separated by spaces. The list is terminated by a colon (:) separated by spaces from other words. At the very end of a command string, the colon can be omitted (see example in the example for *sum*)
 
 * sum
 
@@ -278,7 +278,7 @@ wiggletools sum test/fixedStep.bw test/variableStep.bw :
 wiggletools sum test/fixedStep.bw test/variableStep.bw
 ```
 
-However, the semi-colon can be necessary for the program string to be unambiguous, e.g.:
+However, the colon can be necessary for the program string to be unambiguous, e.g.:
 
 ```
 wiggletools diff sum test/fixedStep.bw test/variableStep.bw \
