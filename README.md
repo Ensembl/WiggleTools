@@ -46,7 +46,7 @@ Obtaining WiggleTools
 If you didnt download WiggleTools yet:
 
 ```
-git clone https://github.com/dzerbino/WiggleTools.git
+git clone https://github.com/Ensembl/WiggleTools.git
 ```
 
 Installing WiggleTools
