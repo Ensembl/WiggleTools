@@ -8,9 +8,10 @@ import subprocess
 import tempfile
 import os
 import os.path
+import json
 
-import parallelWiggleTools
-import multiJob
+#import parallelWiggleTools
+#import multiJob
 
 verbose = False
 
@@ -27,9 +28,9 @@ def normalise_spaces(string):
 def get_options():
 	parser = argparse.ArgumentParser(description='WiggleDB backend.')
 	parser.add_argument('--db', '-d', dest='db', help='Database file',required=True)
-	parser.add_argument('-a',dest='a',help='A SQL select command')
+	parser.add_argument('-a',dest='a',help='A set of SQL constraints',nargs='*')
 	parser.add_argument('-wa',dest='wa',help='WiggleTools command for A')
-	parser.add_argument('-b',dest='b',help='B SQL select command (optional)')
+	parser.add_argument('-b',dest='b',help='A second set of SQL constraints',nargs='*')
 	parser.add_argument('-wb',dest='wb',help='WiggleTools command for B')
 	parser.add_argument('--wiggletools','-w',dest='fun_merge',help='Wiggletools command')
 	parser.add_argument('--load','-l',dest='load',help='Datasets to load in database')
@@ -41,12 +42,13 @@ def get_options():
 	parser.add_argument('--remember',dest='remember',help='Preserve dataset from garbage collection', action='store_true')
 	parser.add_argument('--dry-run',dest='dry_run',help='Do not run the command, print wiggletools command', action='store_true')
 	parser.add_argument('--result','-r',dest='result',help='Return status or end result of job', type=int)
+	parser.add_argument('--attributes','-t',dest='attributes',help='Print JSON hash of attributes and values', action='store_true')
 	parser.add_argument('--verbose','-v',dest='verbose',help='Turn on status output',action='store_true')
 
 	options = parser.parse_args()
 	if options.load is not None:
 		assert not os.path.exists(options.db), "Cannot overwrite pre-existing database %s" % options.db
-	if all(X is None for X in [options.load, options.clean, options.result, options.load_assembly]) and not options.dump_cache and  not options.clear_cache:
+	if all(X is None for X in [options.load, options.clean, options.result, options.load_assembly]) and not options.dump_cache and  not options.clear_cache and not options.attributes:
 		assert options.a is not None, 'No dataset selection to run on'
 		assert options.wa is not None, 'No dataset transformation to run on'
 		assert options.assembly is not None, 'No assembly name specified'
@@ -114,8 +116,8 @@ def create_cache(cursor):
 def create_dataset_table(cursor, filename):
 	file = open(filename)
 	items = file.readline().strip().split('\t')
-	assert items[:3] == list(('location', 'annotation','assembly')), "Badly formed dataset table, please ensure the first three columns refer to location, annotation and assembly"
-	cursor.execute('\n'.join(['CREATE TABLE IF NOT EXISTS datasets ','(','location varchar(1000),annotation bit,'] + [",\n".join(['%s varchar(255)' % X for X in items[2:]])] + [')']))
+	assert items[:4] == list(('location','type','annotation','assembly')), "Badly formed dataset table, please ensure the first three columns refer to location, annotation and assembly"
+	cursor.execute('\n'.join(['CREATE TABLE IF NOT EXISTS datasets ','(','location varchar(1000),type varchar(100), annotation bit, assembly varchar(100),'] + [",\n".join(['%s varchar(255)' % X for X in items[4:]])] + [')']))
 
 	for line in file:
 		cursor.execute('INSERT INTO datasets VALUES (%s)' % ",".join("'%s'" % X for X in line.strip().split('\t')))
@@ -150,11 +152,33 @@ def clean_database(cursor, days):
 ## Search datasets
 ###########################################
 
-def get_dataset_locations(cursor, query, assembly):
-	res = cursor.execute('SELECT location FROM datasets WHERE %s AND assembly = \'%s\'' % (query, assembly)).fetchall()
-	assert len(res) > 0, 'Could not find any match to the query %s' % query
+def get_dataset_attributes_2(cursor):
+	return [X[1] for X in cursor.execute('PRAGMA table_info(datasets)').fetchall()]
+
+def get_dataset_attributes(cursor):
+	return list(set(get_dataset_attributes_2(cursor)) - set(["annotation","assembly","location","type"]))
+
+def get_attribute_values_2(cursor, attribute):
+	return [X[0] for X in cursor.execute('SELECT DISTINCT %s FROM datasets' % (attribute)).fetchall()]
+
+def get_attribute_values(cursor):
+	return dict((attribute, get_attribute_values_2(cursor, attribute)) for attribute in get_dataset_attributes(cursor))
+
+def attribute_selector(attribute, params):
+	return "( %s )" % " OR ".join("%s=:%s_%i" % (attribute,attribute,index) for index in range(len(params[attribute])))
+
+def denormalize_params(params):
+	return dict(("%s_%i" % (attribute, index),value) for attribute in params for (index, value) in enumerate(params[attribute]))
+
+def get_dataset_locations(cursor, params, assembly):
+	# Quick check that all the keys are purely alphanumeric to avoid MySQL injections
+	assert not any(re.match('\W', X) is not None for X in params)
+	params['assembly'] = [assembly]
+	query = " AND ".join(attribute_selector(X, params) for X in params)
+	res = cursor.execute('SELECT location FROM datasets WHERE ' + query, denormalize_params(params)).fetchall()
 	if verbose:
-		print 'Query: SELECT location FROM datasets WHERE %s AND assembly = \'%s\'' % (query, assembly)
+		query_txt = " AND ".join("%s=%s" % (X,params[X]) for X in params)
+		print 'Query: SELECT location FROM datasets WHERE ' + query_txt
 		print 'Found:\n' + "\n".join(X[0] for X in res)
 	return sorted(X[0] for X in res)
 
@@ -353,11 +377,13 @@ def make_normalised_form(fun_merge, fun_A, data_A, fun_B, data_B):
 def request_compute(cursor, options):
 	fun_A = options.wa 
 	data_A = get_dataset_locations(cursor, options.a, options.assembly)
+	assert len(data_A) > 0
 	cmd_A = " ".join([fun_A] + data_A)
 
 	if options.b is not None:
 		fun_B = options.wb
 		data_B = get_dataset_locations(cursor, options.b, options.assembly)
+		assert len(dataB) > 0
 	else:
 		data_B = None
 		fun_B = None
@@ -371,7 +397,7 @@ def request_compute(cursor, options):
 		return launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form)
 
 def query_result(cursor, jobID):
-	reports = cursor.execute('SELECT status, lsf_id FROM jobs WHERE job_id = \'%s\'' % jobID).fetchall()
+	reports = cursor.execute('SELECT status, lsf_id FROM jobs WHERE job_id =?', jobID).fetchall()
 	assert len(reports) == 1, 'Found %i status reports for job %s' % (len(reports), jobID)
 	status, lsfID = reports[0]
 	if status == 'DONE':
@@ -423,7 +449,13 @@ def main():
 		create_cache(cursor)
 		cursor.execute('DROP TABLE jobs')
 		create_job_table(cursor)
+	elif options.attributes:
+		print json.dumps(get_attribute_values(cursor))
 	else:
+		if options.a is not None:
+			options.a = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.a))
+		if options.b is not None:
+			options.b = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.b))
 		print request_compute(cursor, options)
 
 	options.conn.commit()
