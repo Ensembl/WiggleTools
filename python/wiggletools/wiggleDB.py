@@ -10,10 +10,12 @@ import os
 import os.path
 import json
 
-#import parallelWiggleTools
-#import multiJob
+import parallelWiggleTools
+import multiJob
 
 verbose = False
+# The batch system is either SGE or LSF:
+batchSystem = 'SGE'
 
 ###########################################
 ## Command line interface
@@ -44,11 +46,13 @@ def get_options():
 	parser.add_argument('--result','-r',dest='result',help='Return status or end result of job', type=int)
 	parser.add_argument('--attributes','-t',dest='attributes',help='Print JSON hash of attributes and values', action='store_true')
 	parser.add_argument('--verbose','-v',dest='verbose',help='Turn on status output',action='store_true')
+	parser.add_argument('--s3','-s',dest='s3',help='S3 bucket to copy into')
+	parser.add_argument('--annotations','-n',dest='annotations',help='Print list of annotation names', action='store_true')
 
 	options = parser.parse_args()
 	if options.load is not None:
 		assert not os.path.exists(options.db), "Cannot overwrite pre-existing database %s" % options.db
-	if all(X is None for X in [options.load, options.clean, options.result, options.load_assembly]) and not options.dump_cache and  not options.clear_cache and not options.attributes:
+	if all(X is None for X in [options.load, options.clean, options.result, options.load_assembly]) and not options.dump_cache and  not options.clear_cache and not options.attributes and not options.annotations:
 		assert options.a is not None, 'No dataset selection to run on'
 		assert options.wa is not None, 'No dataset transformation to run on'
 		assert options.assembly is not None, 'No assembly name specified'
@@ -164,6 +168,9 @@ def get_attribute_values_2(cursor, attribute):
 def get_attribute_values(cursor):
 	return dict((attribute, get_attribute_values_2(cursor, attribute)) for attribute in get_dataset_attributes(cursor))
 
+def get_annotations(cursor, assembly):
+	return [X[0] for X in cursor.execute('SELECT location FROM datasets WHERE assembly=? AND annotation', (assembly,)).fetchall()]
+
 def attribute_selector(attribute, params):
 	return "( %s )" % " OR ".join("%s=:%s_%i" % (attribute,attribute,index) for index in range(len(params[attribute])))
 
@@ -227,12 +234,12 @@ def get_precomputed_location(cursor, cmd):
 			print 'Did not find pre-computed file for query: %s' % cmd
 		return None
 
-def reuse_or_write_precomputed_location(cursor, cmd):
+def reuse_or_write_precomputed_location(cursor, cmd, working_directory):
 	pre_location = get_precomputed_location(cursor, cmd)
 	if pre_location is not None:
 		return pre_location, pre_location, False
 	else:
-		fh, destination = tempfile.mkstemp(suffix='.bw',dir='.')
+		fh, destination = tempfile.mkstemp(suffix='.bw',dir=working_directory)
 		return 'write %s %s' % (destination, cmd), destination, True
 
 def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form):
@@ -244,7 +251,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 	apply_paste = None
 
 	cmd_A = " ".join([fun_A] + data_A + [':'])
-	cmd_A2, destinationA, computeA = reuse_or_write_precomputed_location(cursor, cmd_A)
+	cmd_A2, destinationA, computeA = reuse_or_write_precomputed_location(cursor, cmd_A, options.working_directory)
 
 	merge_words = fun_merge.split(' ')
 
@@ -252,7 +259,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 		assert fun_merge is not None
 		if fun_B is not None:
 			cmd_B = " ".join([fun_B] + data_B + [':'])
-			cmd_B2, destinationB, computeB = reuse_or_write_precomputed_location(cursor, cmd_B)
+			cmd_B2, destinationB, computeB = reuse_or_write_precomputed_location(cursor, cmd_B, working_directory)
 		else:
 			cmd_B2 = " ".join(data_B)
 			computeB = False
@@ -265,16 +272,16 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 				cmds.append(cmd_B2)
 			width = merge_words[1]
 
-			fh, destination = tempfile.mkstemp(suffix='.txt',dir='.')
+			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
 			if fun_B is not None:
 		        	histogram = "histogram %s %s %s mult %s %s" % (destination, width, destinationA, destinationA, destinationB)
 			elif data_B is not None:
 				histogram = "histogram %s %s %s" % (destination, width, " ".join("mult %s %s" % (destinationA, X) for X in data_B))
 		elif merge_words[0] == 'profile':
-			fh, destination = tempfile.mkstemp(suffix='.txt',dir='.')
+			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
 			cmds = [" ".join(['profile', destination, merge_words[1], cmd_B2, cmd_A2])]
 		elif merge_words[0] == 'profiles':
-			fh, destination = tempfile.mkstemp(suffix='.txt',dir='.')
+			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
 			cmds = [" ".join(['profiles', destination, merge_words[1], cmd_B2, cmd_A2])]
 		elif merge_words[0] == 'apply_paste':
 			cmds = []
@@ -282,11 +289,11 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 				cmds = [cmd_A2]
 			if computeB:
 				cmds.append(cmd_B2)
-			fh, destination = tempfile.mkstemp(suffix='.txt',dir='.')
+			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
 			assert len(data_B) == 1, "Cannot apply_paste to multiplle files %s\n" % " ".join(data_B)
 			apply_paste = " ".join(['apply_paste', destination, 'AUC', data_B[0], destinationA])
 		else:
-			fh, destination = tempfile.mkstemp(suffix='.bw',dir='.')
+			fh, destination = tempfile.mkstemp(suffix='.bw',dir=options.working_directory)
 			cmds = [" ".join(['write', destination, fun_merge, cmd_A2, cmd_B2])]
 	else:
 		if merge_words[0] == 'histogram':
@@ -295,7 +302,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 			else:
 				cmds = []
 			width = merge_words[1]
-			fh, destination = tempfile.mkstemp(suffix='.txt',dir='.')
+			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
 			histogram = "histogram %s %s %s" % (destination, width, destinationA)
 		else:
 			cmds = [cmd_A2]
@@ -336,17 +343,21 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',0,\'%s\',\'0\',date(\'now\'),\'%s\')' % (jobID, cmd_B, destinationB))
 	options.conn.commit()
 
+	finishCmd = 'wiggleDB_finish.py --db %s --jobID %s --temp %s' % (options.db, jobID, " ".join(files))
 	if histogram is not None:
 		if fun_B is not None:
-			lsfID2, temp = multiJob.submit(['wiggleDB_finish.py --db %s --jobID %s --temp %s --histogram \'%s\' --labels Overall Regions' % (options.db, jobID, " ".join(files), histogram)], dependency=lsfID)
+			finishCmd += ' --histogram \'%s\' --labels Overall Regions' % (histogram)
 		elif data_B is not None:
-			lsfID2, temp = multiJob.submit(['wiggleDB_finish.py --db %s --jobID %s --temp %s --histogram \'%s\' --labels %s' % (options.db, jobID, " ".join(files), histogram, " ".join(".".join(os.path.basename(X).split(".")[:-1]) for X in data_B))], dependency=lsfID)
+			finishCmd += ' --histogram \'%s\' --labels %s' % (histogram, " ".join(".".join(os.path.basename(X).split(".")[:-1])))
 		else:
-			lsfID2, temp = multiJob.submit(['wiggleDB_finish.py --db %s --jobID %s --temp %s --histogram \'%s\' --labels Overall' % (options.db, jobID, " ".join(files), histogram)], dependency=lsfID)
+			finishCmd += ' --histogram \'%s\' --labels Overall' % (histogram)
 	elif apply_paste is not None:
-		lsfID2, temp = multiJob.submit(['wiggleDB_finish.py --db %s --jobID %s --temp %s --apply_paste \'%s\'' % (options.db, jobID, " ".join(files), apply_paste)], dependency=lsfID)
-	else:
-		lsfID2, temp = multiJob.submit(['wiggleDB_finish.py --db %s --jobID %s --temp %s' % (options.db, jobID, " ".join(files))], dependency=lsfID)
+		finishCmd += ' --apply_paste \'%s\'' % (apply_paste)
+
+	if options.s3 is not None:
+		finishCmd += ' --s3 ' + options.s3
+
+	lsfID2, temp = multiJob.submit(finishCmd, batchSystem=batchSystem, dependency=lsfID)
 
 	cursor.execute('UPDATE jobs SET lsf_id2=\'%s\',temp=\'%s\' WHERE job_id=\'%s\'' % (lsfID2, temp, jobID))
 	return jobID
@@ -397,12 +408,17 @@ def request_compute(cursor, options):
 		return launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form)
 
 def query_result(cursor, jobID):
-	reports = cursor.execute('SELECT status, lsf_id FROM jobs WHERE job_id =?', jobID).fetchall()
-	assert len(reports) == 1, 'Found %i status reports for job %s' % (len(reports), jobID)
+	reports = cursor.execute('SELECT status, lsf_id FROM jobs WHERE job_id =?', (jobID,)).fetchall()
+
+	if len(reports) == 0:
+		return "UNKNOWN", jobID
+	else:
+		assert len(reports) == 1, 'Found %i status reports for job %s' % (len(reports), jobID)
+
 	status, lsfID = reports[0]
 	if status == 'DONE':
 		return 'DONE', get_job_location_2(cursor, jobID)
-	else:
+	elif batchSystem == 'LSF':
 		p = subprocess.Popen(['bjobs','-noheader',str(lsfID)], stdout=subprocess.PIPE)
 		(stdout, stderr) = p.communicate()
 		assert p.returncode == 0, 'Error when polling LSF job %i' % lsfID
@@ -412,6 +428,36 @@ def query_result(cursor, jobID):
 			if len(items) > 2:
 				values.append(items[2])
 		return "WAITING", " ".join(values)
+	elif batchSystem == 'SGE':
+		p = subprocess.Popen(['qstat','-j',str(lsfID)], stdout=subprocess.PIPE)
+		(stdout, stderr) = p.communicate()
+		if p.returncode == 0:
+			count = 0
+			for line in stdout.split('\n'):
+				items = re.split('\W*', line)
+				if items[0] == 'usage':
+					count += 1
+			values = '%i RUNNING' % (count)
+		else:
+			p = subprocess.Popen(['qacct','-j',str(lsfID)], stdout=subprocess.PIPE)
+			(stdout, stderr) = p.communicate()
+			assert p.returncode == 0, 'Error when polling SGE job %i' % lsfID
+			values = []
+			failedTask = False
+			for line in stdout.split('\n'):
+				items = re.split('\W*', line)
+				if items[0] == 'failed' and items[1] != '0':
+					values.append(" ".join(items[1:]))
+					failedTask = True
+				elif items[0] == 'exit_status': 
+					if failedTask:
+						failedTaskID = False
+					else:
+						values.append(items[1])
+			  
+		return "WAITING", " ".join(values)
+	else:
+		raise NameError
 
 ###########################################
 ## When a job finishes:
@@ -451,6 +497,8 @@ def main():
 		create_job_table(cursor)
 	elif options.attributes:
 		print json.dumps(get_attribute_values(cursor))
+	elif options.annotations:
+		print json.dumps(get_annotations(cursor, options.assembly))
 	else:
 		if options.a is not None:
 			options.a = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.a))

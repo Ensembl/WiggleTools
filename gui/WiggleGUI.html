@@ -244,15 +244,31 @@
 		  </table>
                 </td>
 		<td>
-		  <br> 
-		  <div style="border:2px solid gray;border-radius:5px;padding:10px;height:100%">
-		  1B. Select annotations:
-		  <div class="panel-group" id="ref">
-                    <!-- This is where reference datasets go -->
-		  </div>
-		  <i id="count">
-	            <!-- This is where the count goes -->
-                  </i>
+		  <table id="references" width="100%" style="layout:fixed">
+		    <tr>
+                      <td>
+			<br> 
+			<div style="border:2px solid gray;border-radius:5px;padding:10px;height:100%">
+			1B. Select annotations:
+			<div class="panel-group">
+			  <select id="refs" multiple>
+			    <!-- This is where the references go -->
+			  </select>
+			</div>
+                      </td>
+                    </tr>
+                    <tr>
+		      <td>
+			<br>
+			<div style="border:2px solid gray;border-radius:5px;padding:10px">
+			  2B. Select operation:
+			  <select class='form-control' id="reference_reduction">
+			    <!-- This is where the reduction options go -->
+			  </select>
+			</div>
+		      </td>
+		    </tr>
+                  </table>
 		</td>
               </tr>
 	      <tr>
@@ -261,7 +277,7 @@
 		  <div style="border:2px solid gray;border-radius:5px;padding:10px">
 		    3. Select annotation:
 		    <center>
-		      <select class='form-control' id="comparison">
+		      <select class='form-control' id="annotation">
 			<!-- This is where the comparison options go -->
 		      </select>
 		    </center>
@@ -364,6 +380,24 @@
 	</div>
       </div>
 
+      <!-- Unknown Modal -->
+      <div class="modal fade" id="Unknown_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+	  <div class="modal-content">
+	    <div class="modal-header">
+	      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+	      <h4 class="modal-title" id="myModalLabel">Job unknown</h4>
+	    </div>
+	    <div class="modal-body">
+	      Nope, I've never heard of that job, sorry...
+	    </div>
+	    <div class="modal-footer">
+	      <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+	    </div>
+	  </div>
+	</div>
+      </div>
+
       <!-- Job Sent Modal -->
       <div class="modal fade" id="JobSent_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
 	<div class="modal-dialog">
@@ -373,7 +407,7 @@
 	      <h4 class="modal-title" id="myModalLabel">It's off!</h4>
 	    </div>
 	    <div class="modal-body">
-	      Your job has been registered, and issued ticket #<div id="job_id"></div>.
+	      Your job has been registered, and issued ticket #<div id="job_id"></div>
 	    </div>
 	    <div class="modal-footer">
 	      <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
@@ -393,16 +427,16 @@
     <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
-    <link href="justified-nav.css" rel="stylesheet">
+    <link href="css/justified-nav.css" rel="stylesheet">
 
     <!-- Latest compiled and minified JavaScript -->
-    <script src="jquery-1.11.0.min.js"></script>
+    <script src="libs/jquery-1.11.1.min.js"></script>
 
     <!-- Bootstrap core JavaScript -->
     <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.js"></script>
 
     <!-- Bootstrap multiselect -->
-    <script src="bootstrap-multiselect.js"></script>
+    <script src="libs/bootstrap-multiselect.js"></script>
 
     <!-- The actual script -->
     <script src="WiggleGUI.js"></script>
