@@ -2,8 +2,8 @@
 // Global configuration
 //////////////////////////////////////////
 
-var CGI_URL = "http://localhost/cgi-bin/wiggleCGI.py?";
-var attribute_values_file = "attribute_values.json";
+var CGI_URL = "http://ec2-79-125-52-174.eu-west-1.compute.amazonaws.com/cgi-bin/wiggleCGI.py?";
+var attribute_values_file = "datasets.attribs.json";
 var assembly = "GRCh37";
 
 //////////////////////////////////////////
@@ -13,9 +13,41 @@ var assembly = "GRCh37";
 $(document).ready(
   function () {
     create_all_selectors();
+    add_annotations();
     define_buttons();
   }
 )
+
+//////////////////////////////////////////
+// Global variables
+//////////////////////////////////////////
+
+var selection_panels = [
+  "choose",
+  "chooseB",
+  "chooseA2",
+  "chooseA"
+];
+
+var panel_letters = {
+  "choose":"A",
+  "chooseB":"B",
+  "chooseA2":"A",
+  "chooseA":"A"
+};
+
+var attribute_values = null;
+
+var reduction_opts = {
+  "signal": {"Sum":"sum","Mininum":"min","Maximum":"max","Mean":"mean","Median":"median"},
+  "regions": {"Intersection":"unit mult", "Union":"unit sum"}
+};
+
+var comparison_opts = {
+  "regions": {"Intersection":"unit mult", "Union":"unit sum", "Difference": "unit diff"},
+  "signal": {"Difference":"diff", "Ratio":"ratio", "Log Ratio":"log ratio", "T-test":"t-test", "Wilcoxon rank test":"wilcoxon"},
+  "mixed": {"Distribution":"hist", "Profile curve":"profile", "Profile matrix":"profiles"}
+};
 
 //////////////////////////////////////////
 // Creating multiselects 
@@ -32,17 +64,13 @@ function all_selects_are_used(panel) {
   return res;
 }
 
-var selection_panels = {
-  "choose":"A",
-  "chooseB":"B",
-  "chooseA2":"A",
-  "chooseA":"A"
-};
-
-var attribute_values = null;
-
 function create_multiselect(container, attribute, panel) {
-  var multiselect2 = $("<select>").addClass("multiselect").attr("multiple","multiple").appendTo(container).attr("attribute",selection_panels[panel.attr("id")]+ "_" + attribute);
+  var multiselect2 = $("<select>")
+    .addClass("multiselect")
+    .attr("multiple","multiple")
+    .appendTo(container)
+    .attr("attribute",panel_letters[panel.attr("id")]+ "_" + attribute);
+
   if (attribute in attribute_values) {
     attribute_values[attribute].map(function(value) {add_value_to_multiselect(value, multiselect2);});
   }
@@ -105,8 +133,26 @@ function create_selection_div(panel) {
 function create_all_selectors() {
   jQuery.getJSON(attribute_values_file).done(function(values) {
     attribute_values = values;
-    Object.keys(selection_panels).map(function (id) {create_selection_div($("#"+id));});
+    selection_panels.map(function (id) {create_selection_div($("#"+id));});
   }).fail(catch_JSON_error);
+}
+
+//////////////////////////////////////////
+// Creating the reference selectors 
+//////////////////////////////////////////
+
+function add_annotation(select, annotation) {
+  $("<option>").text(name).appendTo(select);
+}
+
+function add_annotations_2(data) {
+  var select = $('#refs');
+  data['annotations'].map(function (annotation) {add_annotation(select, annotation)});
+}
+
+function add_annotations() {
+  $.getJSON(CGI_URL + "assembly=" + assembly + "&annotations=1").done(add_annotations_2).fail(catch_JSON_error);
+  fill_select($('#reference_reduction'), reduction_opts['regions']);
 }
 
 //////////////////////////////////////////
@@ -126,10 +172,14 @@ function  get_panel_type(panel) {
   return panel.find('#type').find('.active').find('input').attr('value');
 }
 
+function get_panel_letter(panel) {
+  return panel_letters[panel.attr('id')];
+}
+
 function panel_query(panel) {
   list = []
   panel.find(".multiselect").each(function(i,value) {add_multi_select_query(list, $(value));});
-  return list.join("&") + "&type=" + get_panel_type(panel);
+  return list.join("&") + "&" + get_panel_letter(panel) + "_type=" + get_panel_type(panel);
 }
 
 //////////////////////////////////////////
@@ -137,8 +187,9 @@ function panel_query(panel) {
 //////////////////////////////////////////
 
 function update_panel_count(panel) {
-  $.getJSON(CGI_URL + "count=true&assembly=" + assembly + "&" + panel_query(panel)).done(
-   function(data) {
+  url = CGI_URL + "count=true&assembly=" + assembly + "&" + panel_query(panel);
+  $.getJSON(url).done(
+   function(data, textStatus, jqXHR) {
      panel.find("#count").text(data["count"] + " elements selected");
    }
   ).fail(catch_JSON_error);
@@ -147,11 +198,6 @@ function update_panel_count(panel) {
 //////////////////////////////////////////
 // Updating panel reduction select 
 //////////////////////////////////////////
-
-var reduction_opts = {
-  "signal": {"Sum":"sum","Mininum":"min","Maximum":"max","Mean":"mean","Median":"median"},
-  "regions": {"Intersection":"unit mult", "Union":"unit sum"}
-};
 
 function fill_select(select, options) {
   select.children().remove();
@@ -166,12 +212,6 @@ function update_panel_reduction(panel) {
 // Updating tab comparison select 
 //////////////////////////////////////////
 
-var comparison_opts = {
-  "regions": {"Intersection":"unit mult", "Union":"unit sum", "Difference": "unit diff"},
-  "signal": {"Difference":"diff", "Ratio":"ratio", "Log Ratio":"log ratio", "T-test":"t-test", "Wilcoxon rank test":"wilcoxon"},
-  "mixed": {"Distribution":"hist", "Profile curve":"profile", "Profile matrix":"profiles"}
-};
-
 function update_tab_comparison(tab) {
   if (tab.attr('id') != 'compare' && tab.attr('id') != 'annotate') {
     return;
@@ -179,6 +219,13 @@ function update_tab_comparison(tab) {
   var count = 0;  
   tab.find("[id*=choose]").each(function (index, panel) {if (get_panel_type($(panel)) == "regions") {count += 1;}});
   var select = tab.find("#comparison");
+
+  // Sneaky way of detecting that we are in annotation tab, not comparison tab
+  if (select.length == 0) {
+    select = tab.find("#annotation");
+    count += 1;
+  }
+
   if (count == 2) {
     fill_select(select, comparison_opts["regions"]);
   } else if (count == 1) {
@@ -216,6 +263,8 @@ function report_result(data) {
     modal.modal();
   } else if (data["status"] == "FAIL") {
     $('#Failure_modal').modal();	
+  } else if (data["status"] == "UNKNOWN") {
+    $('#Unknown_modal').modal();	
   } else {
     $('#Waiting_modal').modal();	
   }
@@ -234,25 +283,40 @@ function return_ticket(data) {
 
 // Send job to server 
 function submit_query(query) {
-  $.getJSON(CGI_URL + query).done(return_ticket).fail(catch_JSON_error);
+  $.getJSON(CGI_URL + "assembly=" + assembly + "&" + query).done(return_ticket).fail(catch_JSON_error);
 }
 
 // Request summary
 function summary() {
-  submit_query(panel_query('choose') + '&wa=' + $('#wa').val()); 
+  submit_query(panel_query($('#choose')) + '&wa=' + $('#choose').find('#reduction').val()); 
 }
 
 // Request comparison
 function comparison() {
-  submit_query([panel_query('chooseA'),panel_query('chooseB'),'wa=',$('#wa2').val(),'wb=',$('#wb2'),'w=',$('w2')].join("&")); 
+  submit_query(
+    [ 
+      panel_query($('#chooseA')),
+      panel_query($('#chooseB')),
+      'wa='+$('#chooseA').find('#reduction').val(),
+      'wb='+$('#chooseB').find('#reduction').val(),
+      'w='+$('#comparison').val()
+    ].join("&")
+  ); 
 }
 
 // Request annotation
 function annotation() {
-  submit_query([panel_query('chooseA'),annotation_query(),'wa=',$('#wa3').val(),'wb=',$('#wb3'),'w=',$('w3')].join("&")); 
+  submit_query(
+    [ 
+      panel_query($('#chooseA2')),
+      $('#refs').val(),
+      'wa='+$('#chooseA').find('#reduction').val(),
+      'w='+$('#annotation').val()
+    ].join("&")
+  ); 
 }
 
 // JSON error handler
 function catch_JSON_error(jqXHR, textStatus, errorThrown) {
-  console.log('JSON failed: ' + textStatus + ":" + errorThrown);
+  console.log('JSON failed: ' + textStatus + ":" + errorThrown + ":" + jqXHR.responseText + ":" + jqXHR.getAllResponseHeaders());
 }
