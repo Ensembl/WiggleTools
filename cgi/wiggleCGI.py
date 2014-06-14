@@ -5,10 +5,13 @@ database_location = "/data/wiggletools/datasets.sqlite3"
 # Empty directory to catch CGI log files
 logdir = '/data/wiggletools/log/'
 # Directory to catch results files
-working_directory = '/data/tmp/'
+working_directory = '/data/wiggletools/tmp/'
 # S3 references
 s3_bucket = 'wiggletools-data'
 s3_region = 'eu-west-1'
+
+# Debugging flag:
+DEBUG = True
 
 import sys
 import cgi
@@ -30,6 +33,9 @@ class WiggleDBOptions(object):
 		self.wb = None
 		self.a = None
 		self.b = None
+		self.dry_run = DEBUG
+		self.remember = False
+		self.db = database_location
 
 def main():
 	print "Content-Type: application/json"
@@ -71,17 +77,23 @@ def main():
 			else:
 				options.wb = None
 
-			if 'merge' in form:
-				options.fun_merge = form['merge'].value
+			if 'w' in form:
+				options.fun_merge = form['w'].value
 			else:
 				options.fun_merge = None
 
 			options.a = dict((X[2:], form.getlist(X)) for X in form if X[:2] == "A_")
 			options.b = dict((X[2:], form.getlist(X)) for X in form if X[:2] == "B_")
+			if len(options.b.keys()) == 0:
+				options.b = None
+
+			if options.a['type'] == 'regions' and options.b['type'] == 'signal':
+				tmp = options.b
+				options.b = options.a
+				options.a = tmp
 			
-			print json.dumps({'ID':1})
-			#jobID = wiggletools.wiggleDB.request_compute(cursor, options)
-			#print json.dumps({'ID':jobID, 'options':options})
+			jobID = wiggletools.wiggleDB.request_compute(cursor, options)
+			print json.dumps({'ID':jobID})
 
 		else:
 			print json.dumps("No params, no output")
