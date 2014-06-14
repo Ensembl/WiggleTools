@@ -2,7 +2,7 @@
 // Global configuration
 //////////////////////////////////////////
 
-var CGI_URL = "http://ec2-79-125-52-174.eu-west-1.compute.amazonaws.com/cgi-bin/wiggleCGI.py?";
+var CGI_URL = "http://" + location.hostname + "/cgi-bin/wiggleCGI.py?";
 var attribute_values_file = "datasets.attribs.json";
 var assembly = "GRCh37";
 
@@ -46,7 +46,7 @@ var reduction_opts = {
 var comparison_opts = {
   "regions": {"Intersection":"unit mult", "Union":"unit sum", "Difference": "unit diff"},
   "signal": {"Difference":"diff", "Ratio":"ratio", "Log Ratio":"log ratio", "T-test":"t-test", "Wilcoxon rank test":"wilcoxon"},
-  "mixed": {"Distribution":"hist", "Profile curve":"profile", "Profile matrix":"profiles"}
+  "mixed": {"Distribution":"histogram 100", "Profile curve":"profile 100", "Profile matrix":"profiles 100"}
 };
 
 //////////////////////////////////////////
@@ -142,7 +142,7 @@ function create_all_selectors() {
 //////////////////////////////////////////
 
 function add_annotation(select, annotation) {
-  $("<option>").text(name).appendTo(select);
+  $("<option>").text(annotation).appendTo(select);
 }
 
 function add_annotations_2(data) {
@@ -182,6 +182,23 @@ function panel_query(panel) {
   return list.join("&") + "&" + get_panel_letter(panel) + "_type=" + get_panel_type(panel);
 }
 
+///////////////////////////////////////////
+// Panel reduction
+///////////////////////////////////////////
+
+function panel_reduction(panel) {
+  if (panel.find('#reduction').prop('disabled')) {
+    return "";
+  }
+  res = panel.find('#reduction').val();
+  thresholds = panel.find('#threshold_val');
+  if (thresholds.length == 0 || thresholds.val() == "") {
+    return res;	
+  } else {
+    return "gt " + thresholds.val() + " " + res;
+  }
+}
+
 //////////////////////////////////////////
 // Computing panel selection count
 //////////////////////////////////////////
@@ -204,20 +221,44 @@ function fill_select(select, options) {
   Object.keys(options).map(function(opt) {$("<option>").attr("value",options[opt]).text(opt).appendTo(select);});
 }
 
+function add_threshold_selector(div) {
+  var threshold = $('<div>').attr('id','threshold').text("Optional: Select regions above threshold : ").appendTo(div);
+  $("<input>").attr('type','text').attr('id','threshold_val').change(update_my_panel).appendTo(threshold);
+}
+
 function update_panel_reduction(panel) {
-  fill_select(panel.find('#reduction'), reduction_opts[get_panel_type(panel)])
+  var type = get_panel_type(panel);
+  var reduction = panel.find('#reduction');
+  fill_select(reduction, reduction_opts[type])
+  if (type == 'signal') {
+    if (reduction.parent().find('#threshold').length == 0) {
+      add_threshold_selector(reduction.parent());
+    }
+  } else {
+    reduction.parent().find('#threshold').remove();
+  }
 }
 
 //////////////////////////////////////////
 // Updating tab comparison select 
 //////////////////////////////////////////
 
+function add_width_selector(div) {
+  var width = $('<div>').attr('id','width').text("Resolution (points) : ").appendTo(div);
+  $("<input>").attr('type','text').attr('id','width_val').attr('value','100').appendTo(width);
+}
+
 function update_tab_comparison(tab) {
   if (tab.attr('id') != 'compare' && tab.attr('id') != 'annotate') {
     return;
   } 
   var count = 0;  
-  tab.find("[id*=choose]").each(function (index, panel) {if (get_panel_type($(panel)) == "regions") {count += 1;}});
+  tab.find("[id*=choose]").each(function (index, panel) {
+    if (get_panel_type($(panel)) == "regions" 
+        || $(panel).find('#threshold_val').val() != "") {
+      count += 1;
+    }
+  });
   var select = tab.find("#comparison");
 
   // Sneaky way of detecting that we are in annotation tab, not comparison tab
@@ -226,12 +267,36 @@ function update_tab_comparison(tab) {
     count += 1;
   }
 
+  var div = select.parent().parent();
+
   if (count == 2) {
     fill_select(select, comparison_opts["regions"]);
+    div.find("#width").remove();
+    div.find("#threshold").remove();
   } else if (count == 1) {
     fill_select(select, comparison_opts["mixed"]);
+    if (div.find("#width").length == 0) {
+      add_width_selector(div);
+    }
+    div.find("#threshold").remove();
   } else {
     fill_select(select, comparison_opts["signal"]);
+    div.find("#width").remove();
+    add_threshold_selector(div);
+  }
+  
+}
+
+//////////////////////////////////////////
+// Update panels
+//////////////////////////////////////////
+
+function update_panels() {
+  var val = $(this).val();
+  if (val != 't-test' && val != 'wilcoxon') {
+    $(this).parents('.tab-pane').find('#reduction').prop('disabled', false);
+  } else {
+    $(this).parents('.tab-pane').find('#reduction').prop('disabled', true);
   }
 }
 
@@ -240,6 +305,8 @@ function update_tab_comparison(tab) {
 //////////////////////////////////////////
 
 function define_buttons() {
+  $('#annotation').change(update_panels);
+  $('#comparison').change(update_panels);
   $('#summary_button').click(summary);
   $('#comparison_button').click(comparison);
   $('#annotation_button').click(annotation);
@@ -250,6 +317,9 @@ function define_buttons() {
 function update_my_panel() {
   $(this).addClass('active');
   var panel = $(this).parents('[id*="choose"]');
+  if (panel.length == 0) {
+    return;
+  }
   var X = 1;
   update_panel(panel);
   $(this).removeClass('active');
@@ -293,25 +363,43 @@ function summary() {
 
 // Request comparison
 function comparison() {
+  var comparison = $('#comparison').val();
+  var width = $('#comparison').parent().parent().find('#width_val');
+  if (width.length) {
+    comparison = comparison + " " + width.val();
+  }
+  var threshold = $('#comparison').parent().parent().find('#threshold_val');
+  if (threshold.length) {
+    comparison = "gt " + threshold.val() + " " + comparison;
+  }
+  var panelA = $('#chooseA');
+  var panelB = $('#chooseB');
   submit_query(
     [ 
-      panel_query($('#chooseA')),
-      panel_query($('#chooseB')),
-      'wa='+$('#chooseA').find('#reduction').val(),
-      'wb='+$('#chooseB').find('#reduction').val(),
-      'w='+$('#comparison').val()
+      panel_query(panelA),
+      panel_query(panelB),
+      'wa='+panel_reduction(panelA),
+      'wb='+panel_reduction(panelB),
+      'w='+comparison
     ].join("&")
   ); 
 }
 
 // Request annotation
 function annotation() {
+  var comparison = $('#annoation').val();
+  var width = $('#annotation').parent().parent().find('#width_val')
+  if (width.length) {
+    comparison = comparison + " " + width.val()
+  }
+  var panelA = $('#chooseA');
   submit_query(
     [ 
-      panel_query($('#chooseA2')),
-      $('#refs').val(),
-      'wa='+$('#chooseA').find('#reduction').val(),
-      'w='+$('#annotation').val()
+      panel_query(panelA),
+      $('#refs').val().map(function (str) {return "B_name="+str}).join("&"),
+      'B_type=regions',
+      'wa='+panel_reduction(panelA),
+      'w='+comparison
     ].join("&")
   ); 
 }

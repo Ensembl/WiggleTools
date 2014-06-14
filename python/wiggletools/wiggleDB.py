@@ -46,6 +46,7 @@ def get_options():
 	parser.add_argument('--result','-r',dest='result',help='Return status or end result of job', type=int)
 	parser.add_argument('--attributes','-t',dest='attributes',help='Print JSON hash of attributes and values', action='store_true')
 	parser.add_argument('--verbose','-v',dest='verbose',help='Turn on status output',action='store_true')
+	parser.add_argument('--debug','-g',dest='verbose',help='Turn on status output',action='store_true')
 	parser.add_argument('--s3','-s',dest='s3',help='S3 bucket to copy into')
 	parser.add_argument('--annotations','-n',dest='annotations',help='Print list of annotation names', action='store_true')
 
@@ -120,8 +121,8 @@ def create_cache(cursor):
 def create_dataset_table(cursor, filename):
 	file = open(filename)
 	items = file.readline().strip().split('\t')
-	assert items[:4] == list(('location','type','annotation','assembly')), "Badly formed dataset table, please ensure the first three columns refer to location, annotation and assembly"
-	cursor.execute('\n'.join(['CREATE TABLE IF NOT EXISTS datasets ','(','location varchar(1000),type varchar(100), annotation bit, assembly varchar(100),'] + [",\n".join(['%s varchar(255)' % X for X in items[4:]])] + [')']))
+	assert items[:4] == list(('location','name','type','annotation','assembly')), "Badly formed dataset table, please ensure the first three columns refer to location, annotation and assembly"
+	cursor.execute('\n'.join(['CREATE TABLE IF NOT EXISTS datasets ','(','location varchar(1000),name varchar(100), type varchar(100), annotation bit, assembly varchar(100),'] + [",\n".join(['%s varchar(255)' % X for X in items[4:]])] + [')']))
 
 	for line in file:
 		cursor.execute('INSERT INTO datasets VALUES (%s)' % ",".join("'%s'" % X for X in line.strip().split('\t')))
@@ -160,7 +161,7 @@ def get_dataset_attributes_2(cursor):
 	return [X[1] for X in cursor.execute('PRAGMA table_info(datasets)').fetchall()]
 
 def get_dataset_attributes(cursor):
-	return list(set(get_dataset_attributes_2(cursor)) - set(["annotation","assembly","location","type"]))
+	return list(set(get_dataset_attributes_2(cursor)) - set(["annotation","name","assembly","location","type"]))
 
 def get_attribute_values_2(cursor, attribute):
 	return [X[0] for X in cursor.execute('SELECT DISTINCT %s FROM datasets' % (attribute)).fetchall()]
@@ -169,7 +170,7 @@ def get_attribute_values(cursor):
 	return dict((attribute, get_attribute_values_2(cursor, attribute)) for attribute in get_dataset_attributes(cursor))
 
 def get_annotations(cursor, assembly):
-	return [X[0] for X in cursor.execute('SELECT location FROM datasets WHERE assembly=? AND annotation', (assembly,)).fetchall()]
+	return [X[0] for X in cursor.execute('SELECT name FROM datasets WHERE assembly=? AND annotation', (assembly,)).fetchall()]
 
 def attribute_selector(attribute, params):
 	return "( %s )" % " OR ".join("%s=:%s_%i" % (attribute,attribute,index) for index in range(len(params[attribute])))
@@ -253,13 +254,13 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 	cmd_A = " ".join([fun_A] + data_A + [':'])
 	cmd_A2, destinationA, computeA = reuse_or_write_precomputed_location(cursor, cmd_A, options.working_directory)
 
-	merge_words = fun_merge.split(' ')
-
 	if data_B is not None:
+		merge_words = fun_merge.split(' ')
+
 		assert fun_merge is not None
 		if fun_B is not None:
 			cmd_B = " ".join([fun_B] + data_B + [':'])
-			cmd_B2, destinationB, computeB = reuse_or_write_precomputed_location(cursor, cmd_B, working_directory)
+			cmd_B2, destinationB, computeB = reuse_or_write_precomputed_location(cursor, cmd_B, options.working_directory)
 		else:
 			cmd_B2 = " ".join(data_B)
 			computeB = False
@@ -296,18 +297,10 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 			fh, destination = tempfile.mkstemp(suffix='.bw',dir=options.working_directory)
 			cmds = [" ".join(['write', destination, fun_merge, cmd_A2, cmd_B2])]
 	else:
-		if merge_words[0] == 'histogram':
-			if destinationA is not None:
-				cmds = [cmd_A2]
-			else:
-				cmds = []
-			width = merge_words[1]
-			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
-			histogram = "histogram %s %s %s" % (destination, width, destinationA)
-		else:
-			cmds = [cmd_A2]
-			destination = destinationA
-			destinationA = None
+		computeB = False
+		cmds = [cmd_A2]
+		destination = destinationA
+		destinationA = None
 
 	if verbose:
 		print "PARALLEL CMDS : " + "\n".join(cmds)
@@ -316,32 +309,21 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 		if apply_paste is not None:
 			print "APPLY PASTE : " + apply_paste
 
-	if options.dry_run:
-		return "\n".join(cmds)
-
-	if verbose:
-		print 'Running parallelWiggleTools with command(s): ' + "\n".join(cmds)
-
 	chrom_sizes = get_chrom_sizes(cursor, options.assembly)
-	if len(cmds) > 0:
-		lsfID, files = parallelWiggleTools.run(cmds, chrom_sizes)
-	else:
-		
-		lsfID = 0;
-		files = []
-
-	if lsfID is not None:
+	if len(cmds) > 0 and not options.dry_run:
+		lsfID, files = parallelWiggleTools.run(cmds, chrom_sizes, batchSystem=batchSystem)
 		cursor.execute('INSERT INTO jobs (lsf_id, status) VALUES (%i, "LAUNCHED")' % int(lsfID))
+		jobID = cursor.execute('SELECT LAST_INSERT_ROWID()').fetchall()[0][0]
+		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',1,\'%s\',\'%i\',date(\'now\'),\'%s\')' % (jobID, normalised_form, int(options.remember), destination))
+		if computeA: 
+			cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',0,\'%s\',\'0\',date(\'now\'),\'%s\')' % (jobID, cmd_A, destinationA))
+		if computeB:
+			cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',0,\'%s\',\'0\',date(\'now\'),\'%s\')' % (jobID, cmd_B, destinationB))
+		options.conn.commit()
 	else:
-		cursor.execute('INSERT INTO jobs (lsf_id, status) VALUES (-1, "LAUNCHED")')
-	jobID = cursor.execute('SELECT LAST_INSERT_ROWID()').fetchall()[0][0]
-
-	cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',1,\'%s\',\'%i\',date(\'now\'),\'%s\')' % (jobID, normalised_form, int(options.remember), destination))
-	if computeA: 
-		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',0,\'%s\',\'0\',date(\'now\'),\'%s\')' % (jobID, cmd_A, destinationA))
-	if computeB:
-		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',0,\'%s\',\'0\',date(\'now\'),\'%s\')' % (jobID, cmd_B, destinationB))
-	options.conn.commit()
+		lsfID = None
+		files = ['NO FILES']
+		jobID = -1
 
 	finishCmd = 'wiggleDB_finish.py --db %s --jobID %s --temp %s' % (options.db, jobID, " ".join(files))
 	if histogram is not None:
@@ -357,10 +339,12 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 	if options.s3 is not None:
 		finishCmd += ' --s3 ' + options.s3
 
-	lsfID2, temp = multiJob.submit(finishCmd, batchSystem=batchSystem, dependency=lsfID)
-
-	cursor.execute('UPDATE jobs SET lsf_id2=\'%s\',temp=\'%s\' WHERE job_id=\'%s\'' % (lsfID2, temp, jobID))
-	return jobID
+	if options.dry_run:
+		return ";".join(cmds + [finishCmd])
+	else:
+		lsfID2, temp = multiJob.submit(finishCmd, batchSystem=batchSystem, dependency=lsfID, working_directory=options.working_directory)
+		cursor.execute('UPDATE jobs SET lsf_id2=\'%s\',temp=\'%s\' WHERE job_id=\'%s\'' % (lsfID2, temp, jobID))
+		return jobID
 
 def get_chrom_sizes(cursor, assembly):
 	res = cursor.execute('SELECT location FROM assemblies WHERE name = \'%s\'' % (assembly)).fetchall()
@@ -394,7 +378,7 @@ def request_compute(cursor, options):
 	if options.b is not None:
 		fun_B = options.wb
 		data_B = get_dataset_locations(cursor, options.b, options.assembly)
-		assert len(dataB) > 0
+		assert len(data_B) > 0
 	else:
 		data_B = None
 		fun_B = None
