@@ -603,7 +603,7 @@ void rollYourOwn(int argc, char ** argv) {
 	else if (strcmp(token, "profiles") == 0)
 		readProfiles();
 	else if (strcmp(token, "seek") == 0)
-		readSeek();
+		toStdout(readSeek(), false, false);
 	else
 		toStdout(readLastIteratorToken(token), false, false);	
 }
