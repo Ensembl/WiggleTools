@@ -375,7 +375,7 @@ void LogWiggleIteratorPop(WiggleIterator * wi) {
 	LogWiggleIteratorData * data = (LogWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 
-	while (iter->value <= 0)
+	while (!iter->done && iter->value <= 0)
 		pop(iter);
 
 	if (!data->iter->done) {
