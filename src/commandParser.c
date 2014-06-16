@@ -774,6 +774,8 @@ void rollYourOwn(int argc, char ** argv) {
 		runWiggleIterator(readLastIteratorToken(token));
 	else if (strcmp(token, "AUC") == 0 || strcmp(token, "meanI") == 0 || strcmp(token, "varI") == 0 || strcmp(token, "stddevI") == 0 || strcmp(token, "CVI") == 0 || strcmp(token, "maxI") == 0 || strcmp(token, "minI") == 0 || strcmp(token, "pearson") == 0)
 		runWiggleIterator(PrintStatisticsWiggleIterator(readLastIteratorToken(token), stdout));
+	else if (strcmp(token, "seek") == 0)
+		toStdout(readSeek(), false, false);
 	else
 		toStdout(readLastIteratorToken(token), false, false);	
 }
