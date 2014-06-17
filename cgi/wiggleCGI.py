@@ -11,7 +11,7 @@ s3_bucket = 'wiggletools-data'
 s3_region = 'eu-west-1'
 
 # Debugging flag:
-DEBUG = True
+DEBUG = False
 
 import sys
 import cgi
