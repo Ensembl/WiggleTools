@@ -29,46 +29,67 @@ def clean_temp_files(files):
 ## LSF MultiJob
 ################################################
 
-def makeCommand(filename, count, dependency=None, mem=4):
+def makeCommand(filename, count, batchSystem='LSF', dependency=None, mem=4, working_directory='.'):
 	name = os.path.basename(filename)
-	bsub_cmd = "bsub -q normal -R'select[mem>%i] rusage[mem=%i]' -M%i -J'%s[1-%s]'" % (1024*mem, 1024*mem, 1024*mem, name, count)
-	if dependency is not None:
-		bsub_cmd += " -w '%s[*]'" % dependency
-	output = "-o %s_%%I.out -e %s_%%I.err" % (filename, filename)
-	jobCmd = " ".join([bsub_cmd, output, 'LSFwrapper.sh', "' multiJob.py ", filename, "'"])
-	print jobCmd
+	if batchSystem == 'LSF':
+		bsub_cmd = "bsub -q normal -R'select[mem>%i] rusage[mem=%i]' -M%i -J'%s[1-%s]'" % (1024*mem, 1024*mem, 1024*mem, name, count)
+		if dependency is not None:
+			bsub_cmd += " -w '%s[*]'" % dependency
+		output = "-o %s/%s_%%I.out -e %s/%s_%%I.err" % (working_directory, filename, working_directory, filename)
+		jobCmd = " ".join([bsub_cmd, output, 'LSFwrapper.sh', "' multiJob.py ", filename, batchSystem, "'"])
+	elif batchSystem == 'SGE':
+		bsub_cmd = "qsub -terse -cwd -V -b y -t 1-%s -N %s" % (count, os.path.basename(filename))
+		if dependency is not None:
+			bsub_cmd += " -hold_jid %s" % dependency
+		output = "-o %s -e %s" % (working_directory, working_directory)
+		jobCmd = " ".join([bsub_cmd, output, "' multiJob.py ", filename, batchSystem, "'"])
+	elif batchSystem == 'local':
+		jobCmd = "sh " + filename + ">& " + os.path.join(working_directory, filename + ".oe");
+	else:
+		raise NameError
+
 	return jobCmd
 
-def submit(cmds, dependency=None, mem=4):
+def submit(cmds, batchSystem="LSF", dependency=None, mem=4, working_directory='.'):
 	if len(cmds) == 0:
 		sys.stderr.write("No commands in list")
 		raise RuntimeError
 		return None, None
 
-	descr, filename = tempfile.mkstemp(dir='.')
+	descr, filename = tempfile.mkstemp(dir=working_directory)
 
 	fh = open(filename, 'w')
 	fh.write("\n".join(cmds))
 	fh.close()
 
-	multi_job_cmd = makeCommand(filename, len(cmds), dependency, mem)
-	p = subprocess.Popen(multi_job_cmd, shell=True, stdout=subprocess.PIPE)
-	err = p.wait()
-	if err != 0:
+	multi_job_cmd = makeCommand(filename, len(cmds), batchSystem, dependency, mem, working_directory)
+	p = subprocess.Popen(multi_job_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	ret = p.wait()
+	out, err = p.communicate()
+	if ret != 0:
 		print "Could not start job:"
 		print multi_job_cmd
-		sys.exit(err)
+		print "OUT: " + out
+		print "ERR: " + err
+		print os.environ
+		if 'SGE_ROOT' in os.environ:
+			print "SGE_ROOT: " + os.environ['SGE_ROOT']
+		else:
+			print "SGE_ROOT: UNDEF" 
+  		print 'USER: ' + os.environ['USERNAME']
+		assert False
 
-	out, err = p.communicate()
+	if batchSystem == 'LSF':
+		for line in out.split('\n'):
+			match = re.match(r'Job <([0-9]*)>', line)
+			if match is not None:
+				return match.group(1), filename
+		sys.stderr.write("Could not find job id in lsf output: %s" % out)
+		raise RuntimeError
+		return None, None
+	else:
+		return re.split(r'[\n\.]', out)[0], filename
 
-	for line in out.split('\n'):
-		match = re.match(r'Job <([0-9]*)>', line)
-		if match is not None:
-			return match.group(1), filename
-
-	sys.stderr.write("Could not find job id in lsf output: %s" % out)
-	raise RuntimeError
-	return None, None
 
 ################################################
 ## Worker 
@@ -79,7 +100,15 @@ def main():
 	error = tempfile.TemporaryFile()
 
 	file = open( sys.argv[1] )
-	index = os.environ['LSB_JOBINDEX']
+	batchSystem = sys.argv[2]
+
+	if batchSystem == 'LSF':
+		index = os.environ['LSB_JOBINDEX']
+	elif batchSystem == 'SGE':
+		index = os.environ['SGE_TASK_ID']
+	else:
+		raise NameError
+
 	for i in range(int(index)):
 		line = file.readline()
 
