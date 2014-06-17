@@ -467,7 +467,7 @@ static void PowerWiggleIteratorPop(WiggleIterator * wi) {
 
 	// Avoiding divisions by 0
 	if (data->scalar < 0)
-		while (iter->value == 0)
+		while (!iter->done && iter->value == 0)
 			pop(iter);
 
 	if (!iter->done) {
