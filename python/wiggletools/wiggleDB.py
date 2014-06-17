@@ -14,7 +14,7 @@ import parallelWiggleTools
 import multiJob
 
 verbose = False
-# The batch system is either SGE or LSF:
+# The batch system is either SGE, LSF, local:
 batchSystem = 'SGE'
 
 ###########################################
@@ -311,7 +311,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 
 	chrom_sizes = get_chrom_sizes(cursor, options.assembly)
 	if len(cmds) > 0 and not options.dry_run:
-		lsfID, files = parallelWiggleTools.run(cmds, chrom_sizes, batchSystem=batchSystem)
+		lsfID, files = parallelWiggleTools.run(cmds, chrom_sizes, batchSystem=batchSystem, tmp=options.working_directory)
 		cursor.execute('INSERT INTO jobs (lsf_id, status) VALUES (%i, "LAUNCHED")' % int(lsfID))
 		jobID = cursor.execute('SELECT LAST_INSERT_ROWID()').fetchall()[0][0]
 		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',1,\'%s\',\'%i\',date(\'now\'),\'%s\')' % (jobID, normalised_form, int(options.remember), destination))
@@ -342,7 +342,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 	if options.dry_run:
 		return ";".join(cmds + [finishCmd])
 	else:
-		lsfID2, temp = multiJob.submit(finishCmd, batchSystem=batchSystem, dependency=lsfID, working_directory=options.working_directory)
+		lsfID2, temp = multiJob.submit([finishCmd], batchSystem=batchSystem, dependency=lsfID, working_directory=options.working_directory)
 		cursor.execute('UPDATE jobs SET lsf_id2=\'%s\',temp=\'%s\' WHERE job_id=\'%s\'' % (lsfID2, temp, jobID))
 		return jobID
 
@@ -392,7 +392,7 @@ def request_compute(cursor, options):
 		return launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form)
 
 def query_result(cursor, jobID):
-	reports = cursor.execute('SELECT status, lsf_id FROM jobs WHERE job_id =?', (jobID,)).fetchall()
+	reports = cursor.execute('SELECT status, lsf_id2 FROM jobs WHERE job_id =?', (jobID,)).fetchall()
 
 	if len(reports) == 0:
 		return "UNKNOWN", jobID
@@ -403,9 +403,10 @@ def query_result(cursor, jobID):
 	if status == 'DONE':
 		return 'DONE', get_job_location_2(cursor, jobID)
 	elif batchSystem == 'LSF':
-		p = subprocess.Popen(['bjobs','-noheader',str(lsfID)], stdout=subprocess.PIPE)
+		p = subprocess.Popen(['bjobs','-noheader',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		ret = p.wait()
 		(stdout, stderr) = p.communicate()
-		assert p.returncode == 0, 'Error when polling LSF job %i' % lsfID
+		assert ret == 0, 'Error when polling LSF job %i' % lsfID
 		values = []
 		for line in stdout.split('\n'):
 			items = re.split('\W*', line)
@@ -413,17 +414,20 @@ def query_result(cursor, jobID):
 				values.append(items[2])
 		return "WAITING", " ".join(values)
 	elif batchSystem == 'SGE':
-		p = subprocess.Popen(['qstat','-j',str(lsfID)], stdout=subprocess.PIPE)
+		p = subprocess.Popen(['qstat','-j',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		ret = p.wait()
 		(stdout, stderr) = p.communicate()
-		if p.returncode == 0:
+		if ret == 0:
 			count = 0
 			for line in stdout.split('\n'):
 				items = re.split('\W*', line)
 				if items[0] == 'usage':
 					count += 1
 			values = '%i RUNNING' % (count)
+			return "WAITING", " ".join(values), ret
 		else:
-			p = subprocess.Popen(['qacct','-j',str(lsfID)], stdout=subprocess.PIPE)
+			p = subprocess.Popen(['qacct','-j',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			p.wait()
 			(stdout, stderr) = p.communicate()
 			assert p.returncode == 0, 'Error when polling SGE job %i' % lsfID
 			values = []
@@ -438,8 +442,11 @@ def query_result(cursor, jobID):
 						failedTaskID = False
 					else:
 						values.append(items[1])
+			if any(X != '0' for X in values):
+				return 'ERROR', " ".join(values)
+			else:
+				return 'DONE', " ".join(values)
 			  
-		return "WAITING", " ".join(values)
 	else:
 		raise NameError
 
