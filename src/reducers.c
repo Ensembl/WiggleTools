@@ -751,6 +751,7 @@ typedef struct medianMiggleReducerData_st {
 void MedianWiggleReducerSeek(WiggleIterator * iter, const char * chrom, int start, int finish) {
 	MedianWiggleReducerData * data = (MedianWiggleReducerData* ) iter->data;
 	seekMultiplexer(data->multi, chrom, start, finish);
+	pop(iter);
 }
 
 static int compDoubles(const void * A, const void * B) {
