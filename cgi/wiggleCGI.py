@@ -9,6 +9,10 @@ working_directory = '/data/wiggletools/tmp/'
 # S3 references
 s3_bucket = 'wiggletools-data'
 s3_region = 'eu-west-1'
+# Ensembl server
+ensembl_server = 'www.ensembl.org'
+ensembl_species = 'Homo_sapiens'
+ensembl_gene = 'ENSG00000130544'
 
 # Debugging flag:
 DEBUG = False
@@ -48,9 +52,10 @@ def main():
 		if "result" in form:
 			status, info = wiggletools.wiggleDB.query_result(cursor, form["result"].value)
 			if status == "DONE":
-				base_url = 's3-%s.amazonaws.com/%s/' % (s3_region, s3_bucket)
+				base_url = 'http://s3-%s.amazonaws.com/%s/' % (s3_region, s3_bucket)
 				url = re.sub(working_directory, base_url, info)		
-				print json.dumps({'status':status, 'url':url})
+				ensembl = 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (ensembl_server, ensembl_species, ensembl_gene, url)
+				print json.dumps({'status':status, 'url':url, 'view':ensembl})
 			else:
 				print json.dumps({'status':status})
 
@@ -92,8 +97,14 @@ def main():
 				options.b = options.a
 				options.a = tmp
 			
-			jobID = wiggletools.wiggleDB.request_compute(cursor, options)
-			print json.dumps({'ID':jobID})
+			result = wiggletools.wiggleDB.request_compute(cursor, options)
+			if 'location' in result:
+				base_url = 'http://s3-%s.amazonaws.com/%s/' % (s3_region, s3_bucket)
+				url = re.sub(working_directory, base_url, result['location'])		
+				ensembl = 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (ensembl_server, ensembl_species, ensembl_gene, url)
+				print json.dumps({'ID':result['ID'], 'status':'DONE', 'url':url, 'view':ensembl})
+			else:
+				print json.dumps(result)
 
 		else:
 			print json.dumps("No params, no output")
