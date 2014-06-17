@@ -387,9 +387,13 @@ def request_compute(cursor, options):
 	normalised_form = make_normalised_form(options.fun_merge, fun_A, data_A, fun_B, data_B)
 	prior_jobID = get_precomputed_jobID(cursor, normalised_form)
 	if prior_jobID is not None:
-		return prior_jobID
+		status, info = query_result(cursor, prior_jobID)
+		if status == 'DONE':
+			return {'ID': prior_jobID, 'location': info}
+		else:
+			return {'ID':prior_jobID}
 	else:
-		return launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form)
+		return {'ID':launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form)}
 
 def query_result(cursor, jobID):
 	reports = cursor.execute('SELECT status, lsf_id2 FROM jobs WHERE job_id =?', (jobID,)).fetchall()

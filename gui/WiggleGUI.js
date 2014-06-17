@@ -352,9 +352,13 @@ function get_result() {
 }
 
 function return_ticket(data) {
-  var modal = $("#JobSent_modal").clone();
-  modal.find("#job_id").text(data["ID"]);
-  modal.modal();
+  if ('status' in data) {
+    report_result(data);
+  } else {
+    var modal = $("#JobSent_modal").clone();
+    modal.find("#job_id").text(data["ID"]);
+    modal.modal();
+  }
 }
 
 // Send job to server 
