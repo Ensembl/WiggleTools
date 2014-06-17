@@ -45,7 +45,7 @@ var reduction_opts = {
 
 var comparison_opts = {
   "regions": {"Intersection":"unit mult", "Union":"unit sum", "Difference": "unit diff"},
-  "signal": {"Difference":"diff", "Ratio":"ratio", "Log Ratio":"log ratio", "T-test":"t-test", "Wilcoxon rank test":"wilcoxon"},
+  "signal": {"Difference":"diff", "Ratio":"ratio", "Log Ratio":"ln ratio", "T-test":"t-test", "Wilcoxon rank test":"wilcoxon"},
   "mixed": {"Distribution":"histogram 100", "Profile curve":"profile 100", "Profile matrix":"profiles 100"}
 };
 
@@ -221,9 +221,16 @@ function fill_select(select, options) {
   Object.keys(options).map(function(opt) {$("<option>").attr("value",options[opt]).text(opt).appendTo(select);});
 }
 
+function update_my_tab() {
+  update_tab_comparison($(this).parents('.tab-pane'));
+}
+
 function add_threshold_selector(div) {
-  var threshold = $('<div>').attr('id','threshold').text("Optional: Select regions above threshold : ").appendTo(div);
-  $("<input>").attr('type','text').attr('id','threshold_val').change(update_my_panel).appendTo(threshold);
+  if (div.find('#threshold').length == 0) {
+    var threshold = $('<div>').attr('id','threshold').text("Optional: Select regions above threshold : ").appendTo(div);
+    $('<br>').prependTo(threshold);
+    $("<input>").attr('type','text').attr('id','threshold_val').change(update_my_tab).appendTo(threshold);
+  }
 }
 
 function update_panel_reduction(panel) {
@@ -231,9 +238,7 @@ function update_panel_reduction(panel) {
   var reduction = panel.find('#reduction');
   fill_select(reduction, reduction_opts[type])
   if (type == 'signal') {
-    if (reduction.parent().find('#threshold').length == 0) {
-      add_threshold_selector(reduction.parent());
-    }
+    add_threshold_selector(reduction.parent());
   } else {
     reduction.parent().find('#threshold').remove();
   }
@@ -245,6 +250,7 @@ function update_panel_reduction(panel) {
 
 function add_width_selector(div) {
   var width = $('<div>').attr('id','width').text("Resolution (points) : ").appendTo(div);
+  $('<br>').prependTo(width);
   $("<input>").attr('type','text').attr('id','width_val').attr('value','100').appendTo(width);
 }
 
@@ -331,7 +337,7 @@ function report_result(data) {
     modal.find('#url').attr('href',data['url']);
     modal.find('#view').attr('href',data['view']);
     modal.modal();
-  } else if (data["status"] == "FAIL") {
+  } else if (data["status"] == "ERROR") {
     $('#Failure_modal').modal();	
   } else if (data["status"] == "UNKNOWN") {
     $('#Unknown_modal').modal();	
@@ -369,7 +375,7 @@ function comparison() {
     comparison = comparison + " " + width.val();
   }
   var threshold = $('#comparison').parent().parent().find('#threshold_val');
-  if (threshold.length) {
+  if (threshold.length && threshold.val() != "") {
     comparison = "gt " + threshold.val() + " " + comparison;
   }
   var panelA = $('#chooseA');
