@@ -175,8 +175,8 @@ echo 'int main(int c, char **v) {&png_sig_cmp;}' >> tmp.c
 #######################
 
 echo "Checking for mysql..."
-echo "#include <mysql.h>" > tmp.c
-echo 'int main(int c, char **v) {&mysql_connect;}' >> tmp.c
+echo "#include <mysql/mysql.h>" > tmp.c
+echo 'int main(int c, char **v) {&mysql_server_init;}' >> tmp.c
 (gcc tmp.c -o tmp.a &> tmp.o) || install_mysql
 
 #######################
@@ -184,7 +184,7 @@ echo 'int main(int c, char **v) {&mysql_connect;}' >> tmp.c
 #######################
 
 echo "Checking for GSL..."
-echo "#include <gsl/gsl_sf_bessel.h>" > tmp
+echo "#include <gsl/gsl_sf_bessel.h>" > tmp.c
 echo 'int main(int c, char **v) {&gsl_sf_bessel_J0;}' >> tmp.c
 (gcc tmp.c -o tmp.a &> tmp.o) || install_gsl
 
