@@ -1,13 +1,13 @@
-default: Samtools Wiggletools Parallel
+default: Parallel
 
-Samtools:
+Samtools-lib:
 	cd samtools; make
 
-Wiggletools:
-	cd src; make
+Wiggletools: Samtools-lib
+	cd src; make -e
 
-Parallel:
-	cd parallel; make
+Parallel: Wiggletools
+	cd python/wiggletools; make
 
 test: tests
 
