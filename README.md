@@ -7,6 +7,22 @@ Copyright holder: EMBL-EBI (Apache 2 License)
 
 The WiggleTools package allows genomewide data files to be manipulated as numerical functions, equipped with all the standard functional analysis operators (sum, product, product by a scalar, comparators), and derived statistics (mean, median, variance, stddev, t-test, Wilcoxon's rank sum test, etc).
 
+Easy Installation (Experimental)
+--------------------------------
+
+WiggleTools requires quite a few dependencies, and this can be a hassle to install.
+
+To speed up the process you can use the easy installation script:
+
+```
+easy_install.sh
+```
+It will test for the presence of pre-existing installations, prompt you before each download then install as appropriate. If you already installed Tabix or the Kent source code, be sure to set the $TABIX_SRC and $KENT_SRC environment variables to avoid a redundant installation. Because C libraries are being installed, root permissions are required. 
+
+If you are on Mac or Ubuntu, the script will use HomeBrew or apt-get. If you have a different package installer, it should be pretty easy to install hooks for it in the script. 
+
+Note that this script is quite experimental, and your system is different from mine, so please be nice to it and let me know if it can be corrected in any way.
+
 Installation
 ------------
 
