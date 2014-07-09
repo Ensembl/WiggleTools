@@ -1,4 +1,3 @@
-Hold fire on writers
 Seekable apply_paste
 Memory tracking & cleaning of chrom labels
 Read strand in BigBed files?
