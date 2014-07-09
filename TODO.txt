@@ -2,3 +2,4 @@ Memory tracking & cleaning of chrom labels
 HMM app? (requires reverse iterators...)
 Read strand in BigBed files?
 Read score in BigBed files? => Handling overlapping iterators with value in unit and filter
+Read data in VCF file?
