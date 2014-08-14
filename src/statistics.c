@@ -41,6 +41,24 @@ double span(WiggleIterator * wi) {
 	return total;
 }
 
+double max(WiggleIterator * wi) {
+	wi = NonOverlappingWiggleIterator(wi);
+	double max = wi->value;
+	for(;!wi->done; pop(wi))
+		if (wi->value > max)
+			max = wi->value;
+	return max;
+}
+
+double min(WiggleIterator * wi) {
+	wi = NonOverlappingWiggleIterator(wi);
+	double min = wi->value;
+	for(;!wi->done; pop(wi))
+		if (wi->value < min)
+			min = wi->value;
+	return min;
+}
+
 double mean(WiggleIterator * wi) {
 	double total = 0;
 	double span = 0;

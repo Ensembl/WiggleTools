@@ -7,6 +7,13 @@ def test(cmd):
 	print 'Testing: %s' % cmd
 	return subprocess.call(cmd, shell = True)
 
+def testOutput(cmd):
+	print 'Testing: %s' % cmd
+	p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell = True)
+	assert p.wait() == 0
+	out, err = p.communicate()
+	return out
+
 if not os.path.exists('tmp'):
 	os.mkdir('tmp')
 
@@ -53,7 +60,7 @@ assert test('../bin/wiggletools isZero diff pow 2 fixedStep.bw mult fixedStep.wi
 assert test('../bin/wiggletools isZero diff smooth 1 fixedStep.wig fixedStep.wig') == 0
 
 # Testing apply
-assert test('../bin/wiggletools apply_paste tmp/regional_means.txt mean overlapping.bed fixedStep.wig') == 0
+assert test('../bin/wiggletools apply_paste tmp/regional_means.txt meanI overlapping.bed fixedStep.wig') == 0
 
 # Testing pearson
 assert test('../bin/wiggletools pearson tmp/pearson.txt fixedStep.wig variableStep.wig') == 0
@@ -66,6 +73,12 @@ assert test('../bin/wiggletools profile tmp/profile.txt 3 overlapping.bed fixedS
 
 # Test overlap
 assert test('../bin/wiggletools isZero diff fixedStep.wig overlaps fixedStep.wig fixedStep.wig') == 0
+
+# Test min
+assert float(testOutput('../bin/wiggletools minI - fixedStep.wig')) == 0
+
+# Test max
+assert float(testOutput('../bin/wiggletools maxI - fixedStep.wig')) == 9
 
 assert test('diff tmp expected') == 0
 shutil.rmtree('tmp')

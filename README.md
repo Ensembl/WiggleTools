@@ -442,7 +442,7 @@ Note that BedGraphs and the BedGraph sections within wiggle files are 0-based, w
 Statistics
 ----------
 
-Sometimes, you just want a statistic across the genome. The following functions do not return a sequence of numbers, just a single number. All of these outputs are directed to an user defined output file (in this case results.txt) but you can put `-' for standard output:
+Sometimes, you just want a statistic across the genome. The following functions do not return a sequence of numbers, just a single number. Some of these integrating functions have "I" appended to them to distinguish them from the iterators with related (yet different) functions. All of these outputs are directed to a user defined output file (in this case results.txt) but you can put `-' for standard output:
 
 
 * AUC
@@ -453,12 +453,36 @@ Computes the area under the curve (AUC) of the an iterator:
 wiggletools AUC results.txt test/fixedStep.bw test/variableStep.bw 
 ```
 
-* variance
+* meanI
+
+Computes the mean of an iterator across all of its points:
+
+```
+wiggletools meanI results.txt test/fixedStep.bw 
+```
+
+* varI
 
 Computes the variance of an iterator across all of its points:
 
 ```
-wiggletools variance results.txt test/fixedStep.bw 
+wiggletools varI results.txt test/fixedStep.bw 
+```
+
+* maxI
+
+Computes the maximum of an iterator across all of its points:
+
+```
+wiggletools maxI results.txt test/fixedStep.bw 
+```
+
+* minI
+
+Computes the minimum of an iterator across all of its points:
+
+```
+wiggletools minI results.txt test/fixedStep.bw 
 ```
 
 * pearson

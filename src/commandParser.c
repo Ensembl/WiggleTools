@@ -42,7 +42,7 @@ puts("\twiggletools program");
 puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
-puts("\tstatistic = AUC (output) (iterator) | meanI (output) (iterator) | varI (output) (iterator) | pearson (output) (iterator) (iterator) | isZero (iterator)");
+puts("\tstatistic = AUC (output) (iterator) | meanI (output) (iterator) | varI (output) (iterator) | minI (iterator) | maxI (iterator) | pearson (output) (iterator) (iterator) | isZero (iterator)");
 puts("\toutput = filename | -");
 puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator) | histogram (output) (width) (iterator_list)");
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
@@ -390,10 +390,14 @@ static WiggleIterator * readApply() {
 
 	if (strcmp(operation, "AUC") == 0)
 		function = &AUC;
-	else if (strcmp(operation, "mean") == 0)
+	else if (strcmp(operation, "meanI") == 0)
 		function = &mean;
-	else if (strcmp(operation, "variance") == 0)
+	else if (strcmp(operation, "varI") == 0)
 		function = &variance;
+	else if (strcmp(operation, "maxI") == 0)
+		function = &max;
+	else if (strcmp(operation, "minI") == 0)
+		function = &min;
 	else {
 		fprintf(stderr, "Name of function to be applied unrecognized: %s\n", operation);
 		exit(1);
@@ -537,6 +541,18 @@ static void readMeanIntegrated() {
 	fclose(file);
 }
 
+static void readMaxIntegrated() {
+	FILE * file = readOutputFilename();
+	fprintf(file, "%lf\n", max(readLastIterator()));	
+	fclose(file);
+}
+
+static void readMinIntegrated() {
+	FILE * file = readOutputFilename();
+	fprintf(file, "%lf\n", min(readLastIterator()));	
+	fclose(file);
+}
+
 static void readVarianceIntegrated() {
 	FILE * file = readOutputFilename();
 	fprintf(file, "%lf\n", variance(readLastIterator()));	
@@ -552,30 +568,34 @@ static void readPearson() {
 }
 
 static WiggleIterator * readApplyPaste() {
-       FILE * outfile = readOutputFilename();
-       char * operation = needNextToken();
-       char * infilename = needNextToken();
+	FILE * outfile = readOutputFilename();
+	char * operation = needNextToken();
+	char * infilename = needNextToken();
 
-       FILE * infile = fopen(infilename, "r");
-       if (!infile) {
-               fprintf(stderr, "Could not open %s.\n", infilename);
-               exit(1);
-       }
+	FILE * infile = fopen(infilename, "r");
+	if (!infile) {
+	       fprintf(stderr, "Could not open %s.\n", infilename);
+	       exit(1);
+	}
 
-       double (*function)(WiggleIterator *);
+	double (*function)(WiggleIterator *);
 
-       if (strcmp(operation, "AUC") == 0)
-               function = &AUC;
-       else if (strcmp(operation, "mean") == 0)
-               function = &mean;
-       else if (strcmp(operation, "variance") == 0)
-               function = &variance;
-       else {
-               fprintf(stderr, "Name of function to be applied unrecognized: %s\n", operation);
-               exit(1);
-       }
+	if (strcmp(operation, "AUC") == 0)
+	       function = &AUC;
+	else if (strcmp(operation, "meanI") == 0)
+	       function = &mean;
+	else if (strcmp(operation, "varI") == 0)
+	       function = &variance;
+	else if (strcmp(operation, "maxI") == 0)
+		function = &max;
+	else if (strcmp(operation, "minI") == 0)
+		function = &min;
+	else {
+	       fprintf(stderr, "Name of function to be applied unrecognized: %s\n", operation);
+	       exit(1);
+	}
 
-       return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readLastIterator()), infile, outfile, false);
+	return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readLastIterator()), infile, outfile, false);
 }
 
 void rollYourOwn(int argc, char ** argv) {
@@ -586,6 +606,10 @@ void rollYourOwn(int argc, char ** argv) {
 		readHistogram();
 	else if (strcmp(token, "meanI") == 0)
 		readMeanIntegrated();
+	else if (strcmp(token, "maxI") == 0)
+		readMaxIntegrated();
+	else if (strcmp(token, "minI") == 0)
+		readMinIntegrated();
 	else if (strcmp(token, "varI") == 0)
 		readVarianceIntegrated();
 	else if (strcmp(token, "pearson") == 0) 

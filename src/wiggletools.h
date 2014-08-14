@@ -102,6 +102,8 @@ WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * o
 // 	Unary
 double AUC (WiggleIterator *);
 double mean (WiggleIterator *);
+double min (WiggleIterator *);
+double max (WiggleIterator *);
 double variance (WiggleIterator *);
 double isZero(WiggleIterator * wi);
 void regionProfile(WiggleIterator *, double *, int, int, bool);
