@@ -158,11 +158,11 @@ double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
 		if (multi->inplay[0])
 			deltaA = multi->values[0] - meanA;
 		else
-			deltaA = -meanA;
+			deltaA = iters[0]->default_value - meanA;
 		if (multi->inplay[1])
 			deltaB = multi->values[1] - meanB;
 		else
-			deltaB = -meanB;
+			deltaB = iters[1]->default_value - meanB;
 		sum_sq_A += deltaA * deltaA * sweep;
 		sum_sq_B += deltaB * deltaB * sweep;
 		sum_AB += deltaA * deltaB * sweep;
