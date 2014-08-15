@@ -29,24 +29,43 @@ typedef struct bufferedWiggleIteratorData_st {
 	int index;
 	int length;
 	double * values;
+	bool * set;
 	struct bufferedWiggleIteratorData_st * next;
 } BufferedWiggleIteratorData;
 
+static BufferedWiggleIteratorData * createBufferedWiggleIteratorData(char * chrom, int start, int finish) {
+	BufferedWiggleIteratorData * bufferedData = (BufferedWiggleIteratorData *) calloc(1, sizeof(BufferedWiggleIteratorData));
+	if (!bufferedData) {
+		fprintf(stderr, "Could not calloc %li bytes\n", sizeof(BufferedWiggleIteratorData));
+		abort();
+	}
+	bufferedData->chrom = chrom;
+	bufferedData->start = start;
+	bufferedData->finish = finish;
+	bufferedData->index = 0;
+	bufferedData->length = finish - start;
+	bufferedData->values = (double *) calloc(bufferedData->length, sizeof(double));
+	bufferedData->set = (bool *) calloc(bufferedData->length, sizeof(bool));
+	return bufferedData;
+}
+
 void destroyBufferedWiggleIteratorData(BufferedWiggleIteratorData * data) {
 	free(data->values);
+	free(data->set);
 	free(data);
 }
 
 void BufferedWiggleIteratorPop(WiggleIterator * wi) {
 	BufferedWiggleIteratorData * data = (BufferedWiggleIteratorData *) wi->data;
-	if (data->index < data->length) {
-		wi->start = data->index;
-		wi->finish = wi->start + 1;
-		wi->value = data->values[data->index];
-		data->index++;
-	} else {
-		wi->done = true;
+	while (++data->index < data->length) {
+		if (data->set[data->index]) {
+			wi->start = data->index;
+			wi->finish = wi->start + 1;
+			wi->value = data->values[data->index];
+			return;
+		}
 	}
+	wi->done = true;
 }
 
 void BufferedWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
@@ -75,17 +94,7 @@ typedef struct applyWiggleIteratorData_st {
 } ApplyWiggleIteratorData;
 
 static void createTarget(ApplyWiggleIteratorData * data) {
-	BufferedWiggleIteratorData * bufferedData = (BufferedWiggleIteratorData *) calloc(1, sizeof(BufferedWiggleIteratorData));
-	if (!bufferedData) {
-		fprintf(stderr, "Could not calloc %li bytes\n", sizeof(BufferedWiggleIteratorData));
-		abort();
-	}
-	bufferedData->chrom = data->regions->chrom;
-	bufferedData->start = data->regions->start;
-	bufferedData->finish = data->regions->finish;
-	bufferedData->index = 0;
-	bufferedData->length = data->regions->finish - data->regions->start;
-	bufferedData->values = (double *) calloc(bufferedData->length, sizeof(double));
+	BufferedWiggleIteratorData * bufferedData = createBufferedWiggleIteratorData(data->regions->chrom, data->regions->start, data->regions->finish);
 	if (!data->head)
 		data->head = bufferedData;
 	else
@@ -115,8 +124,10 @@ static void pushDataOnBuffer(ApplyWiggleIteratorData * data, BufferedWiggleItera
 	else
 		finish = data->input->finish - bufferedData->start;
 
-	for (pos = start; pos < finish; pos++)
+	for (pos = start; pos < finish; pos++) {
 		bufferedData->values[pos] = data->input->value;
+		bufferedData->set[pos] = true;
+	}
 
 }
 

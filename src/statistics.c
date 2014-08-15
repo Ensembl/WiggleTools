@@ -42,6 +42,9 @@ double span(WiggleIterator * wi) {
 }
 
 double max(WiggleIterator * wi) {
+	if (wi->done)
+		return NAN;
+
 	wi = NonOverlappingWiggleIterator(wi);
 	double max = wi->value;
 	for(;!wi->done; pop(wi))
@@ -51,6 +54,9 @@ double max(WiggleIterator * wi) {
 }
 
 double min(WiggleIterator * wi) {
+	if (wi->done)
+		return NAN;
+
 	wi = NonOverlappingWiggleIterator(wi);
 	double min = wi->value;
 	for(;!wi->done; pop(wi))
@@ -60,6 +66,9 @@ double min(WiggleIterator * wi) {
 }
 
 double mean(WiggleIterator * wi) {
+	if (wi->done)
+		return NAN;
+
 	double total = 0;
 	double span = 0;
 	wi = NonOverlappingWiggleIterator(wi);
@@ -71,6 +80,9 @@ double mean(WiggleIterator * wi) {
 }
 
 double variance(WiggleIterator * wi) {
+	if (wi->done)
+		return NAN;
+
 	// Online algorithm copied from 
 	// http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Two-pass_algorithm
 	double sumWeight = 0;
@@ -93,11 +105,17 @@ double variance(WiggleIterator * wi) {
 }
 
 double stddev(WiggleIterator * wi) {
+	if (wi->done)
+		return NAN;
+
 	wi = NonOverlappingWiggleIterator(wi);
 	return sqrt(variance(wi));
 }
 
 double isZero(WiggleIterator * wi) {
+	if (wi->done)
+		return NAN;
+
 	wi = NonOverlappingWiggleIterator(wi);
 	for (; !wi->done; pop(wi))
 		if (wi->value != 0)
@@ -114,6 +132,9 @@ double isZero(WiggleIterator * wi) {
 // http://en.wikipedia.org/wiki?title=Talk:Correlation
 
 double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
+	if (iterA->done || iterB->done)
+		return NAN;
+
 	double sum_sq_A = 0;
 	double sum_sq_B = 0;
 	double sum_AB = 0;
