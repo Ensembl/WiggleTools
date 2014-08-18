@@ -141,6 +141,9 @@ void CompressionWiggleIteratorPop(WiggleIterator * wi) {
 	if (iter->done) {
 		wi->done = true;
 	} else {
+		while (!iter->done && iter->value == NAN)
+			pop(iter);
+
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
@@ -172,7 +175,7 @@ void UnitWiggleIteratorPop(WiggleIterator * wi) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!data->iter->done) {
-		while (!data->iter->done && data->iter->value == 0)
+		while (!data->iter->done && (data->iter->value == 0 || data->iter->value == NAN))
 			pop(iter);
 		if (data->iter->done) {
 			wi->done = true;
@@ -210,7 +213,7 @@ void HighPassFilterWiggleIteratorPop(WiggleIterator * wi) {
 	HighPassFilterWiggleIteratorData * data = (HighPassFilterWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!data->iter->done) {
-		while (!data->iter->done && data->iter->value <= data->scalar)
+		while (!data->iter->done && (data->iter->value <= data->scalar || data->iter->value == NAN))
 			pop(data->iter);
 		if (data->iter->done) {
 			wi->done = true;
@@ -467,7 +470,7 @@ static void PowerWiggleIteratorPop(WiggleIterator * wi) {
 
 	// Avoiding divisions by 0
 	if (data->scalar < 0)
-		while (!iter->done && iter->value == 0)
+		while (!iter->done && (iter->value == 0 || iter->value == NAN))
 			pop(iter);
 
 	if (!iter->done) {
