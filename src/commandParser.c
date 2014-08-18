@@ -347,7 +347,7 @@ static WiggleIterator * readRatio() {
 	WiggleIterator ** iters = calloc(2, sizeof(WiggleIterator *));
 	iters[0] = readIterator();
 	iters[1] = PowerWiggleIterator(readIterator(), -1);
-	return ProductReduction(newMultiplexer(iters, 2));
+	return ProductReduction(newStrictMultiplexer(iters, 2));
 }
 
 static WiggleIterator * readSeek() {
