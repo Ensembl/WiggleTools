@@ -15,6 +15,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "multiplexer.h"
 
@@ -104,17 +105,23 @@ static void readValues(Multiplexer * multi) {
 	}
 }
 
+static bool anyInactiveIterator(Multiplexer * multi) {
+	int i;
+	for (i=0; i < multi->count; i++)
+		if (!multi->inplay[i] || multi->values[i] == NAN)
+			return true;
+	return false;
+}
+
 void popMultiplexer(Multiplexer * multi) {
-	if (multi->done)
-		return;
-
-	chooseCoords(multi);
-
-	if (multi->done)
-		return;
-
-	readValues(multi);
-
+	if (!multi->done)
+		chooseCoords(multi);
+	if (!multi->done) {
+		if (multi->strict)
+			while (!multi->done && anyInactiveIterator(multi))
+				chooseCoords(multi);
+		readValues(multi);
+	}
 }
 
 void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
@@ -127,7 +134,7 @@ void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int fin
 	popMultiplexer(multi);
 }
 
-Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
+Multiplexer * newCoreMultiplexer(WiggleIterator ** iters, int count) {
 	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
 	new->count = count;
 	new->iters = calloc(count, sizeof(WiggleIterator *));
@@ -136,6 +143,18 @@ Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
 		new->iters[i] = NonOverlappingWiggleIterator(iters[i]);
 	new->inplay = (bool *) calloc(count, sizeof(bool));
 	new->values = (double *) calloc(count, sizeof(double));
+	return new;
+}
+
+Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
+	Multiplexer * new = newCoreMultiplexer(iters, count);
+	popMultiplexer(new);
+	return new;
+}
+
+Multiplexer * newStrictMultiplexer(WiggleIterator ** iters, int count) {
+	Multiplexer * new = newCoreMultiplexer(iters, count);
+	new->strict = true;
 	popMultiplexer(new);
 	return new;
 }
