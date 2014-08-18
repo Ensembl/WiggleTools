@@ -26,7 +26,7 @@ struct multiplexer_st {
 	bool *inplay;
 	WiggleIterator ** iters;
 	bool done;
-	void (*pop)(struct multiplexer_st *);
+	bool strict;
 
 	FILE * file;
 };

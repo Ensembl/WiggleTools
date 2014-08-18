@@ -18,10 +18,6 @@
 
 #include "multiplexer.h"
 
-void popMultiplexer(Multiplexer * multi) {
-	(*(multi->pop))(multi);
-}
-
 static void chooseCoords(Multiplexer * multi) {
 	int i;
 	char * lastChrom = multi->chrom;
@@ -108,7 +104,7 @@ static void readValues(Multiplexer * multi) {
 	}
 }
 
-void popListMultiplexer(Multiplexer * multi) {
+void popMultiplexer(Multiplexer * multi) {
 	if (multi->done)
 		return;
 
@@ -133,7 +129,6 @@ void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int fin
 
 Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
 	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
-	new->pop = popListMultiplexer;
 	new->count = count;
 	new->iters = calloc(count, sizeof(WiggleIterator *));
 	int i;
