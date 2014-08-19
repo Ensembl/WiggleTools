@@ -71,6 +71,43 @@ WiggleIterator * SelectReduction(Multiplexer * multi, int index) {
 }
 
 ////////////////////////////////////////////////////////
+// Fill in 
+////////////////////////////////////////////////////////
+
+void FillInReductionPop(WiggleIterator * wi) {
+	if (wi->done)
+		return;
+
+	WiggleReducerData * data = (WiggleReducerData *) wi->data;
+	Multiplexer * multi = data->multi;
+
+	if (multi->done) {
+		wi->done = true;
+		return;
+	}
+
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
+	if (multi->inplay[1])
+		wi->value = multi->iters[1]->value;
+	else
+		wi->value = multi->iters[1]->default_value;
+	popMultiplexer(multi);
+}
+
+WiggleIterator * FillInReduction(Multiplexer * multi) {
+	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
+	if (multi->count != 2) {
+		printf("The fill in operator can only work on 2 iterators! Got %i\n", multi->count);
+		exit(1);
+	}
+	data->multi = multi;
+	WiggleIterator * res = newWiggleIterator(data, &FillInReductionPop, &WiggleReducerSeek, multi->iters[1]->default_value);
+	return res;
+}
+
+////////////////////////////////////////////////////////
 // Max
 ////////////////////////////////////////////////////////
 

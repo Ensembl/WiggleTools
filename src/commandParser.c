@@ -48,10 +48,10 @@ puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (ou
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
 puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | default (float)");
-puts("\tbinary_operator = diff | ratio | overlaps | apply (statistic)");
+puts("\tbinary_operator = diff | ratio | overlaps | apply (statistic) | fillIn");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
 puts("\titerator_list = (iterator) : | (iterator) (iterator_list)");
-puts("\tmultiplex = (iterator_list) | map (unary_operator) (multiplex)");
+puts("\tmultiplex = (iterator_list) | map (unary_operator) (multiplex) | strict (multiplex)");
 puts("\tsetComparison = ttest | wilcoxon");
 puts("\tfilename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
 
@@ -104,53 +104,53 @@ static WiggleIterator ** readFileList(int * count, char * firstToken) {
 	return iters;
 }
 
-static WiggleIterator ** readIteratorList(int * count);
+static WiggleIterator ** readIteratorList(int * count, bool * strict);
 
-static WiggleIterator ** readMappedIteratorList(int * count) {
+static WiggleIterator ** readMappedIteratorList(int * count, bool * strict) {
 	char * token = needNextToken();
 	WiggleIterator ** iters;
 	int i;
 
 	if (strcmp(token, "unit") == 0) {
-		iters = readIteratorList(count);
+		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = UnitWiggleIterator(iters[i]);
 	} else if (strcmp(token, "smooth") == 0) {
 		int width = atoi(needNextToken());
-		iters = readIteratorList(count);
+		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = SmoothWiggleIterator(iters[i], width);
 	} else if (strcmp(token, "exp") == 0) {
-		iters = readIteratorList(count);
+		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = NaturalExpWiggleIterator(iters[i]);
 	} else if (strcmp(token, "ln") == 0) {
-		iters = readIteratorList(count);
+		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = NaturalLogWiggleIterator(iters[i]);
 	} else if (strcmp(token, "log") == 0) {
 		double base = atof(needNextToken());
-		iters = readIteratorList(count);
+		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = LogWiggleIterator(iters[i], base);
 	} else if (strcmp(token, "pow") == 0) {
 		double base = atof(needNextToken());
-		iters = readIteratorList(count);
+		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = PowerWiggleIterator(iters[i], base);
 	} else if (strcmp(token, "scale") == 0) {
 		double scalar = atof(needNextToken());
-		iters = readIteratorList(count);
+		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = ScaleWiggleIterator(iters[i], scalar);
 	} else if (strcmp(token, "offset") == 0) {
 		double scalar = atof(needNextToken());
-		iters = readIteratorList(count);
+		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = ShiftWiggleIterator(iters[i], scalar);
 	} else if (strcmp(token, "gt") == 0) {
 		double scalar = atof(needNextToken());
-		iters = readIteratorList(count);
+		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = HighPassFilterWiggleIterator(iters[i], scalar);
 	} else if (strcmp(token, "default") == 0) {
@@ -166,17 +166,21 @@ static WiggleIterator ** readMappedIteratorList(int * count) {
 	return iters;
 }
 
-static WiggleIterator ** readIteratorList(int * count) {
+static WiggleIterator ** readIteratorList(int * count, bool * strict) {
 	char * token = needNextToken();
 
-	if (strcmp(token, "map"))
+	if (strcmp(token, "map") == 0)
+		return readMappedIteratorList(count, strict);
+	else if (strcmp(token, "strict") == 0) {
+		*strict = true;
+		return readIteratorList(count, strict);
+	} else
 		return readFileList(count, token);
-	else 
-		return readMappedIteratorList(count);
 }
 
 static WiggleIterator ** readLastIteratorList(int * count) {
-	WiggleIterator ** res = readIteratorList(count);
+	bool strict = false;
+	WiggleIterator ** res = readIteratorList(count, &strict);
 	char * remainder = nextToken(0,0);
 	if (remainder) {
 		fprintf(stderr, "Trailing tokens: the last tokens in your command were not read, check your syntax:\n...");
@@ -192,8 +196,12 @@ static WiggleIterator ** readLastIteratorList(int * count) {
 
 static Multiplexer * readMultiplexer() {
 	int count = 0; 
-	WiggleIterator ** iters = readIteratorList(&count);
-	return newMultiplexer(iters, count);
+	bool strict = false;
+	WiggleIterator ** iters = readIteratorList(&count, &strict);
+	if (strict)
+		return newStrictMultiplexer(iters, count);
+	else
+		return newMultiplexer(iters, count);
 }
 
 static FILE * readOutputFilename() {
@@ -282,6 +290,10 @@ static WiggleIterator * readSum() {
 	return SumReduction(readMultiplexer());
 }
 
+static WiggleIterator * readFillIn() {
+	return FillInReduction(readMultiplexer());
+}
+
 static char ** getListOfFilenames(int * count, char * first) {
 	int length = 1000;
 	char ** filenames = calloc(sizeof(char*), length);
@@ -357,7 +369,7 @@ static WiggleIterator * readRatio() {
 	WiggleIterator ** iters = calloc(2, sizeof(WiggleIterator *));
 	iters[0] = readIterator();
 	iters[1] = PowerWiggleIterator(readIterator(), -1);
-	return ProductReduction(newStrictMultiplexer(iters, 2));
+	return ProductReduction(newMultiplexer(iters, 2));
 }
 
 static WiggleIterator * readSeek() {
@@ -397,6 +409,7 @@ static WiggleIterator * readMWUTest() {
 static WiggleIterator * readApply() {
 	char * operation = needNextToken();
 	double (*function)(WiggleIterator *);
+	bool strict = true;
 
 	if (strcmp(operation, "AUC") == 0)
 		function = &AUC;
@@ -413,10 +426,16 @@ static WiggleIterator * readApply() {
 		exit(1);
 	}
 
-	WiggleIterator * regions = readIterator();
+	char * token = needNextToken();
+	if (strcmp(token, "fillIn") == 0) {
+		strict = false;
+		token = needNextToken();
+	}
+
+	WiggleIterator * regions = readIteratorToken(token);
 	WiggleIterator * data = readIterator();
 
-	return ApplyWiggleIterator(regions, function, data);
+	return ApplyWiggleIterator(regions, function, data, strict);
 }
 
 
@@ -431,6 +450,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readUnit();
 	if (strcmp(token, "sum") == 0)
 		return readSum();
+	if (strcmp(token, "fillIn") == 0)
+		return readFillIn();
 	if (strcmp(token, "mult") == 0)
 		return readProduct();
 	if (strcmp(token, "diff") == 0)
@@ -582,7 +603,13 @@ static void readPearson() {
 static WiggleIterator * readApplyPaste() {
 	FILE * outfile = readOutputFilename();
 	char * operation = needNextToken();
+	bool strict = true;
+
 	char * infilename = needNextToken();
+	if (strcmp(infilename, "fillIn") == 0) {
+		strict = false;
+		infilename = needNextToken();
+	}
 
 	FILE * infile = fopen(infilename, "r");
 	if (!infile) {
@@ -607,7 +634,7 @@ static WiggleIterator * readApplyPaste() {
 	       exit(1);
 	}
 
-	return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readLastIterator()), infile, outfile, false);
+	return PasteWiggleIterator(ApplyWiggleIterator(SmartReader(infilename), function, readLastIterator(), strict), infile, outfile, false);
 }
 
 void rollYourOwn(int argc, char ** argv) {

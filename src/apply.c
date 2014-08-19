@@ -57,15 +57,37 @@ void destroyBufferedWiggleIteratorData(BufferedWiggleIteratorData * data) {
 	free(data);
 }
 
-void BufferedWiggleIteratorPop(WiggleIterator * wi) {
+void LooseBufferedWiggleIteratorPop(WiggleIterator * wi) {
 	BufferedWiggleIteratorData * data = (BufferedWiggleIteratorData *) wi->data;
-	while (++data->index < data->length) {
+	if (wi->done)
+		;
+	else if (data->index == data->length)
+		wi->done = true;
+	else {
+		wi->start = data->index;
+		if (data->set[data->index]) {
+			wi->value = data->values[data->index];
+			data->index++;
+		} else {
+			wi->value = wi->default_value;
+			while (data->index < data->length && !data->set[data->index])
+				data->index++;
+		}
+		wi->finish = data->index;
+	}
+}
+
+void StrictBufferedWiggleIteratorPop(WiggleIterator * wi) {
+	BufferedWiggleIteratorData * data = (BufferedWiggleIteratorData *) wi->data;
+	while (data->index < data->length) {
 		if (data->set[data->index]) {
 			wi->start = data->index;
 			wi->finish = wi->start + 1;
 			wi->value = data->values[data->index];
+			data->index++;
 			return;
-		}
+		} else
+			data->index++;
 	}
 	wi->done = true;
 }
@@ -75,8 +97,12 @@ void BufferedWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int sta
 	exit(1);
 }
 
-WiggleIterator * BufferedWiggleIterator(BufferedWiggleIteratorData * data) {
-	WiggleIterator * wi = newWiggleIterator(data, &BufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value);
+WiggleIterator * BufferedWiggleIterator(BufferedWiggleIteratorData * data, bool strict) {
+	WiggleIterator * wi;
+	if (strict)
+		wi = newWiggleIterator(data, &StrictBufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value);
+	else
+		wi = newWiggleIterator(data, &LooseBufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value);
 	wi->chrom = data->chrom;
 	return wi;
 }
@@ -90,6 +116,7 @@ typedef struct applyWiggleIteratorData_st {
 	double (*statistic)(WiggleIterator *);
 	double * valuePtr;
 	int profile_width;
+	bool strict;
 	WiggleIterator * input;
 	BufferedWiggleIteratorData * head;
 	BufferedWiggleIteratorData * tail;
@@ -170,10 +197,10 @@ void ApplyWiggleIteratorPop(WiggleIterator * wi) {
 	wi->start = data->head->start;
 	wi->finish = data->head->finish;
 	if (data->statistic)
-		wi->value = data->statistic(BufferedWiggleIterator(data->head));
+		wi->value = data->statistic(BufferedWiggleIterator(data->head, data->strict));
 	else {
 		wi->valuePtr = data->valuePtr;
-		regionProfile(BufferedWiggleIterator(data->head), wi->valuePtr, data->profile_width, wi->finish - wi->start, false);
+		regionProfile(BufferedWiggleIterator(data->head, data->strict), wi->valuePtr, data->profile_width, wi->finish - wi->start, false);
 	}
 
 	// Discard struct
@@ -197,11 +224,12 @@ void ApplyWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start,
 	seek(data->regions, chrom, start, finish);
 }
 
-WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset) {
+WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset, bool strict) {
 	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) calloc(1, sizeof(ApplyWiggleIteratorData));
 	data->regions = regions;
 	data->statistic = statistic;
 	data->input = dataset;
+	data->strict = strict;
 	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL, dataset->default_value);
 }
 
@@ -211,5 +239,6 @@ WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, Wigg
 	data->profile_width = width;
 	data->input = dataset;
 	data->valuePtr = calloc(width, sizeof(double));
+	data->strict = false;
 	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL, dataset->default_value);
 }

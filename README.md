@@ -554,3 +554,42 @@ parallelWiggletools.py test/chrom_sizes 'write copy.bw test/fixedStep.bw'
 ```
 
 Because these are asynchronous jobs, they generate a bunch of files as input, stdout and stderr. If these files are annoying to you, you can change the DUMP\_DIR variable in the parallelWiggleTools script, to another directory which is visible to all the nodes in the LSF farm.
+
+Default Values
+--------------
+
+A basic underlying question is how to deal with missing values. In some cases, no value in a BigWig file implicitly means 0, typically when working with coverage statistics or peaks. However, sometimes, you want positions with no values to be disregarded. 
+
+* To deal with this, every iterator has a default value. By default, any file being read has a default value of 0. The default value of composed iterators is computed from their inputs. For example, if B is equal to A multiplied by 10, then the default value of B is 10 times that of A. The default value of an iterator can be directly set with the *default* keyword:
+
+```
+wiggletools sum test/fixedStep.wig test/variableStep.wig
+wiggletools sum test/fixedStep.wig default 10 test/variableStep.wig
+```
+
+* When a set of iterators A1, A2 ... is composed by a n-ary iterator M, M will skip the regions which are skipped by all the input iterators. However, in the presence of more than one input iterators that do not perfectly overlap, there will be regions which are covered by say A1, but not A2. Two behaviours are defined: if M is *strict*, it skips those regions, else it replaces missing values with the corresponding default values. 
+
+By default, n-ary iterators are not strict, but they can be made so with the *strict* keyword after the n-ary function name:
+
+```
+wiggletools sum test/fixedStep.wig test/variableStep.wig
+wiggletools sum strict test/fixedStep.wig test/variableStep.wig
+```
+
+* However, when integrating statistics across the genome, or regions of the genome, missing values are discarded by default, because it is not known which regions need to be filled in. 
+
+The *fillIn* operator allows you to define which regions should be filled in with the default value. It takes in two iterators, and behaves like a default multiplexer. Wherever possible, it takes the value of the second iterator, and otherwise takes the default_value of the second iterator. Note that this incurs a slight processing cost, so only use this operator at the last step of your computations, right before computing a statistic. 
+
+```
+wiggletools test/variableStep.wig
+wiggletools meanI - test/variableStep.wig
+wiggletools fillIn test/fixedStep.wig test/variableStep.wig
+wiggletools meanI - fillIn test/fixedStep.wig test/variableStep.wig
+```
+
+For convenience, the fillIn keyword can be used in the apply commands, as is:
+
+```
+wiggletools apply mean unit test/variableStep.bw test/fixedStep.bw
+wiggletools apply mean fillIn unit test/variableStep.bw test/fixedStep.bw
+```

@@ -83,14 +83,14 @@ static void chooseCoords(Multiplexer * multi) {
 
 	for (i = 0; i < first; i++)
 		multi->inplay[i] = false;
-
 }
 
-static void readValues(Multiplexer * multi) {
+static bool readValues(Multiplexer * multi) {
 	int i;
 	bool * inplayPtr = multi->inplay;
 	WiggleIterator ** wiPtr = multi->iters;
 	double * valuePtr = multi->values;
+	bool allActive = true;
 
 	for (i=0; i < multi->count; i++) {
 		if (*inplayPtr) {
@@ -98,29 +98,23 @@ static void readValues(Multiplexer * multi) {
 			if ((*wiPtr)->finish == multi->finish) {
 				pop(*wiPtr);
 			}
-		}
+		} else 
+			allActive = false;
 		valuePtr++;
 		inplayPtr++;
 		wiPtr++;
 	}
-}
 
-static bool anyInactiveIterator(Multiplexer * multi) {
-	int i;
-	for (i=0; i < multi->count; i++)
-		if (!multi->inplay[i])
-			return true;
-	return false;
+	return allActive;
 }
 
 void popMultiplexer(Multiplexer * multi) {
-	if (!multi->done)
+	while (!multi->done) {
 		chooseCoords(multi);
-	if (!multi->done) {
-		if (multi->strict)
-			while (!multi->done && anyInactiveIterator(multi))
-				chooseCoords(multi);
-		readValues(multi);
+		if (multi->done)
+			break;
+		if (readValues(multi) || !multi->strict)
+			break;
 	}
 }
 

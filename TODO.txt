@@ -1,4 +1,3 @@
-When/how to read default_value versus NaN? Consistent everywhere?
 Memory tracking & cleaning of chrom labels
 HMM app? (requires reverse iterators...)
 Read strand in BigBed files?
