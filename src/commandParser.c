@@ -47,7 +47,7 @@ puts("\toutput = filename | -");
 puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator) | histogram (output) (width) (iterator_list)");
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
-puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float)");
+puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | default (float)");
 puts("\tbinary_operator = diff | ratio | overlaps | apply (statistic)");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
 puts("\titerator_list = (iterator) : | (iterator) (iterator_list)");
@@ -153,6 +153,11 @@ static WiggleIterator ** readMappedIteratorList(int * count) {
 		iters = readIteratorList(count);
 		for (i = 0; i < *count; i++)
 			iters[i] = HighPassFilterWiggleIterator(iters[i], scalar);
+	} else if (strcmp(token, "default") == 0) {
+		double scalar = atof(needNextToken());
+		iters = readIteratorList(count, strict);
+		for (i = 0; i < *count; i++)
+			iters[i] = DefaultValueWiggleIterator(iters[i], scalar);
 	} else {
 		fprintf(stderr, "Unary function unkown: %s\n", token);
 		exit(1);
@@ -252,6 +257,11 @@ static WiggleIterator * readOverlap() {
 static WiggleIterator * readGt() {
 	double cutoff = atof(needNextToken());
 	return HighPassFilterWiggleIterator(readIterator(), cutoff);
+}
+
+static WiggleIterator * readDefault() {
+	double value = atof(needNextToken());
+	return DefaultValueWiggleIterator(readIterator(), value);
 }
 
 static WiggleIterator * readScale() {
@@ -463,6 +473,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readPow();
 	if (strcmp(token, "gt") == 0)
 		return readGt();
+	if (strcmp(token, "default") == 0)
+		return readDefault();
 	if (strcmp(token, "overlaps") == 0)
 		return readOverlap();
 	if (strcmp(token, "ttest") == 0)

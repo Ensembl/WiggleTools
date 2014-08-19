@@ -131,6 +131,36 @@ WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator * i) {
 }
 
 //////////////////////////////////////////////////////
+// Default value operator
+//////////////////////////////////////////////////////
+
+void DefaultValueWiggleIteratorPop(WiggleIterator * wi) {
+	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+
+	if (iter->done) {
+		wi->done = true;
+	} else {
+		while (!iter->done && iter->value == NAN)
+			pop(iter);
+
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		wi->value = iter->value;
+		pop(iter);
+	}
+}
+
+WiggleIterator * DefaultValueWiggleIterator(WiggleIterator * i, double value) {
+	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
+	data->iter = i;
+	WiggleIterator * res = newWiggleIterator(data, &DefaultValueWiggleIteratorPop, &UnaryWiggleIteratorSeek);
+	res->default_value = value;
+	return res;
+}
+
+//////////////////////////////////////////////////////
 // Compression operator
 //////////////////////////////////////////////////////
 
