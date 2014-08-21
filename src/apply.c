@@ -196,7 +196,7 @@ void ApplyWiggleIteratorPop(WiggleIterator * wi) {
 	wi->chrom = data->head->chrom;
 	wi->start = data->head->start;
 	wi->finish = data->head->finish;
-	BuffereWiggleIterator * bwi = BufferedWiggleIterator(data->head, data->strict);
+	WiggleIterator * bwi = BufferedWiggleIterator(data->head, data->strict);
 	if (data->statistic)
 		wi->value = data->statistic(bwi);
 	else {
