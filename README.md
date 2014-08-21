@@ -498,7 +498,7 @@ wiggletools pearson results.txt test/fixedStep.bw test/fixedStep.bw
 The apply function reads the regions from one iterator, then computes a given statistic on another iterator across those regions. It ignores regions with value 0.
 
 ```
-wiggletools apply mean unit test/variableStep.bw test/fixedStep.bw
+wiggletools apply meanI unit test/variableStep.bw test/fixedStep.bw
 ```
 
 * Apply and Paste
@@ -506,7 +506,7 @@ wiggletools apply mean unit test/variableStep.bw test/fixedStep.bw
 This is a convenience wrapper around the above function: it reads the regions directly from a Bed file, then prints out each line of the file, with the resulting statistic appended at the end of the line. This is useful to keep identifiers and other metadata contained in the same file as the results:
 
 ```
-wiggletools apply_paste output_file.txt mean test/overlapping.bed test/fixedStep.bw
+wiggletools apply_paste output_file.txt meanI test/overlapping.bed test/fixedStep.bw
 ```
 
 Profiles
