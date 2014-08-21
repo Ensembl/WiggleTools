@@ -1,3 +1,4 @@
+Statistics as iterators to allow concurrent computation on a single pass
 Memory tracking & cleaning of chrom labels
 HMM app? (requires reverse iterators...)
 Read strand in BigBed files?

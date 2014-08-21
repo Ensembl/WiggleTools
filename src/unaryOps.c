@@ -162,10 +162,6 @@ void CompressionWiggleIteratorPop(WiggleIterator * wi) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 
-	while (!iter->done && isnan(iter->value)) {
-		pop(iter);
-	}
-
 	if (iter->done) {
 		wi->done = true;
 	} else {
@@ -175,7 +171,7 @@ void CompressionWiggleIteratorPop(WiggleIterator * wi) {
 		wi->value = iter->value;
 		pop(iter);
 
-		while (!iter->done && strcmp(iter->chrom, wi->chrom) == 0 && iter->start == wi->finish && iter->value == wi->value) {
+		while (!iter->done && strcmp(iter->chrom, wi->chrom) == 0 && iter->start == wi->finish && ((isnan(iter->value) && isnan(wi->value)) || iter->value == wi->value)) {
 			wi->finish = iter->finish;
 			pop(iter);
 		}
