@@ -24,6 +24,11 @@ void popMultiplexer(Multiplexer * multi) {
 		multi->pop(multi);
 }
 
+void runMultiplexer(Multiplexer * multi) {
+	while (!multi->done)
+		multi->pop(multi);
+}
+
 void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
 	if (!multi->done)
 		multi->seek(multi, chrom, start, finish);

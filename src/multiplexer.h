@@ -34,5 +34,6 @@ struct multiplexer_st {
 
 void popMultiplexer(Multiplexer * multi);
 void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish);
+void runMultiplexer(Multiplexer * multi);
 
 #endif
