@@ -93,6 +93,11 @@ static bool readValues(Multiplexer * multi) {
 	bool allActive = true;
 
 	for (i=0; i < multi->count; i++) {
+		if (multi->strict && (*wiPtr)->done) {
+			multi->done;
+			break;
+		}
+
 		if (*inplayPtr) {
 			*valuePtr = (*wiPtr)->value;
 			if ((*wiPtr)->finish == multi->finish) {
@@ -100,6 +105,7 @@ static bool readValues(Multiplexer * multi) {
 			}
 		} else 
 			allActive = false;
+
 		valuePtr++;
 		inplayPtr++;
 		wiPtr++;
