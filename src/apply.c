@@ -31,9 +31,10 @@ typedef struct bufferedWiggleIteratorData_st {
 	double * values;
 	bool * set;
 	struct bufferedWiggleIteratorData_st * next;
+	double default_value;
 } BufferedWiggleIteratorData;
 
-static BufferedWiggleIteratorData * createBufferedWiggleIteratorData(char * chrom, int start, int finish) {
+static BufferedWiggleIteratorData * createBufferedWiggleIteratorData(char * chrom, int start, int finish, float default_value) {
 	BufferedWiggleIteratorData * bufferedData = (BufferedWiggleIteratorData *) calloc(1, sizeof(BufferedWiggleIteratorData));
 	if (!bufferedData) {
 		fprintf(stderr, "Could not calloc %li bytes\n", sizeof(BufferedWiggleIteratorData));
@@ -46,6 +47,7 @@ static BufferedWiggleIteratorData * createBufferedWiggleIteratorData(char * chro
 	bufferedData->length = finish - start;
 	bufferedData->values = (double *) calloc(bufferedData->length, sizeof(double));
 	bufferedData->set = (bool *) calloc(bufferedData->length, sizeof(bool));
+	bufferedData->default_value = default_value;
 	return bufferedData;
 }
 
@@ -74,7 +76,7 @@ void BufferedWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int sta
 }
 
 WiggleIterator * BufferedWiggleIterator(BufferedWiggleIteratorData * data) {
-	WiggleIterator * wi = newWiggleIterator(data, &BufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek);
+	WiggleIterator * wi = newWiggleIterator(data, &BufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value);
 	wi->chrom = data->chrom;
 	return wi;
 }
@@ -94,7 +96,7 @@ typedef struct applyWiggleIteratorData_st {
 } ApplyWiggleIteratorData;
 
 static void createTarget(ApplyWiggleIteratorData * data) {
-	BufferedWiggleIteratorData * bufferedData = createBufferedWiggleIteratorData(data->regions->chrom, data->regions->start, data->regions->finish);
+	BufferedWiggleIteratorData * bufferedData = createBufferedWiggleIteratorData(data->regions->chrom, data->regions->start, data->regions->finish, data->input->default_value);
 	if (!data->head)
 		data->head = bufferedData;
 	else
@@ -200,7 +202,7 @@ WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statisti
 	data->regions = regions;
 	data->statistic = statistic;
 	data->input = dataset;
-	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL);
+	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL, dataset->default_value);
 }
 
 WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, WiggleIterator * dataset) {
@@ -209,5 +211,5 @@ WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, Wigg
 	data->profile_width = width;
 	data->input = dataset;
 	data->valuePtr = calloc(width, sizeof(double));
-	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL);
+	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL, dataset->default_value);
 }

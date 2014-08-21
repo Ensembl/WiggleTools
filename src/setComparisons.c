@@ -133,7 +133,7 @@ WiggleIterator * TTestReduction(Multiset * multi) {
 		exit(1);
 	}	
 	data->multi = multi;
-	return newWiggleIterator(data, &TTestReductionPop, &SetComparisonSeek);
+	return newWiggleIterator(data, &TTestReductionPop, &SetComparisonSeek, NAN);
 }
 
 ////////////////////////////////////////////////////////
@@ -291,5 +291,5 @@ WiggleIterator * MWUReduction(Multiset * multi) {
 		data->mu_U = data->n1 * data->n2 / 2;
 		data->sigma_U = sqrt(data->n1 * data->n2 * (data->n1 + data->n2 + 1) / 12);
 	}
-	return newWiggleIterator(data, &MWUReductionPop, &MWUSeek);
+	return newWiggleIterator(data, &MWUReductionPop, &MWUSeek, NAN);
 }

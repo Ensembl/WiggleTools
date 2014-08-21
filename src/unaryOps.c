@@ -32,8 +32,7 @@ void NullWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, 
 }
 
 WiggleIterator * NullWiggleIterator() {
-	WiggleIterator * new = newWiggleIterator(NULL, &NullWiggleIteratorPop, &NullWiggleIteratorSeek);
-	new->done = true;
+	WiggleIterator * new = newWiggleIterator(NULL, &NullWiggleIteratorPop, &NullWiggleIteratorSeek, 0);
 	new->done = true;
 	return new;
 }
@@ -87,7 +86,7 @@ void UnionWiggleIteratorPop(WiggleIterator * wi) {
 WiggleIterator * UnionWiggleIterator(WiggleIterator * i) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
 	data->iter = i;
-	return newWiggleIterator(data, &UnionWiggleIteratorPop, &UnaryWiggleIteratorSeek);
+	return newWiggleIterator(data, &UnionWiggleIteratorPop, &UnaryWiggleIteratorSeek, 0);
 }
 
 //////////////////////////////////////////////////////
@@ -127,7 +126,7 @@ void TestNonOverlappingWiggleIteratorPop(WiggleIterator * wi) {
 WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator * i) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
 	data->iter = i;
-	return newWiggleIterator(data, &TestNonOverlappingWiggleIteratorPop, &UnaryWiggleIteratorSeek);
+	return newWiggleIterator(data, &TestNonOverlappingWiggleIteratorPop, &UnaryWiggleIteratorSeek, i->default_value);
 }
 
 //////////////////////////////////////////////////////
@@ -155,9 +154,7 @@ void DefaultValueWiggleIteratorPop(WiggleIterator * wi) {
 WiggleIterator * DefaultValueWiggleIterator(WiggleIterator * i, double value) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
 	data->iter = i;
-	WiggleIterator * res = newWiggleIterator(data, &DefaultValueWiggleIteratorPop, &UnaryWiggleIteratorSeek);
-	res->default_value = value;
-	return res;
+	return newWiggleIterator(data, &DefaultValueWiggleIteratorPop, &UnaryWiggleIteratorSeek, value);
 }
 
 //////////////////////////////////////////////////////
@@ -193,7 +190,7 @@ WiggleIterator * CompressionWiggleIterator(WiggleIterator * i) {
 	else {
 		UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
 		data->iter = i;
-		return newWiggleIterator(data, &CompressionWiggleIteratorPop, &UnaryWiggleIteratorSeek);
+		return newWiggleIterator(data, &CompressionWiggleIteratorPop, &UnaryWiggleIteratorSeek, i->default_value);
 	}
 }
 
@@ -226,7 +223,7 @@ WiggleIterator * UnitWiggleIterator(WiggleIterator * i) {
 	} else {
 		UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
 		data->iter = i;
-		return UnionWiggleIterator(newWiggleIterator(data, &UnitWiggleIteratorPop, &UnaryWiggleIteratorSeek));
+		return UnionWiggleIterator(newWiggleIterator(data, &UnitWiggleIteratorPop, &UnaryWiggleIteratorSeek, 0));
 	}
 }
 
@@ -268,7 +265,7 @@ WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator * i, double s) {
 	HighPassFilterWiggleIteratorData * data = (HighPassFilterWiggleIteratorData *) calloc(1, sizeof(HighPassFilterWiggleIteratorData));
 	data->iter = i;
 	data->scalar = s;
-	return UnionWiggleIterator(newWiggleIterator(data, &HighPassFilterWiggleIteratorPop, &HighPassFilterWiggleIteratorSeek));
+	return UnionWiggleIterator(newWiggleIterator(data, &HighPassFilterWiggleIteratorPop, &HighPassFilterWiggleIteratorSeek, 0));
 }
 
 //////////////////////////////////////////////////////
@@ -321,8 +318,7 @@ WiggleIterator * OverlapWiggleIterator(WiggleIterator * source, WiggleIterator *
 	OverlapWiggleIteratorData * data = (OverlapWiggleIteratorData *) calloc(1, sizeof(OverlapWiggleIteratorData));
 	data->source = source;
 	data->mask = mask;
-	WiggleIterator * wi = newWiggleIterator(data, &OverlapWiggleIteratorPop, &OverlapWiggleIteratorSeek);
-	wi->default_value = source->default_value;
+	WiggleIterator * wi = newWiggleIterator(data, &OverlapWiggleIteratorPop, &OverlapWiggleIteratorSeek, source->default_value);
 	wi->overlaps = source->overlaps;
 	return wi;
 }
@@ -360,9 +356,12 @@ WiggleIterator * ScaleWiggleIterator(WiggleIterator * i, double s) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) calloc(1, sizeof(ScaleWiggleIteratorData));
 	data->iter = NonOverlappingWiggleIterator(i);
 	data->scalar = s;
-	WiggleIterator * wi = newWiggleIterator(data, &ScaleWiggleIteratorPop, &ScaleWiggleIteratorSeek);
-	wi->default_value = i->default_value * s;
-	return wi;
+	float default_value;
+	if (isnan(i->default_value))
+		default_value = NAN;
+	else
+		default_value = i->default_value * s;
+	return newWiggleIterator(data, &ScaleWiggleIteratorPop, &ScaleWiggleIteratorSeek, default_value);
 }
 
 //////////////////////////////////////////////////////
@@ -387,9 +386,12 @@ WiggleIterator * ShiftWiggleIterator(WiggleIterator * i, double s) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) calloc(1, sizeof(ScaleWiggleIteratorData));
 	data->iter = NonOverlappingWiggleIterator(i);
 	data->scalar = s;
-	WiggleIterator * wi = newWiggleIterator(data, &ShiftWiggleIteratorPop, &ScaleWiggleIteratorSeek);
-	wi->default_value = i->default_value + s;
-	return wi;
+	float default_value;
+	if (isnan(i->default_value))
+		default_value = NAN;
+	else
+		default_value = i->default_value + s;
+	return newWiggleIterator(data, &ShiftWiggleIteratorPop, &ScaleWiggleIteratorSeek, default_value);
 }
 
 //////////////////////////////////////////////////////
@@ -433,7 +435,12 @@ WiggleIterator * NaturalLogWiggleIterator(WiggleIterator * i) {
 	data->iter = i;
 	data->base = E;
 	data->baseLog = 1;
-	return newWiggleIterator(data, &LogWiggleIteratorPop, &LogWiggleIteratorSeek);
+	double default_value;
+	if (!isnan(i->default_value) && i->default_value > 0)
+		default_value =  log(i->default_value) / data->baseLog;
+	else
+		default_value = NAN;
+	return newWiggleIterator(data, &LogWiggleIteratorPop, &LogWiggleIteratorSeek, default_value);
 }
 
 WiggleIterator * LogWiggleIterator(WiggleIterator * i, double s) {
@@ -441,7 +448,12 @@ WiggleIterator * LogWiggleIterator(WiggleIterator * i, double s) {
 	data->iter = NonOverlappingWiggleIterator(i);
 	data->base = s;
 	data->baseLog = log(s);
-	return newWiggleIterator(data, &LogWiggleIteratorPop, &LogWiggleIteratorSeek);
+	double default_value;
+	if (!isnan(i->default_value) && i->default_value > 0)
+		default_value =  log(i->default_value) / data->baseLog;
+	else
+		default_value = NAN;
+	return newWiggleIterator(data, &LogWiggleIteratorPop, &LogWiggleIteratorSeek, default_value);
 }
 
 //////////////////////////////////////////////////////
@@ -479,7 +491,12 @@ WiggleIterator * ExpWiggleIterator(WiggleIterator * i, double s) {
 	data->iter = i;
 	data->radix = s;
 	data->radixLog = log(data->radix);
-	return newWiggleIterator(data, &ExpWiggleIteratorPop, &ExpWiggleIteratorSeek);
+	float default_value;
+	if (isnan(i->default_value))
+		default_value = NAN;
+	else
+		default_value = exp(i->default_value * data->radixLog);
+	return newWiggleIterator(data, &ExpWiggleIteratorPop, &ExpWiggleIteratorSeek, default_value);
 }
 
 WiggleIterator * NaturalExpWiggleIterator(WiggleIterator * i) {
@@ -487,7 +504,12 @@ WiggleIterator * NaturalExpWiggleIterator(WiggleIterator * i) {
 	data->iter = NonOverlappingWiggleIterator(i);
 	data->radix = E;
 	data->radixLog = 1;
-	return newWiggleIterator(data, &ExpWiggleIteratorPop, &ExpWiggleIteratorSeek);
+	float default_value;
+	if (isnan(i->default_value))
+		default_value = NAN;
+	else
+		default_value = exp(i->default_value * data->radixLog);
+	return newWiggleIterator(data, &ExpWiggleIteratorPop, &ExpWiggleIteratorSeek, default_value);
 }
 
 //////////////////////////////////////////////////////
@@ -518,7 +540,12 @@ WiggleIterator * PowerWiggleIterator(WiggleIterator * i, double s) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) calloc(1, sizeof(ScaleWiggleIteratorData));
 	data->iter = NonOverlappingWiggleIterator(i);
 	data->scalar = s;
-	return newWiggleIterator(data, &PowerWiggleIteratorPop, &ScaleWiggleIteratorSeek);
+	double default_value;
+	if (!isnan(i->default_value) && (i->default_value > 0 || s > 0))
+		default_value = pow(i->default_value, s);
+	else
+		default_value = NAN;
+	return newWiggleIterator(data, &PowerWiggleIteratorPop, &ScaleWiggleIteratorSeek, default_value);
 }
 
 //////////////////////////////////////////////////////
@@ -542,7 +569,12 @@ static void AbsWiggleIteratorPop(WiggleIterator * wi) {
 WiggleIterator * AbsWiggleIterator(WiggleIterator * i) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
 	data->iter = NonOverlappingWiggleIterator(i);
-	return newWiggleIterator(data, &AbsWiggleIteratorPop, &UnaryWiggleIteratorSeek);
+	double default_value;
+	if (!isnan(i->default_value))
+		default_value = abs(i->default_value);
+	else
+		default_value = NAN;
+	return newWiggleIterator(data, &AbsWiggleIteratorPop, &UnaryWiggleIteratorSeek, default_value);
 }
 
 //////////////////////////////////////////////////////
@@ -658,7 +690,7 @@ WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int width) {
 	data->iter = NonOverlappingWiggleIterator(i);
 	data->buffer = (double*) calloc(sizeof(double), width);
 	data->width = width;
-	return newWiggleIterator(data, &SmoothWiggleIteratorPop, &SmoothWiggleIteratorSeek);
+	return newWiggleIterator(data, &SmoothWiggleIteratorPop, &SmoothWiggleIteratorSeek, i->default_value);
 }
 
 //////////////////////////////////////////////////////
@@ -742,5 +774,5 @@ WiggleIterator * CatWiggleIterator(char ** filenames, int count) {
 	data->count = count;
 	data->filenames = filenames;
 	data->iter = SmartReader(data->filenames[0]);
-	return newWiggleIterator(data, &CatWiggleIteratorPop, &CatWiggleIteratorSeek);
+	return newWiggleIterator(data, &CatWiggleIteratorPop, &CatWiggleIteratorSeek, 0);
 }

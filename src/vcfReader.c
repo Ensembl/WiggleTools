@@ -95,7 +95,7 @@ WiggleIterator * VcfReader(char * filename) {
 		fprintf(stderr, "Could not open bed file %s\n", filename);
 		exit(1);
 	}
-	WiggleIterator * res = newWiggleIterator(data, &VcfReaderPop, &VcfReaderSeek);
+	WiggleIterator * res = newWiggleIterator(data, &VcfReaderPop, &VcfReaderSeek, 0);
 	res->value = 1;
 	res->overlaps = true;
 	return res;

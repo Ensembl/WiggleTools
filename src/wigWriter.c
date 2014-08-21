@@ -267,7 +267,7 @@ WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedG
 	if (!holdFire)
 		launchWriter(data);
 
-	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek);
+	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek, i->default_value);
 }
 
 void toFile(WiggleIterator * wi, char * filename, bool bedGraph, bool holdFire) {
@@ -297,5 +297,5 @@ WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * o
 	if (!holdFire)
 		launchWriter(data);
 
-	return newWiggleIterator(data, &TeeWiggleIteratorPop, NULL);
+	return newWiggleIterator(data, &TeeWiggleIteratorPop, NULL, i->default_value);
 }

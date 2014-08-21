@@ -67,7 +67,7 @@ WiggleIterator * SelectReduction(Multiplexer * multi, int index) {
 	WiggleSelectData * data = (WiggleSelectData *) calloc(1, sizeof(WiggleSelectData));
 	data->multi = multi;
 	data->index = index;
-	return newWiggleIterator(data, &SelectReductionPop, &WiggleReducerSeek);
+	return newWiggleIterator(data, &SelectReductionPop, &WiggleReducerSeek, multi->iters[index]->default_value);
 }
 
 ////////////////////////////////////////////////////////
@@ -111,7 +111,19 @@ void MaxReductionPop(WiggleIterator * wi) {
 WiggleIterator * MaxReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &MaxReductionPop, &WiggleReducerSeek);
+	int i;
+	double max = data->multi->iters[0]->default_value;
+	if (!isnan(max)) {
+		for (i = 1; i < multi->count; i++) {
+			if (isnan(data->multi->iters[i]->default_value)) {
+				max = NAN;
+				break;
+			}
+			if (data->multi->iters[i]->default_value > max)
+				max = data->multi->iters[i]->default_value;
+		}
+	}
+	return newWiggleIterator(data, &MaxReductionPop, &WiggleReducerSeek, max);
 }
 
 ////////////////////////////////////////////////////////
@@ -155,7 +167,19 @@ void MinReductionPop(WiggleIterator * wi) {
 WiggleIterator * MinReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &MinReductionPop, &WiggleReducerSeek);
+	int i;
+	double min = data->multi->iters[0]->default_value;
+	if (!isnan(min)) {
+		for (i = 1; i < multi->count; i++) {
+			if (isnan(data->multi->iters[i]->default_value)) {
+				min = NAN;
+				break;
+			}
+			if (data->multi->iters[i]->default_value < min)
+				min = data->multi->iters[i]->default_value;
+		}
+	}
+	return newWiggleIterator(data, &MinReductionPop, &WiggleReducerSeek, min);
 }
 
 ////////////////////////////////////////////////////////
@@ -180,18 +204,36 @@ void SumReductionPop(WiggleIterator * wi) {
 	wi->start = multi->start;
 	wi->finish = multi->finish;
 	wi->value = 0;
-	for (i = 0; i < multi->count; i++)
+	for (i = 0; i < multi->count; i++) {
+		double value;
 		if (multi->inplay[i])
-			wi->value += multi->values[i];
+			value = multi->values[i];
 		else
-			wi->value += multi->iters[i]->default_value;
+			value = multi->iters[i]->default_value;
+
+		if (isnan(value)) {
+			wi->value = NAN;
+			break;
+		}
+
+		wi->value += value;
+	}
 	popMultiplexer(multi);
 }
 
 WiggleIterator * SumReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &SumReductionPop, &WiggleReducerSeek);
+	int i;
+	double sum = 0;
+	for (i = 0; i < multi->count; i++) {
+		if (isnan(data->multi->iters[i]->default_value)) {
+			sum = NAN;
+			break;
+		}
+		sum += data->multi->iters[i]->default_value;
+	}
+	return newWiggleIterator(data, &SumReductionPop, &WiggleReducerSeek, sum);
 }
 
 ////////////////////////////////////////////////////////
@@ -228,7 +270,16 @@ void ProductReductionPop(WiggleIterator * wi) {
 WiggleIterator * ProductReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &ProductReductionPop, &WiggleReducerSeek);
+	int i;
+	double prod = 1;
+	for (i = 0; i < multi->count; i++) {
+		if (isnan(data->multi->iters[i]->default_value)) {
+			prod = NAN;
+			break;
+		}
+		prod *= data->multi->iters[i]->default_value;
+	}
+	return newWiggleIterator(data, &ProductReductionPop, &WiggleReducerSeek, prod);
 }
 
 ////////////////////////////////////////////////////////
@@ -253,19 +304,43 @@ void MeanReductionPop(WiggleIterator * wi) {
 	wi->start = multi->start;
 	wi->finish = multi->finish;
 	wi->value = 0;
-	for (i = 0; i < multi->count; i++)
+	for (i = 0; i < multi->count; i++) {
+		double value;
 		if (multi->inplay[i])
-			wi->value += multi->values[i];
+			value = multi->values[i];
 		else
-			wi->value += multi->iters[i]->default_value;
-	wi->value /= multi->count;
+			value = multi->iters[i]->default_value;
+
+		if (isnan(value)) {
+			wi->value = NAN;
+			break;
+		}
+
+		wi->value += value;
+	}
+	if (!isnan(wi->value))
+		wi->value /= multi->count;
 	popMultiplexer(multi);
 }
 
 WiggleIterator * MeanReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &MeanReductionPop, &WiggleReducerSeek);
+	int i;
+	double sum = 0;
+	for (i = 0; i < multi->count; i++) {
+		if (isnan(data->multi->iters[i]->default_value)) {
+			sum = NAN;
+			break;
+		}
+		sum += data->multi->iters[i]->default_value;
+	}
+	float default_value;
+	if (isnan(sum))
+		default_value = NAN;
+	else
+		default_value = sum/multi->count;
+	return newWiggleIterator(data, &MeanReductionPop, &WiggleReducerSeek, default_value);
 }
 
 ////////////////////////////////////////////////////////
@@ -315,16 +390,34 @@ void VarianceReductionPop(WiggleIterator * wi) {
 			}
 		}
 		wi->value /= count;
-		
-		popMultiplexer(multi);
-		break;
 	}
+	popMultiplexer(multi);
 }
 
 WiggleIterator * VarianceReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &VarianceReductionPop, &WiggleReducerSeek);
+	int i;
+	double sum = 0;
+	for (i = 0; i < multi->count; i++) {
+		if (isnan(data->multi->iters[i]->default_value)) {
+			sum = NAN;
+			break;
+		}
+		sum += data->multi->iters[i]->default_value;
+	}
+	double default_value;
+	if (isnan(sum)) 
+		default_value = NAN;
+	else {
+		double mean = sum / multi->count;
+		double error = 0;
+		for (i = 0; i < multi->count; i++)
+			error += (data->multi->iters[i]->default_value - mean) * (data->multi->iters[i]->default_value - mean);
+		default_value = error/multi->count;
+	}
+
+	return newWiggleIterator(data, &VarianceReductionPop, &WiggleReducerSeek, default_value);
 }
 
 ////////////////////////////////////////////////////////
@@ -372,7 +465,28 @@ void StdDevReductionPop(WiggleIterator * wi) {
 WiggleIterator * StdDevReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek);
+	int i;
+	double sum = 0;
+	for (i = 0; i < multi->count; i++) {
+		if (isnan(data->multi->iters[i]->default_value)) {
+			sum = NAN;
+			break;
+		}
+		sum += data->multi->iters[i]->default_value;
+	}
+	double default_value;
+
+	if (isnan(sum)) 
+		default_value = NAN;
+	else {
+		double mean = sum / multi->count;
+		double error = 0;
+		for (i = 0; i < multi->count; i++)
+			error += (data->multi->iters[i]->default_value - mean) * (data->multi->iters[i]->default_value - mean);
+		default_value = sqrt(error/multi->count);
+	}
+
+	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek, default_value);
 }
 
 ////////////////////////////////////////////////////////
@@ -415,7 +529,29 @@ void EntropyReductionPop(WiggleIterator * wi) {
 WiggleIterator * EntropyReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek);
+
+	int i;
+	int count = 0;
+	for (i = 0; i < multi->count; i++) {
+		if (isnan(multi->iters[i]->default_value)) {
+			count = -1;
+			break;
+		}
+		if (multi->iters[i]->default_value != 0)
+			count++;
+	}
+	double default_value;
+	if (count == -1)
+		default_value = NAN;
+	else {
+		double p = count / multi->count;
+		if (p)
+			default_value = - p * log(p) - (1-p) * log(1 - p);
+		else
+			default_value = 0;
+	}
+
+	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek, default_value);
 }
 
 ////////////////////////////////////////////////////////
@@ -463,21 +599,32 @@ bool CVReductionPop2(WiggleIterator * wi) {
 	wi->value = sqrt(wi->value) / mean;
 	
 	popMultiplexer(multi);
-	return false;
-}
-
-void CVReductionPop(WiggleIterator * wi) {
-	if (wi->done)
-		return;
-
-	while(CVReductionPop2(wi))
-		;
 }
 
 WiggleIterator * CVReduction(Multiplexer * multi) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	data->multi = multi;
-	return newWiggleIterator(data, &CVReductionPop, &WiggleReducerSeek);
+
+	int i;
+	double mean = 0;
+	for (i = 0; i < multi->count; i++) {
+		if ( isnan(multi->iters[i]->default_value)) {
+			mean = NAN;
+			break;
+		} 
+		mean += multi->iters[i]->default_value;
+	}
+
+	float default_value;
+	if (!isnan(mean)) {
+		mean /= multi->count;
+		double error = 0;
+		for (i = 0; i < multi->count; i++)
+			error += (mean - multi->iters[i]->default_value) * (mean - multi->iters[i]->default_value);
+		default_value = sqrt(error/multi->count)/mean;
+	} else
+		default_value = NAN;
+	return newWiggleIterator(data, &CVReductionPop, &WiggleReducerSeek, default_value);
 }
 
 
@@ -539,5 +686,19 @@ WiggleIterator * MedianReduction(Multiplexer * multi) {
 	MedianWiggleReducerData * data = (MedianWiggleReducerData *) calloc(1, sizeof(MedianWiggleReducerData));
 	data->multi = multi;
 	data->vals = (double *) calloc(data->multi->count, sizeof(double));
-	return newWiggleIterator(data, &MedianReductionPop, &MedianWiggleReducerSeek);
+	int i;
+	float default_value = 0;
+	for (i = 0; i < multi->count; i++) {
+		data->vals[i] = multi->iters[i]->default_value;
+		if (isnan(data->vals[i])) {
+			default_value = NAN;
+			break;
+		}
+	}
+
+	if (!isnan(default_value)) {
+		qsort(data->vals, multi->count, sizeof(double), &compDoubles);
+		default_value = data->vals[multi->count/2];
+	}
+	return newWiggleIterator(data, &MedianReductionPop, &MedianWiggleReducerSeek, default_value);
 }
