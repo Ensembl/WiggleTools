@@ -590,6 +590,6 @@ wiggletools meanI - fillIn test/fixedStep.wig test/variableStep.wig
 For convenience, the fillIn keyword can be used in the apply commands, as is:
 
 ```
-wiggletools apply mean unit test/variableStep.bw test/fixedStep.bw
-wiggletools apply mean fillIn unit test/variableStep.bw test/fixedStep.bw
+wiggletools apply meanI unit test/variableStep.bw test/fixedStep.bw
+wiggletools apply meanI fillIn unit test/variableStep.bw test/fixedStep.bw
 ```
