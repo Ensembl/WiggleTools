@@ -140,9 +140,6 @@ void DefaultValueWiggleIteratorPop(WiggleIterator * wi) {
 	if (iter->done) {
 		wi->done = true;
 	} else {
-		while (!iter->done && iter->value == NAN)
-			pop(iter);
-
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
@@ -165,12 +162,13 @@ void CompressionWiggleIteratorPop(WiggleIterator * wi) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 
+	while (!iter->done && isnan(iter->value)) {
+		pop(iter);
+	}
+
 	if (iter->done) {
 		wi->done = true;
 	} else {
-		while (!iter->done && iter->value == NAN)
-			pop(iter);
-
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
@@ -202,7 +200,7 @@ void UnitWiggleIteratorPop(WiggleIterator * wi) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!data->iter->done) {
-		while (!data->iter->done && (data->iter->value == 0 || data->iter->value == NAN))
+		while (!data->iter->done && (data->iter->value == 0 || isnan(data->iter->value)))
 			pop(iter);
 		if (data->iter->done) {
 			wi->done = true;
@@ -240,7 +238,7 @@ void HighPassFilterWiggleIteratorPop(WiggleIterator * wi) {
 	HighPassFilterWiggleIteratorData * data = (HighPassFilterWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!data->iter->done) {
-		while (!data->iter->done && (data->iter->value <= data->scalar || data->iter->value == NAN))
+		while (!data->iter->done && (data->iter->value <= data->scalar || isnan(data->iter->value)))
 			pop(data->iter);
 		if (data->iter->done) {
 			wi->done = true;
@@ -339,7 +337,10 @@ void ScaleWiggleIteratorPop(WiggleIterator * wi) {
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
-		wi->value = data->scalar * iter->value;
+		if (isnan(iter->value))
+			wi->value = NAN;
+		else
+			wi->value = data->scalar * iter->value;
 		pop(data->iter);
 	} else {
 		wi->done = true;
@@ -417,7 +418,10 @@ void LogWiggleIteratorPop(WiggleIterator * wi) {
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
-		wi->value = log(iter->value) / data->baseLog;
+		if (isnan(iter->value) || iter->value < 0)
+			wi->value = NAN;
+		else
+			wi->value = log(iter->value) / data->baseLog;
 		pop(data->iter);
 	} else {
 		wi->done = true;
@@ -520,16 +524,14 @@ static void PowerWiggleIteratorPop(WiggleIterator * wi) {
 	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 
-	// Avoiding divisions by 0
-	if (data->scalar < 0)
-		while (!iter->done && (iter->value == 0 || iter->value == NAN))
-			pop(iter);
-
 	if (!iter->done) {
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
-		wi->value = pow(iter->value, data->scalar);
+		if ((data->scalar < 0 && iter->value <= 0) || isnan(iter->value))
+			wi->value = NAN;
+		else
+			wi->value = pow(iter->value, data->scalar);
 		pop(iter);
 	} else {
 		wi->done = true;
@@ -559,7 +561,10 @@ static void AbsWiggleIteratorPop(WiggleIterator * wi) {
 		wi->chrom = iter->chrom;
 		wi->start = iter->start;
 		wi->finish = iter->finish;
-		wi->value = abs(iter->value);
+		if (!isnan(iter->value))
+			wi->value = abs(iter->value);
+		else
+			wi->value = NAN;
 		pop(iter);
 	} else {
 		wi->done = true;

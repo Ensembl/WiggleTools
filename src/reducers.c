@@ -96,12 +96,23 @@ void MaxReductionPop(WiggleIterator * wi) {
 	else
 		wi->value = 0;
 
+	if (isnan(wi->value)) {
+		popMultiplexer(multi);
+		return;
+	}
+
 	for (i = 1; i < multi->count; i++) {
 		double value;
 		if (multi->inplay[i])
 			value = multi->values[i];
 		else
 			value = multi->iters[i]->default_value;
+
+		if (isnan(value)) {
+			wi->value = NAN;
+			break;
+		}
+
 		if (wi->value < value)
 			wi->value = value;
 	}
@@ -152,12 +163,23 @@ void MinReductionPop(WiggleIterator * wi) {
 	else
 		wi->value = 0;
 
+	if (isnan(wi->value)) {
+		popMultiplexer(multi);
+		return;
+	}
+
 	for (i = 1; i < multi->count; i++) {
 		double value;
 		if (multi->inplay[i])
 			value = multi->values[i];
 		else
 			value = multi->iters[i]->default_value;
+
+		if (isnan(value)) {
+			wi->value = NAN;
+			break;
+		}
+
 		if (wi->value > value)
 			wi->value = value;
 	}
@@ -259,10 +281,18 @@ void ProductReductionPop(WiggleIterator * wi) {
 	wi->finish = multi->finish;
 	wi->value = 1;
 	for (i = 0; i < multi->count; i++) {
+		double value;
 		if (multi->inplay[i])
-			wi->value *= multi->values[i];
+			value = multi->values[i];
 		else
-			wi->value *= multi->iters[i]->default_value;
+			value = multi->iters[i]->default_value;
+
+		if (isnan(value)) {
+			wi->value = NAN;
+			break;
+		}
+
+		wi->value *= value;
 	}
 	popMultiplexer(multi);
 }
@@ -356,30 +386,36 @@ void VarianceReductionPop(WiggleIterator * wi) {
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
-	while (true) {
-		if (multi->done) {
-			wi->done = true;
-			return;
+	if (multi->done) {
+		wi->done = true;
+		return;
+	}
+
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
+
+	double mean = 0;
+	double count = 0;
+	for (i = 0; i < multi->count; i++) {
+		float value;
+
+		if (multi->inplay[i])
+			value = multi->values[i];
+		else 	
+			value = multi->iters[i]->default_value;
+
+		if (isnan(value)) {
+			mean = NAN;
+			break;
 		}
+		mean += value;
+		count++;
+	}
 
-		wi->chrom = multi->chrom;
-		wi->start = multi->start;
-		wi->finish = multi->finish;
-
-		double mean = 0;
-		double count = 0;
-		for (i = 0; i < multi->count; i++) {
-			if (multi->inplay[i]) {
-				mean += multi->values[i];
-				count++;
-			}	
-		}
-
-		if (count < 2) {
-			popMultiplexer(multi);
-			continue;
-		}
-
+	if (count < 2 || isnan(mean)) {
+		wi->value = NAN;
+	} else {
 		mean /= count;
 		
 		wi->value = 0;
@@ -443,21 +479,37 @@ void StdDevReductionPop(WiggleIterator * wi) {
 	wi->start = multi->start;
 	wi->finish = multi->finish;
 	mean = 0;
-	for (i = 0; i < multi->count; i++)
-		if (multi->inplay[i])
-			mean += multi->values[i];
-	mean /= multi->count;
-	
-	wi->value = 0;
 	for (i = 0; i < multi->count; i++) {
+		float value;
 		if (multi->inplay[i])
-			diff = mean - multi->values[i];
+			value = multi->values[i];
 		else
-			diff = mean - multi->iters[i]->default_value;
-		wi->value += diff * diff;
+			value = multi->iters[i]->default_value;
+
+		if (isnan(value)) {
+			mean = NAN;
+			break;
+		}
+
+		mean += value;
 	}
-	wi->value /= multi->count;
-	wi->value = sqrt(wi->value);
+
+	if (isnan(mean))
+		wi->value = NAN;
+	else {
+		mean /= multi->count;
+		
+		wi->value = 0;
+		for (i = 0; i < multi->count; i++) {
+			if (multi->inplay[i])
+				diff = mean - multi->values[i];
+			else
+				diff = mean - multi->iters[i]->default_value;
+			wi->value += diff * diff;
+		}
+		wi->value /= multi->count;
+		wi->value = sqrt(wi->value);
+	}
 	
 	popMultiplexer(multi);
 }
@@ -512,9 +564,20 @@ void EntropyReductionPop(WiggleIterator * wi) {
 	wi->start = multi->start;
 	wi->finish = multi->finish;
 
-	for (i = 0; i < multi->count; i++)
-		if ((multi->inplay[i] && multi->values[i] != 0) || (!multi->inplay[i] && multi->iters[i]->default_value != 0))
+	for (i = 0; i < multi->count; i++) {
+		double value;
+		if (multi->inplay[i]) 
+			value = multi->values[i]; 
+		else 
+			value = multi->iters[i]->default_value;
+
+		if (isnan(value)) {
+			wi->value = NAN;
+			popMultiplexer(multi);
+			return;
+		} else if (value > 0)
 			count++;
+	}
 
 	if (count == 0 || count == multi->count)
 		wi->value = 0;
@@ -558,33 +621,44 @@ WiggleIterator * EntropyReduction(Multiplexer * multi) {
 // CV
 ////////////////////////////////////////////////////////
 
-bool CVReductionPop2(WiggleIterator * wi) {
+void CVReductionPop(WiggleIterator * wi) {
 	int i;
 	double mean, diff;
 
 	if (wi->done)
-		return true;
+		return;
 
 	WiggleReducerData * data = (WiggleReducerData *) wi->data;
 	Multiplexer * multi = data->multi;
 
 	if (multi->done) {
 		wi->done = true;
-		return false;
+		return;
 	}
 
 	wi->chrom = multi->chrom;
 	wi->start = multi->start;
 	wi->finish = multi->finish;
 	mean = 0;
-	for (i = 0; i < multi->count; i++)
+	for (i = 0; i < multi->count; i++) {
+		float value;
 		if (multi->inplay[i])
-			mean += multi->values[i];
+			value = multi->values[i];
+		else
+			value = multi->iters[i]->default_value;
+
+		if (isnan(value)) {
+			wi->value = NAN;
+			popMultiplexer(multi);
+			return;
+		}
+	}
 	mean /= multi->count;
 
 	if (mean == 0) {
+		wi->value = NAN;
 		popMultiplexer(multi);
-		return true;
+		return;
 	}
 	
 	wi->value = 0;
@@ -675,6 +749,12 @@ void MedianReductionPop(WiggleIterator * wi) {
 			data->vals[i] = multi->values[i];
 		else
 			data->vals[i] = multi->iters[i]->default_value;
+
+		if (isnan(data->vals[i])) {
+			wi->value = NAN;
+			popMultiplexer(multi);
+			return;
+		}
 	}
 	qsort(data->vals, multi->count, sizeof(double), &compDoubles);
 	wi->value = data->vals[multi->count / 2];

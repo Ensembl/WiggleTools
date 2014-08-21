@@ -28,7 +28,8 @@ double AUC(WiggleIterator * wi) {
 	double total = 0;
 	wi = NonOverlappingWiggleIterator(wi);
 	for(;!wi->done; pop(wi)) 
-		total += (wi->finish - wi->start) * wi->value;
+		if (!isnan(wi->value))
+			total += (wi->finish - wi->start) * wi->value;
 	return total;
 }
 
@@ -36,7 +37,7 @@ double span(WiggleIterator * wi) {
 	double total = 0;
 	wi = NonOverlappingWiggleIterator(wi);
 	for(;!wi->done; pop(wi)) 
-		if (wi->value)
+		if (!isnan(wi->value) && wi->value)
 			total += (wi->finish - wi->start);
 	return total;
 }
@@ -48,7 +49,7 @@ double max(WiggleIterator * wi) {
 	wi = NonOverlappingWiggleIterator(wi);
 	double max = wi->value;
 	for(;!wi->done; pop(wi))
-		if (wi->value > max)
+		if (!isnan(wi->value) && wi->value > max)
 			max = wi->value;
 	return max;
 }
@@ -60,7 +61,7 @@ double min(WiggleIterator * wi) {
 	wi = NonOverlappingWiggleIterator(wi);
 	double min = wi->value;
 	for(;!wi->done; pop(wi))
-		if (wi->value < min)
+		if (!isnan(wi->value) && wi->value < min)
 			min = wi->value;
 	return min;
 }
@@ -73,8 +74,10 @@ double mean(WiggleIterator * wi) {
 	double span = 0;
 	wi = NonOverlappingWiggleIterator(wi);
 	for(;!wi->done; pop(wi)) {
-		span += (wi->finish - wi->start);
-		total += (wi->finish - wi->start) * wi->value;
+		if (!isnan(wi->value)) {
+			span += (wi->finish - wi->start);
+			total += (wi->finish - wi->start) * wi->value;
+		}
 	}
 	return total / span;
 }
@@ -92,6 +95,8 @@ double variance(WiggleIterator * wi) {
 	wi = NonOverlappingWiggleIterator(wi);
 
 	for(;!wi->done; pop(wi)) {
+		if (isnan(wi->value))
+			continue;
 		double weight = wi->finish - wi->start;
 		double temp = sumWeight + weight;
 		double delta = wi->value - mean;
@@ -149,6 +154,8 @@ double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
 	Multiplexer * multi;
 
 	for (multi=newMultiplexer(iters, 2); !multi->done; popMultiplexer(multi)) {
+		if (isnan(multi->values[0]) || isnan(multi->values[1]))
+			continue;
 		width = (multi->finish - multi->start);
 		halfway = totalLength + width/2;
 		if (halfway == 0)

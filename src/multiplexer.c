@@ -108,7 +108,7 @@ static void readValues(Multiplexer * multi) {
 static bool anyInactiveIterator(Multiplexer * multi) {
 	int i;
 	for (i=0; i < multi->count; i++)
-		if (!multi->inplay[i] || multi->values[i] == NAN)
+		if (!multi->inplay[i])
 			return true;
 	return false;
 }
