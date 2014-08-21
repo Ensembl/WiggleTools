@@ -19,6 +19,16 @@
 
 #include "multiplexer.h"
 
+void popMultiplexer(Multiplexer * multi) {
+	if (!multi->done)
+		multi->pop(multi);
+}
+
+void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
+	if (!multi->done)
+		multi->seek(multi, chrom, start, finish);
+}
+
 static void chooseCoords(Multiplexer * multi) {
 	int i;
 	char * lastChrom = multi->chrom;
@@ -114,7 +124,7 @@ static bool readValues(Multiplexer * multi) {
 	return allActive;
 }
 
-void popMultiplexer(Multiplexer * multi) {
+static void popCoreMultiplexer(Multiplexer * multi) {
 	while (!multi->done) {
 		chooseCoords(multi);
 		if (multi->done)
@@ -124,7 +134,7 @@ void popMultiplexer(Multiplexer * multi) {
 	}
 }
 
-void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
+static void seekCoreMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
 	int i;
 	multi->done = false;
 	for (i=0; i<multi->count; i++)
@@ -134,7 +144,7 @@ void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int fin
 	popMultiplexer(multi);
 }
 
-Multiplexer * newCoreMultiplexer(WiggleIterator ** iters, int count) {
+Multiplexer * newCoreMultiplexer(WiggleIterator ** iters, int count, void (*pop)(Multiplexer *), void (*seek)(Multiplexer *, const char *, int, int)) {
 	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
 	new->count = count;
 	new->iters = calloc(count, sizeof(WiggleIterator *));
@@ -143,11 +153,13 @@ Multiplexer * newCoreMultiplexer(WiggleIterator ** iters, int count) {
 		new->iters[i] = NonOverlappingWiggleIterator(iters[i]);
 	new->inplay = (bool *) calloc(count, sizeof(bool));
 	new->values = (double *) calloc(count, sizeof(double));
+	new->pop = pop;
+	new->seek = seek;
 	return new;
 }
 
 Multiplexer * newMultiplexer(WiggleIterator ** iters, int count, bool strict) {
-	Multiplexer * new = newCoreMultiplexer(iters, count);
+	Multiplexer * new = newCoreMultiplexer(iters, count, popCoreMultiplexer, seekCoreMultiplexer);
 	new->strict = strict;
 	popMultiplexer(new);
 	return new;

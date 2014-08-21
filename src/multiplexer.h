@@ -27,7 +27,8 @@ struct multiplexer_st {
 	WiggleIterator ** iters;
 	bool done;
 	bool strict;
-
+	void (*pop)(Multiplexer *);
+	void (*seek)(Multiplexer *, const char *, int, int);
 	FILE * file;
 };
 
