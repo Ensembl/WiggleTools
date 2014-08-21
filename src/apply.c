@@ -232,7 +232,7 @@ WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statisti
 	data->statistic = statistic;
 	data->input = dataset;
 	data->strict = strict;
-	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL, dataset->default_value);
+	return newWiggleIterator(data, &ApplyWiggleIteratorPop, &ApplyWiggleIteratorSeek, dataset->default_value);
 }
 
 WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, WiggleIterator * dataset) {
@@ -242,5 +242,5 @@ WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, Wigg
 	data->input = dataset;
 	data->valuePtr = calloc(width, sizeof(double));
 	data->strict = false;
-	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL, dataset->default_value);
+	return newWiggleIterator(data, &ApplyWiggleIteratorPop, &ApplyWiggleIteratorSeek, dataset->default_value);
 }
