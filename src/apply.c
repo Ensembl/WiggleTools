@@ -196,11 +196,12 @@ void ApplyWiggleIteratorPop(WiggleIterator * wi) {
 	wi->chrom = data->head->chrom;
 	wi->start = data->head->start;
 	wi->finish = data->head->finish;
+	BuffereWiggleIterator * bwi = BufferedWiggleIterator(data->head, data->strict);
 	if (data->statistic)
-		wi->value = data->statistic(BufferedWiggleIterator(data->head, data->strict));
+		wi->value = data->statistic(bwi);
 	else {
 		wi->valuePtr = data->valuePtr;
-		regionProfile(BufferedWiggleIterator(data->head, data->strict), wi->valuePtr, data->profile_width, wi->finish - wi->start, false);
+		regionProfile(bwi, wi->valuePtr, data->profile_width, wi->finish - wi->start, false);
 	}
 
 	// Discard struct
@@ -210,6 +211,7 @@ void ApplyWiggleIteratorPop(WiggleIterator * wi) {
 	else
 		data->head = data->head->next;
 	destroyBufferedWiggleIteratorData(bufferedData);
+	free(bwi);
 }
 
 void ApplyWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {

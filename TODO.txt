@@ -1,4 +1,4 @@
-Print out multiplexers
+Print out final value iterator
 Statistics as iterators to allow concurrent computation on a single pass
 Memory tracking & cleaning of chrom labels
 HMM app? (requires reverse iterators...)
