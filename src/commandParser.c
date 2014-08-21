@@ -44,7 +44,7 @@ puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (statistic) | (extraction)");
 puts("\tstatistic = AUC (output) (iterator) | meanI (output) (iterator) | varI (output) (iterator) | minI (iterator) | maxI (iterator) | pearson (output) (iterator) (iterator) | isZero (iterator)");
 puts("\toutput = filename | -");
-puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator) | histogram (output) (width) (iterator_list)");
+puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator) | histogram (output) (width) (iterator_list) | mwrite (output) (multiplex) | mwrite_bg (output) (multiplex)");
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex)");
 puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | default (float)");
@@ -166,9 +166,7 @@ static WiggleIterator ** readMappedIteratorList(int * count, bool * strict) {
 	return iters;
 }
 
-static WiggleIterator ** readIteratorList(int * count, bool * strict) {
-	char * token = needNextToken();
-
+static WiggleIterator ** readIteratorListToken(int * count, bool * strict, char * token) {
 	if (strcmp(token, "map") == 0)
 		return readMappedIteratorList(count, strict);
 	else if (strcmp(token, "strict") == 0) {
@@ -178,9 +176,11 @@ static WiggleIterator ** readIteratorList(int * count, bool * strict) {
 		return readFileList(count, token);
 }
 
-static WiggleIterator ** readLastIteratorList(int * count) {
-	bool strict = false;
-	WiggleIterator ** res = readIteratorList(count, &strict);
+static WiggleIterator ** readIteratorList(int * count, bool * strict) {
+	return readIteratorListToken(count, strict, needNextToken());
+}
+
+static void noTokensLeft() {
 	char * remainder = nextToken(0,0);
 	if (remainder) {
 		fprintf(stderr, "Trailing tokens: the last tokens in your command were not read, check your syntax:\n...");
@@ -191,14 +191,13 @@ static WiggleIterator ** readLastIteratorList(int * count) {
 		fprintf(stderr, "\n");
 		exit(1);
 	}
-	return res;
 }
 
-static Multiplexer * readMultiplexer() {
-	int count = 0; 
+static WiggleIterator ** readLastIteratorList(int * count) {
 	bool strict = false;
-	WiggleIterator ** iters = readIteratorList(&count, &strict);
-	return newMultiplexer(iters, count, strict);
+	WiggleIterator ** res = readIteratorList(count, &strict);
+	noTokensLeft();
+	return res;
 }
 
 static FILE * readOutputFilename() {
@@ -212,6 +211,34 @@ static FILE * readOutputFilename() {
 		return file;
 	} else 
 		return stdout;
+}
+
+static Multiplexer * readMultiplexer();
+
+static Multiplexer * readMultiplexerToken(char * token) {
+	if (strcmp(token, "mwrite") == 0) {
+		FILE * file = readOutputFilename();
+		return TeeMultiplexer(readMultiplexer(), file, false, holdFire);
+	} else if (strcmp(token, "mwrite_bg") == 0) {
+		FILE * file = readOutputFilename();
+		return TeeMultiplexer(readMultiplexer(), file, true, holdFire);
+	} else {
+		int count = 0; 
+		bool strict = false;
+		WiggleIterator ** iters = readIteratorListToken(&count, &strict, token);
+		return newMultiplexer(iters, count, strict);
+	}
+}
+
+static Multiplexer * readLastMultiplexerToken(char * token) {
+	Multiplexer * res = readMultiplexerToken(token);
+	noTokensLeft();
+	return res;
+}
+
+static Multiplexer * readMultiplexer() {
+	char * token = needNextToken();
+	return readMultiplexerToken(token);
 }
 
 static WiggleIterator * readTee() {
@@ -676,6 +703,8 @@ void rollYourOwn(int argc, char ** argv) {
 		readProfiles();
 	else if (strcmp(token, "seek") == 0)
 		readSeek();
+	else if (strncmp(token, "mwrite", 6) == 0)
+		runMultiplexer(readLastMultiplexerToken(token));
 	else
 		toStdout(readLastIteratorToken(token), false, false);	
 }

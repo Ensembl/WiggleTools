@@ -109,7 +109,7 @@ static bool readValues(Multiplexer * multi) {
 
 	for (i=0; i < multi->count; i++) {
 		if (multi->strict && (*wiPtr)->done) {
-			multi->done;
+			multi->done = true;
 			break;
 		}
 
@@ -149,23 +149,24 @@ static void seekCoreMultiplexer(Multiplexer * multi, const char * chrom, int sta
 	popMultiplexer(multi);
 }
 
-Multiplexer * newCoreMultiplexer(WiggleIterator ** iters, int count, void (*pop)(Multiplexer *), void (*seek)(Multiplexer *, const char *, int, int)) {
+Multiplexer * newCoreMultiplexer(void * data, int count, void (*pop)(Multiplexer *), void (*seek)(Multiplexer *, const char *, int, int)) {
 	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
 	new->count = count;
+	new->values = (double *) calloc(count, sizeof(double));
+	new->pop = pop;
+	new->seek = seek;
+	new->data = data;
+	return new;
+}
+
+Multiplexer * newMultiplexer(WiggleIterator ** iters, int count, bool strict) {
+	Multiplexer * new = newCoreMultiplexer(NULL, count, popCoreMultiplexer, seekCoreMultiplexer);
+	new->strict = strict;
 	new->iters = calloc(count, sizeof(WiggleIterator *));
 	int i;
 	for (i = 0; i < count; i++)
 		new->iters[i] = NonOverlappingWiggleIterator(iters[i]);
 	new->inplay = (bool *) calloc(count, sizeof(bool));
-	new->values = (double *) calloc(count, sizeof(double));
-	new->pop = pop;
-	new->seek = seek;
-	return new;
-}
-
-Multiplexer * newMultiplexer(WiggleIterator ** iters, int count, bool strict) {
-	Multiplexer * new = newCoreMultiplexer(iters, count, popCoreMultiplexer, seekCoreMultiplexer);
-	new->strict = strict;
 	popMultiplexer(new);
 	return new;
 }

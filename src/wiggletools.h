@@ -95,6 +95,9 @@ void toFile (WiggleIterator *, char *, bool, bool);
 void toStdout (WiggleIterator *, bool, bool);
 WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *, bool, bool);
 void runWiggleIterator(WiggleIterator * );
+Multiplexer * TeeMultiplexer(Multiplexer *, FILE *, bool, bool);
+void toStdoutMultiplexer (Multiplexer *, bool, bool);
+void runMultiplexer(Multiplexer * );
 
 WiggleIterator * ApplyWiggleIterator(WiggleIterator *, double (*)(WiggleIterator *), WiggleIterator *, bool);
 WiggleIterator * ProfileWiggleIterator(WiggleIterator *, int, WiggleIterator *);
