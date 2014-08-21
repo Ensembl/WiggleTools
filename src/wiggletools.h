@@ -96,8 +96,8 @@ void toStdout (WiggleIterator *, bool, bool);
 WiggleIterator * TeeWiggleIterator(WiggleIterator *, FILE *, bool, bool);
 void runWiggleIterator(WiggleIterator * );
 
-WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset);
-WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, WiggleIterator * dataset);
+WiggleIterator * ApplyWiggleIterator(WiggleIterator *, double (*)(WiggleIterator *), WiggleIterator *, bool);
+WiggleIterator * ProfileWiggleIterator(WiggleIterator *, int, WiggleIterator *);
 WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile, bool);
 
 // Statistics
