@@ -153,7 +153,7 @@ double pearsonCorrelation(WiggleIterator * iterA, WiggleIterator * iterB) {
 	iters[1] = NonOverlappingWiggleIterator(iterB);
 	Multiplexer * multi;
 
-	for (multi=newMultiplexer(iters, 2); !multi->done; popMultiplexer(multi)) {
+	for (multi=newMultiplexer(iters, 2, false); !multi->done; popMultiplexer(multi)) {
 		if (isnan(multi->values[0]) || isnan(multi->values[1]))
 			continue;
 		width = (multi->finish - multi->start);

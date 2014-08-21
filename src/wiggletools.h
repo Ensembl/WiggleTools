@@ -66,8 +66,7 @@ WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
 WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int width);
 
 // Sets of iterators 
-Multiplexer * newMultiplexer(WiggleIterator **, int);
-Multiplexer * newStrictMultiplexer(WiggleIterator **, int);
+Multiplexer * newMultiplexer(WiggleIterator **, int, bool);
 
 // Reduction operators on sets
 

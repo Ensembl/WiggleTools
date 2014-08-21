@@ -146,15 +146,9 @@ Multiplexer * newCoreMultiplexer(WiggleIterator ** iters, int count) {
 	return new;
 }
 
-Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
+Multiplexer * newMultiplexer(WiggleIterator ** iters, int count, bool strict) {
 	Multiplexer * new = newCoreMultiplexer(iters, count);
-	popMultiplexer(new);
-	return new;
-}
-
-Multiplexer * newStrictMultiplexer(WiggleIterator ** iters, int count) {
-	Multiplexer * new = newCoreMultiplexer(iters, count);
-	new->strict = true;
+	new->strict = strict;
 	popMultiplexer(new);
 	return new;
 }

@@ -198,10 +198,7 @@ static Multiplexer * readMultiplexer() {
 	int count = 0; 
 	bool strict = false;
 	WiggleIterator ** iters = readIteratorList(&count, &strict);
-	if (strict)
-		return newStrictMultiplexer(iters, count);
-	else
-		return newMultiplexer(iters, count);
+	return newMultiplexer(iters, count, strict);
 }
 
 static FILE * readOutputFilename() {
@@ -368,10 +365,7 @@ static WiggleIterator * readDifference() {
 	}
 	iters[0] = readIteratorToken(token);
 	iters[1] = ScaleWiggleIterator(readIterator(), -1);
-	if (strict)
-		return SumReduction(newStrictMultiplexer(iters, 2));
-	else
-		return SumReduction(newMultiplexer(iters, 2));
+	return SumReduction(newMultiplexer(iters, 2, strict));
 }
 
 static WiggleIterator * readRatio() {
@@ -384,10 +378,7 @@ static WiggleIterator * readRatio() {
 	}
 	iters[0] = readIteratorToken(token);
 	iters[1] = PowerWiggleIterator(readIterator(), -1);
-	if (strict)
-		return ProductReduction(newStrictMultiplexer(iters, 2));
-	else
-		return ProductReduction(newMultiplexer(iters, 2));
+	return ProductReduction(newMultiplexer(iters, 2, strict));
 }
 
 static WiggleIterator * readSeek() {
