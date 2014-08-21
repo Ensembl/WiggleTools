@@ -360,16 +360,34 @@ static WiggleIterator * readUnit() {
 
 static WiggleIterator * readDifference() {
 	WiggleIterator ** iters = calloc(2, sizeof(WiggleIterator *));
-	iters[0] = readIterator();
+	bool strict = false;
+	char * token = needNextToken();
+	if (strcmp(token, "strict")==0) {
+		strict = true;
+		token = needNextToken();
+	}
+	iters[0] = readIteratorToken(token);
 	iters[1] = ScaleWiggleIterator(readIterator(), -1);
-	return SumReduction(newMultiplexer(iters, 2));
+	if (strict)
+		return SumReduction(newStrictMultiplexer(iters, 2));
+	else
+		return SumReduction(newMultiplexer(iters, 2));
 }
 
 static WiggleIterator * readRatio() {
 	WiggleIterator ** iters = calloc(2, sizeof(WiggleIterator *));
-	iters[0] = readIterator();
+	bool strict = false;
+	char * token = needNextToken();
+	if (strcmp(token, "strict")==0) {
+		strict = true;
+		token = needNextToken();
+	}
+	iters[0] = readIteratorToken(token);
 	iters[1] = PowerWiggleIterator(readIterator(), -1);
-	return ProductReduction(newMultiplexer(iters, 2));
+	if (strict)
+		return ProductReduction(newStrictMultiplexer(iters, 2));
+	else
+		return ProductReduction(newMultiplexer(iters, 2));
 }
 
 static WiggleIterator * readSeek() {
