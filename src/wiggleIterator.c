@@ -27,6 +27,7 @@ WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterat
 	new->strand = 0; // Default value for non-stranded data;
 	new->valuePtr = NULL;
 	new->overlaps = false;
+	new->append = NULL;
 	new->default_value = default_value;
 	pop(new);
 	return new;

@@ -130,6 +130,32 @@ WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator * i) {
 }
 
 //////////////////////////////////////////////////////
+// isZero 
+//////////////////////////////////////////////////////
+
+void isZeroPop(WiggleIterator * wi) {
+	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) wi->data;
+	if (data->iter->done) {
+		wi->done = true;
+		return;
+	}
+	wi->chrom = data->iter->chrom;
+	wi->start = data->iter->start;
+	wi->finish = data->iter->finish;
+	wi->value = data->iter->value;
+	if (wi->value != 0) {
+		exit(1);
+	}
+	pop(data->iter);
+}
+
+WiggleIterator * IsZero(WiggleIterator * wi) {
+	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
+	data->iter = wi;
+	return newWiggleIterator(data, &isZeroPop, &UnaryWiggleIteratorSeek, wi->default_value);
+}
+
+//////////////////////////////////////////////////////
 // Default value operator
 //////////////////////////////////////////////////////
 

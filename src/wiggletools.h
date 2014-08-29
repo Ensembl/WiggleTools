@@ -49,21 +49,22 @@ void seek(WiggleIterator *, const char *, int, int);
 WiggleIterator * UnitWiggleIterator (WiggleIterator *);
 WiggleIterator * UnionWiggleIterator (WiggleIterator *);
 WiggleIterator * NonOverlappingWiggleIterator (WiggleIterator *);
-WiggleIterator * DefaultValueWiggleIterator(WiggleIterator *, double);
 WiggleIterator * AbsWiggleIterator (WiggleIterator * );
 WiggleIterator * NaturalLogWiggleIterator (WiggleIterator *);
 WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
 WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator * );
-WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator *, double);
 WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator *);
-WiggleIterator * OverlapWiggleIterator(WiggleIterator * source, WiggleIterator * mask);
+WiggleIterator * OverlapWiggleIterator(WiggleIterator *, WiggleIterator *);
+WiggleIterator * IsZero(WiggleIterator *);
 	// Scalar operations
 WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
 WiggleIterator * ShiftWiggleIterator(WiggleIterator *, double);
 WiggleIterator * PowerWiggleIterator (WiggleIterator *, double);
 WiggleIterator * LogWiggleIterator (WiggleIterator * , double);
 WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
-WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int width);
+WiggleIterator * DefaultValueWiggleIterator(WiggleIterator *, double);
+WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator *, double);
+WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int);
 
 // Sets of iterators 
 Multiplexer * newMultiplexer(WiggleIterator **, int, bool);
@@ -99,29 +100,26 @@ Multiplexer * TeeMultiplexer(Multiplexer *, FILE *, bool, bool);
 void toStdoutMultiplexer (Multiplexer *, bool, bool);
 void runMultiplexer(Multiplexer * );
 
-WiggleIterator * ApplyWiggleIterator(WiggleIterator *, double (*)(WiggleIterator *), WiggleIterator *, bool);
-WiggleIterator * ProfileWiggleIterator(WiggleIterator *, int, WiggleIterator *);
-WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile, bool);
-
 // Statistics
 // 	Unary
-double AUC (WiggleIterator *);
-double mean (WiggleIterator *);
-double min (WiggleIterator *);
-double max (WiggleIterator *);
-double variance (WiggleIterator *);
-double isZero(WiggleIterator * wi);
+WiggleIterator * AUCIntegrator (WiggleIterator *);
+WiggleIterator * MeanIntegrator (WiggleIterator *);
+WiggleIterator * MinIntegrator (WiggleIterator *);
+WiggleIterator * MaxIntegrator (WiggleIterator *);
+WiggleIterator * VarianceIntegrator (WiggleIterator *);
 void regionProfile(WiggleIterator *, double *, int, int, bool);
 void addProfile(double *, double *, int);
 //	Binary 
-double pearsonCorrelation (WiggleIterator * , WiggleIterator * );
+WiggleIterator * PearsonIntegrator (WiggleIterator * , WiggleIterator * );
 //	Histograms
 Histogram * histogram(WiggleIterator **, int, int);
 void normalize_histogram(Histogram *);
 void print_histogram(Histogram *, FILE *);
 
 // Regional statistics
-WiggleIterator * apply(WiggleIterator * , double (*statistic)(WiggleIterator *), WiggleIterator *);
+Multiplexer * ApplyMultiplexer(WiggleIterator *, WiggleIterator * (**statistics)(WiggleIterator *), int count, WiggleIterator *, bool strict);
+Multiplexer * ProfileMultiplexer(WiggleIterator *, int, WiggleIterator *);
+Multiplexer * PasteMultiplexer(Multiplexer *,  FILE *, FILE *, bool);
 
 // Cleaning up
 void destroyWiggleIterator (WiggleIterator *);

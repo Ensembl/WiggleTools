@@ -442,7 +442,7 @@ Note that BedGraphs and the BedGraph sections within wiggle files are 0-based, w
 Statistics
 ----------
 
-Sometimes, you just want a statistic across the genome. The following functions do not return a sequence of numbers, just a single number. Some of these integrating functions have "I" appended to them to distinguish them from the iterators with related (yet different) functions. All of these outputs are directed to a user defined output file (in this case results.txt) but you can put `-' for standard output:
+Sometimes, you just want a statistic across the genome. The following functions do not return a sequence of numbers, just a single number. Some of these integrating functions have "I" appended to them to distinguish them from the iterators with related (yet different) functions. Note the print statement at the beginning of the command.
 
 
 * AUC
@@ -450,7 +450,7 @@ Sometimes, you just want a statistic across the genome. The following functions 
 Computes the area under the curve (AUC) of the an iterator:
 
 ```
-wiggletools AUC results.txt test/fixedStep.bw test/variableStep.bw 
+wiggletools print - AUC test/fixedStep.bw test/variableStep.bw 
 ```
 
 * meanI
@@ -458,7 +458,7 @@ wiggletools AUC results.txt test/fixedStep.bw test/variableStep.bw
 Computes the mean of an iterator across all of its points:
 
 ```
-wiggletools meanI results.txt test/fixedStep.bw 
+wiggletools print - meanI test/fixedStep.bw 
 ```
 
 * varI
@@ -466,7 +466,7 @@ wiggletools meanI results.txt test/fixedStep.bw
 Computes the variance of an iterator across all of its points:
 
 ```
-wiggletools varI results.txt test/fixedStep.bw 
+wiggletools print - varI test/fixedStep.bw 
 ```
 
 * maxI
@@ -474,7 +474,7 @@ wiggletools varI results.txt test/fixedStep.bw
 Computes the maximum of an iterator across all of its points:
 
 ```
-wiggletools maxI results.txt test/fixedStep.bw 
+wiggletools print - maxI test/fixedStep.bw 
 ```
 
 * minI
@@ -482,7 +482,7 @@ wiggletools maxI results.txt test/fixedStep.bw
 Computes the minimum of an iterator across all of its points:
 
 ```
-wiggletools minI results.txt test/fixedStep.bw 
+wiggletools print - minI test/fixedStep.bw 
 ```
 
 * pearson
@@ -490,7 +490,22 @@ wiggletools minI results.txt test/fixedStep.bw
 Computes the Pearson correlation between two iterators across all their points:
 
 ```
-wiggletools pearson results.txt test/fixedStep.bw test/fixedStep.bw 
+wiggletools print - pearson test/fixedStep.bw test/fixedStep.bw 
+```
+
+* Chaining statistics:
+
+All the above functions are actually iterators that transmit the same data as they are given, e.g.:
+
+```
+wiggletools test/fixedStep.bw 
+wiggletools AUC test/fixedStep.bw 
+```
+
+This allows you to plug multiple statistics in a dandelion chain off the same iterator. Note how the print statement simply concatenates the results of the operators as they are reads from left to right:
+
+```
+wiggletools print - meanI varI minI maxI test/fixedStep.bw 
 ```
 
 * Apply
