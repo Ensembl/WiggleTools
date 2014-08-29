@@ -295,6 +295,7 @@ Multiplexer * TeeMultiplexer(Multiplexer * in, FILE * outfile, bool bedGraph, bo
 	Multiplexer * res = newCoreMultiplexer(data, in->count, &TeeMultiplexerPop, &TeeMultiplexerSeek);
 	res->values = in->values;
 	res->inplay = in->inplay;
+	res->default_values = in->default_values;
 	popMultiplexer(res);
 	return res;
 }
@@ -319,6 +320,7 @@ Multiplexer * PasteMultiplexer(Multiplexer * in, FILE * infile, FILE * outfile, 
 
 	Multiplexer * res = newCoreMultiplexer(data, in->count, &TeeMultiplexerPop, &TeeMultiplexerSeek);
 	res->values = in->values;
+	res->default_values = in->default_values;
 	res->inplay = in->inplay;
 	popMultiplexer(res);
 	return res;

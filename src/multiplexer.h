@@ -22,6 +22,7 @@ struct multiplexer_st {
 	int start;
 	int finish;
 	double * values;
+	double * default_values;
 	int count;
 	bool *inplay;
 	WiggleIterator ** iters;
