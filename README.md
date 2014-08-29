@@ -469,6 +469,22 @@ Computes the variance of an iterator across all of its points:
 wiggletools print - varI test/fixedStep.bw 
 ```
 
+* stddevI
+
+Computes the standard deviation of an iterator across all of its points:
+
+```
+wiggletools print - stddevI test/fixedStep.bw 
+```
+
+* CVI 
+
+Computes the coefficient of variation of an iterator across all of its points:
+
+```
+wiggletools print - CVI test/fixedStep.bw 
+```
+
 * maxI
 
 Computes the maximum of an iterator across all of its points:

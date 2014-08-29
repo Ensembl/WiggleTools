@@ -46,7 +46,7 @@ puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) 
 puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | default (float) | isZero | (statistic)");
 puts("\toutput = (filename) | -");
 puts("\tfilename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
-puts("\tstatistic = AUC | meanI | varI | minI | maxI | pearson (iterator)");
+puts("\tstatistic = AUC | meanI | varI | minI | maxI | stddevI | CVI | pearson (iterator)");
 puts("\tbinary_operator = diff | ratio | overlaps | apply (statistic) | fillIn");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
 puts("\tmultiplex = (iterator_list) | map (unary_operator) (multiplex) | strict (multiplex)");
@@ -227,6 +227,10 @@ static statisticCreator * readStatisticList(char ** token, int * count) {
 			statistics[(*count)++] = &MeanIntegrator;
 		else if (strcmp(*token, "varI") == 0)
 			statistics[(*count)++] = &VarianceIntegrator;
+		else if (strcmp(*token, "stddevI") == 0)
+			statistics[(*count)++] = &StandardDeviationIntegrator;
+		else if (strcmp(*token, "CVI") == 0)
+			statistics[(*count)++] = &CoefficientOfVariationIntegrator;
 		else if (strcmp(*token, "maxI") == 0)
 			statistics[(*count)++] = &MaxIntegrator;
 		else if (strcmp(*token, "minI") == 0)
@@ -515,6 +519,14 @@ static WiggleIterator * readVarianceIntegrator() {
 	return VarianceIntegrator(readIterator());	
 }
 
+static WiggleIterator * readStandardDeviationIntegrator() {
+	return StandardDeviationIntegrator(readIterator());	
+}
+
+static WiggleIterator * readCoefficientOfVariationIntegrator() {
+	return CoefficientOfVariationIntegrator(readIterator());	
+}
+
 static WiggleIterator * readPearson() {
 	WiggleIterator * iter1 = readIterator();
 	WiggleIterator * iter2 = readLastIterator();
@@ -600,6 +612,10 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readMinIntegrator();
 	if (strcmp(token, "varI") == 0)
 		return readVarianceIntegrator();
+	if (strcmp(token, "stddevI") == 0)
+		return readStandardDeviationIntegrator();
+	if (strcmp(token, "CVI") == 0)
+		return readCoefficientOfVariationIntegrator();
 	if (strcmp(token, "pearson") == 0) 
 		return readPearson();
 	if (strcmp(token, "isZero") == 0) 

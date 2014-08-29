@@ -228,15 +228,7 @@ typedef struct varianceData {
 	double count;
 } VarianceData;
 
-static void VariancePop(WiggleIterator * wi) {
-	VarianceData * data = (VarianceData *) wi->data;
-
-	if (data->source->done) {
-		wi->done = true;
-		data->res = (data->M2 * data->count) / (data->sumWeight * (data->count - 1));
-		return;
-	}
-
+static void VarianceCorePop(WiggleIterator * wi, VarianceData * data) {
 	wi->chrom = data->source->chrom;
 	wi->start = data->source->start;
 	wi->finish = data->source->finish;
@@ -257,6 +249,18 @@ static void VariancePop(WiggleIterator * wi) {
 	pop(data->source);
 }
 
+static void VariancePop(WiggleIterator * wi) {
+	VarianceData * data = (VarianceData *) wi->data;
+
+	if (data->source->done) {
+		wi->done = true;
+		data->res = (data->M2 * data->count) / (data->sumWeight * (data->count - 1));
+		return;
+	}
+
+	VarianceCorePop(wi, data);
+}
+
 static void VarianceSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	VarianceData * data = (VarianceData *) wi->data;
 	seek(data->source, chrom, start, finish);
@@ -272,6 +276,63 @@ WiggleIterator * VarianceIntegrator(WiggleIterator * wi) {
 	data->M2 = 0;
 	data->count = 0;
 	return newStatisticIterator(data, VariancePop, VarianceSeek, wi->default_value, wi);
+}
+
+//////////////////////////////////////////////////////
+// Standard deviation 
+//////////////////////////////////////////////////////
+
+static void StandardDeviationPop(WiggleIterator * wi) {
+	VarianceData * data = (VarianceData *) wi->data;
+
+	if (data->source->done) {
+		wi->done = true;
+		data->res = (data->M2 * data->count) / (data->sumWeight * (data->count - 1));
+		data->res = sqrt(data->res);
+		return;
+	}
+
+	VarianceCorePop(wi, data);
+}
+
+WiggleIterator * StandardDeviationIntegrator(WiggleIterator * wi) {
+	VarianceData * data = (VarianceData *) calloc(1, sizeof(VarianceData));
+	data->source = NonOverlappingWiggleIterator(wi);
+	data->res = NAN;
+	data->sumWeight = 0;
+	data->mean = 0;
+	data->M2 = 0;
+	data->count = 0;
+	return newStatisticIterator(data, StandardDeviationPop, VarianceSeek, wi->default_value, wi);
+}
+
+//////////////////////////////////////////////////////
+// Coefficient of Variation
+//////////////////////////////////////////////////////
+
+static void CoefficientOfVariationPop(WiggleIterator * wi) {
+	VarianceData * data = (VarianceData *) wi->data;
+
+	if (data->source->done) {
+		wi->done = true;
+		data->res = (data->M2 * data->count) / (data->sumWeight * (data->count - 1));
+		data->res = sqrt(data->res);
+		data->res /= data->mean;
+		return;
+	}
+
+	VarianceCorePop(wi, data);
+}
+
+WiggleIterator * CoefficientOfVariationIntegrator(WiggleIterator * wi) {
+	VarianceData * data = (VarianceData *) calloc(1, sizeof(VarianceData));
+	data->source = NonOverlappingWiggleIterator(wi);
+	data->res = NAN;
+	data->sumWeight = 0;
+	data->mean = 0;
+	data->M2 = 0;
+	data->count = 0;
+	return newStatisticIterator(data, CoefficientOfVariationPop, VarianceSeek, wi->default_value, wi);
 }
 
 //////////////////////////////////////////////////////
