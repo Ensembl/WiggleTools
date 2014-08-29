@@ -154,9 +154,13 @@ Multiplexer * newCoreMultiplexer(void * data, int count, void (*pop)(Multiplexer
 	new->count = count;
 	new->values = (double *) calloc(count, sizeof(double));
 	new->default_values = (double *) calloc(count, sizeof(double));
+	new->inplay = (bool *) calloc(count, sizeof(bool));
 	new->pop = pop;
 	new->seek = seek;
 	new->data = data;
+	int i;
+	for (i = 0; i < count; i++)
+		new->inplay[i] = true;
 	return new;
 }
 
@@ -169,7 +173,6 @@ Multiplexer * newMultiplexer(WiggleIterator ** iters, int count, bool strict) {
 		new->iters[i] = NonOverlappingWiggleIterator(iters[i]);
 		new->default_values[i] = new->iters[i]->default_value;
 	}
-	new->inplay = (bool *) calloc(count, sizeof(bool));
 	popMultiplexer(new);
 	return new;
 }
