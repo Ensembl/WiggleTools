@@ -15,11 +15,23 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "multiplexer.h"
 
 void popMultiplexer(Multiplexer * multi) {
-	(*(multi->pop))(multi);
+	if (!multi->done)
+		multi->pop(multi);
+}
+
+void runMultiplexer(Multiplexer * multi) {
+	while (!multi->done)
+		multi->pop(multi);
+}
+
+void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
+	if (!multi->done)
+		multi->seek(multi, chrom, start, finish);
 }
 
 static void chooseCoords(Multiplexer * multi) {
@@ -86,42 +98,48 @@ static void chooseCoords(Multiplexer * multi) {
 
 	for (i = 0; i < first; i++)
 		multi->inplay[i] = false;
-
 }
 
-static void readValues(Multiplexer * multi) {
+static bool readValues(Multiplexer * multi) {
 	int i;
 	bool * inplayPtr = multi->inplay;
 	WiggleIterator ** wiPtr = multi->iters;
 	double * valuePtr = multi->values;
+	bool allActive = true;
 
 	for (i=0; i < multi->count; i++) {
+		if (multi->strict && (*wiPtr)->done) {
+			multi->done = true;
+			break;
+		}
+
 		if (*inplayPtr) {
 			*valuePtr = (*wiPtr)->value;
 			if ((*wiPtr)->finish == multi->finish) {
 				pop(*wiPtr);
 			}
-		}
+		} else 
+			allActive = false;
+
 		valuePtr++;
 		inplayPtr++;
 		wiPtr++;
 	}
+
+	return allActive;
 }
 
-void popListMultiplexer(Multiplexer * multi) {
-	if (multi->done)
-		return;
-
-	chooseCoords(multi);
-
-	if (multi->done)
-		return;
-
-	readValues(multi);
-
+static void popCoreMultiplexer(Multiplexer * multi) {
+	while (!multi->done) {
+		chooseCoords(multi);
+		if (multi->done)
+			break;
+		if (readValues(multi) || !multi->strict)
+			break;
+	}
 }
 
-void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
+static void seekCoreMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
 	int i;
 	multi->done = false;
 	for (i=0; i<multi->count; i++)
@@ -131,16 +149,30 @@ void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int fin
 	popMultiplexer(multi);
 }
 
-Multiplexer * newMultiplexer(WiggleIterator ** iters, int count) {
+Multiplexer * newCoreMultiplexer(void * data, int count, void (*pop)(Multiplexer *), void (*seek)(Multiplexer *, const char *, int, int)) {
 	Multiplexer * new = (Multiplexer *) calloc (1, sizeof(Multiplexer));
-	new->pop = popListMultiplexer;
 	new->count = count;
-	new->iters = calloc(count, sizeof(WiggleIterator *));
+	new->values = (double *) calloc(count, sizeof(double));
+	new->default_values = (double *) calloc(count, sizeof(double));
+	new->inplay = (bool *) calloc(count, sizeof(bool));
+	new->pop = pop;
+	new->seek = seek;
+	new->data = data;
 	int i;
 	for (i = 0; i < count; i++)
+		new->inplay[i] = true;
+	return new;
+}
+
+Multiplexer * newMultiplexer(WiggleIterator ** iters, int count, bool strict) {
+	Multiplexer * new = newCoreMultiplexer(NULL, count, popCoreMultiplexer, seekCoreMultiplexer);
+	new->strict = strict;
+	new->iters = calloc(count, sizeof(WiggleIterator *));
+	int i;
+	for (i = 0; i < count; i++) {
 		new->iters[i] = NonOverlappingWiggleIterator(iters[i]);
-	new->inplay = (bool *) calloc(count, sizeof(bool));
-	new->values = (double *) calloc(count, sizeof(double));
+		new->default_values[i] = new->iters[i]->default_value;
+	}
 	popMultiplexer(new);
 	return new;
 }

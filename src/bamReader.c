@@ -202,5 +202,5 @@ WiggleIterator * BamReader(char * filename) {
 	setSamtoolsDefaultConf(data);
 	OpenBamFile(data, filename);
 	launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));
-	return newWiggleIterator(data, &BamReaderPop, &BamReaderSeek);
+	return newWiggleIterator(data, &BamReaderPop, &BamReaderSeek, 0);
 }
