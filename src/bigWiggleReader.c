@@ -95,5 +95,5 @@ static void openBigWigFile(BigFileReaderData * data, char * filename) {
 WiggleIterator * BigWiggleReader(char * f) {
 	BigFileReaderData * data = (BigFileReaderData *) calloc(1, sizeof(BigFileReaderData));
 	openBigWigFile(data, f);
-	return newWiggleIterator(data, &BigFileReaderPop, &BigFileReaderSeek);
+	return newWiggleIterator(data, &BigFileReaderPop, &BigFileReaderSeek, 0);
 }	

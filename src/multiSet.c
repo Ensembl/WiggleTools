@@ -18,10 +18,6 @@
 
 #include "multiSet.h"
 
-void popMultiset(Multiset * multi) {
-	(*(multi->pop))(multi);
-}
-
 static void chooseCoords(Multiset * multi) {
 	int i; 
 	char * lastChrom = multi->chrom;
@@ -100,7 +96,7 @@ void popMultiplexers(Multiset * multi) {
 	}
 }
 
-void popListMultiset(Multiset * multi) {
+void popMultiset(Multiset * multi) {
 	if (!multi->done)
 		chooseCoords(multi);
 	if (!multi->done)
@@ -119,7 +115,6 @@ void seekMultiset(Multiset * multi, const char * chrom, int start, int finish) {
 
 Multiset * newMultiset(Multiplexer ** multis, int count) {
 	Multiset * new = (Multiset *) calloc (1, sizeof(Multiset));
-	new->pop = popListMultiset;
 	new->count = count;
 	new->multis = multis;
 	new->inplay = (bool *) calloc(count, sizeof(bool));

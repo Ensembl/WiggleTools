@@ -32,16 +32,16 @@ void SetComparisonSeek(WiggleIterator * iter, const char * chrom, int start, int
 // T-test
 ////////////////////////////////////////////////////////
 
-bool TTestReductionPop2(WiggleIterator * wi) {
+void TTestReductionPop(WiggleIterator * wi) {
 	if (wi->done)
-		return true;
+		return;
 
 	SetComparisonData * data = (SetComparisonData *) wi->data;
 	Multiset * multi = data->multi;
 
 	if (multi->done) {
 		wi->done = true;
-		return true;
+		return;
 	}
 
 	// Go to first position where both of the sets have at least one value
@@ -49,7 +49,7 @@ bool TTestReductionPop2(WiggleIterator * wi) {
 		popMultiset(multi);
 		if (multi->done) {
 			wi->done = true;
-			return true;
+			return;
 		}
 	}
 	wi->chrom = multi->chrom;
@@ -82,9 +82,9 @@ bool TTestReductionPop2(WiggleIterator * wi) {
 
 	// To avoid divisions by 0:
 	if (count1 == 0 || count2 == 0) {
+		wi->value = NAN;
 		popMultiset(multi);
-		pop(wi);	
-		return false;
+		return;
 	}
 
 	double mean1 = sum1 / count1;
@@ -96,8 +96,9 @@ bool TTestReductionPop2(WiggleIterator * wi) {
 
 	// To avoid divisions by 0:
 	if (var1 + var2 == 0) {
+		wi->value = NAN;
 		popMultiset(multi);
-		return false;
+		return;
 	}
 
 	// T-statistic
@@ -117,13 +118,6 @@ bool TTestReductionPop2(WiggleIterator * wi) {
 
 	// Update inputs
 	popMultiset(multi);
-	return true;
-}
-
-void TTestReductionPop(WiggleIterator * wi) {
-	while (true)
-		if (wi->done || TTestReductionPop2(wi))
-			break;
 }
 
 WiggleIterator * TTestReduction(Multiset * multi) {
@@ -133,7 +127,7 @@ WiggleIterator * TTestReduction(Multiset * multi) {
 		exit(1);
 	}	
 	data->multi = multi;
-	return newWiggleIterator(data, &TTestReductionPop, &SetComparisonSeek);
+	return newWiggleIterator(data, &TTestReductionPop, &SetComparisonSeek, NAN);
 }
 
 ////////////////////////////////////////////////////////
@@ -173,16 +167,16 @@ static int compareValueSetPairs(const void * A, const void * B) {
 	return 0;
 }
 
-bool MWUReductionPop2(WiggleIterator * wi) {
+void MWUReductionPop(WiggleIterator * wi) {
 	if (wi->done)
-		return true;
+		return;
 
 	MWUData * data = (MWUData *) wi->data;
 	Multiset * multi = data->multi;
 
 	if (multi->done) {
 		wi->done = true;
-		return true;
+		return;
 	}
 
 	// Go to first position where both of the sets have at least one value
@@ -190,7 +184,7 @@ bool MWUReductionPop2(WiggleIterator * wi) {
 		popMultiset(multi);
 		if (multi->done) {
 			wi->done = true;
-			return true;
+			return;
 		}
 	}
 	wi->chrom = multi->chrom;
@@ -205,7 +199,12 @@ bool MWUReductionPop2(WiggleIterator * wi) {
 		if (multi->multis[0]->inplay[index]) 
 			vspPtr->value = multi->values[0][index];
 		else
-			vspPtr->value = 0;
+			vspPtr->value = multi->multis[0]->iters[index]->default_value;
+		if (isnan(vspPtr->value)) {
+			wi->value = NAN;
+			popMultiset(multi);
+			return;
+		}
 		vspPtr->set = false;
 		vspPtr++;
 	}
@@ -214,7 +213,12 @@ bool MWUReductionPop2(WiggleIterator * wi) {
 		if (multi->multis[1]->inplay[index]) 
 			vspPtr->value = multi->values[1][index];
 		else
-			vspPtr->value = 0;
+			vspPtr->value = multi->multis[1]->iters[index]->default_value;
+		if (isnan(vspPtr->value)) {
+			wi->value = NAN;
+			popMultiset(multi);
+			return;
+		}
 		vspPtr->set = true;
 		vspPtr++;
 	}
@@ -264,14 +268,6 @@ bool MWUReductionPop2(WiggleIterator * wi) {
 
 	// Update inputs
 	popMultiset(multi);
-	return true;
-}
-
-
-void MWUReductionPop(WiggleIterator * wi) {
-	while (true)
-		if (wi->done || MWUReductionPop2(wi))
-			break;
 }
 
 WiggleIterator * MWUReduction(Multiset * multi) {
@@ -291,5 +287,5 @@ WiggleIterator * MWUReduction(Multiset * multi) {
 		data->mu_U = data->n1 * data->n2 / 2;
 		data->sigma_U = sqrt(data->n1 * data->n2 * (data->n1 + data->n2 + 1) / 12);
 	}
-	return newWiggleIterator(data, &MWUReductionPop, &MWUSeek);
+	return newWiggleIterator(data, &MWUReductionPop, &MWUSeek, NAN);
 }

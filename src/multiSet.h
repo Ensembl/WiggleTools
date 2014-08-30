@@ -26,7 +26,6 @@ struct multiset_st {
 	bool *inplay;
 	Multiplexer ** multis;
 	bool done;
-	void (*pop)(struct multiset_st *);
 
 	FILE * file;
 };

@@ -22,16 +22,21 @@ struct multiplexer_st {
 	int start;
 	int finish;
 	double * values;
+	double * default_values;
 	int count;
 	bool *inplay;
 	WiggleIterator ** iters;
 	bool done;
-	void (*pop)(struct multiplexer_st *);
-
+	bool strict;
+	void (*pop)(Multiplexer *);
+	void (*seek)(Multiplexer *, const char *, int, int);
 	FILE * file;
+	void * data;
 };
 
 void popMultiplexer(Multiplexer * multi);
 void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish);
+void runMultiplexer(Multiplexer * multi);
+Multiplexer * newCoreMultiplexer(void * data, int count, void (*pop)(Multiplexer *), void (*seek)(Multiplexer *, const char *, int, int));
 
 #endif

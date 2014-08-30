@@ -442,7 +442,7 @@ Note that BedGraphs and the BedGraph sections within wiggle files are 0-based, w
 Statistics
 ----------
 
-Sometimes, you just want a statistic across the genome. The following functions do not return a sequence of numbers, just a single number. All of these outputs are directed to an user defined output file (in this case results.txt) but you can put `-' for standard output:
+Sometimes, you just want a statistic across the genome. The following functions do not return a sequence of numbers, just a single number. Some of these integrating functions have "I" appended to them to distinguish them from the iterators with related (yet different) functions. Note the print statement at the beginning of the command.
 
 
 * AUC
@@ -450,15 +450,55 @@ Sometimes, you just want a statistic across the genome. The following functions 
 Computes the area under the curve (AUC) of the an iterator:
 
 ```
-wiggletools AUC results.txt test/fixedStep.bw test/variableStep.bw 
+wiggletools print - AUC test/fixedStep.bw test/variableStep.bw 
 ```
 
-* variance
+* meanI
+
+Computes the mean of an iterator across all of its points:
+
+```
+wiggletools print - meanI test/fixedStep.bw 
+```
+
+* varI
 
 Computes the variance of an iterator across all of its points:
 
 ```
-wiggletools variance results.txt test/fixedStep.bw 
+wiggletools print - varI test/fixedStep.bw 
+```
+
+* stddevI
+
+Computes the standard deviation of an iterator across all of its points:
+
+```
+wiggletools print - stddevI test/fixedStep.bw 
+```
+
+* CVI 
+
+Computes the coefficient of variation of an iterator across all of its points:
+
+```
+wiggletools print - CVI test/fixedStep.bw 
+```
+
+* maxI
+
+Computes the maximum of an iterator across all of its points:
+
+```
+wiggletools print - maxI test/fixedStep.bw 
+```
+
+* minI
+
+Computes the minimum of an iterator across all of its points:
+
+```
+wiggletools print - minI test/fixedStep.bw 
 ```
 
 * pearson
@@ -466,7 +506,22 @@ wiggletools variance results.txt test/fixedStep.bw
 Computes the Pearson correlation between two iterators across all their points:
 
 ```
-wiggletools pearson results.txt test/fixedStep.bw test/fixedStep.bw 
+wiggletools print - pearson test/fixedStep.bw test/fixedStep.bw 
+```
+
+* Chaining statistics:
+
+All the above functions are actually iterators that transmit the same data as they are given, e.g.:
+
+```
+wiggletools test/fixedStep.bw 
+wiggletools AUC test/fixedStep.bw 
+```
+
+This allows you to plug multiple statistics in a dandelion chain off the same iterator. Note how the print statement simply concatenates the results of the operators as they are reads from left to right:
+
+```
+wiggletools print - meanI varI minI maxI test/fixedStep.bw 
 ```
 
 * Apply
@@ -474,7 +529,7 @@ wiggletools pearson results.txt test/fixedStep.bw test/fixedStep.bw
 The apply function reads the regions from one iterator, then computes a given statistic on another iterator across those regions. It ignores regions with value 0.
 
 ```
-wiggletools apply mean unit test/variableStep.bw test/fixedStep.bw
+wiggletools apply meanI unit test/variableStep.bw test/fixedStep.bw
 ```
 
 * Apply and Paste
@@ -482,7 +537,7 @@ wiggletools apply mean unit test/variableStep.bw test/fixedStep.bw
 This is a convenience wrapper around the above function: it reads the regions directly from a Bed file, then prints out each line of the file, with the resulting statistic appended at the end of the line. This is useful to keep identifiers and other metadata contained in the same file as the results:
 
 ```
-wiggletools apply_paste output_file.txt mean test/overlapping.bed test/fixedStep.bw
+wiggletools apply_paste output_file.txt meanI test/overlapping.bed test/fixedStep.bw
 ```
 
 Profiles
@@ -530,3 +585,42 @@ parallelWiggletools.py test/chrom_sizes 'write copy.bw test/fixedStep.bw'
 ```
 
 Because these are asynchronous jobs, they generate a bunch of files as input, stdout and stderr. If these files are annoying to you, you can change the DUMP\_DIR variable in the parallelWiggleTools script, to another directory which is visible to all the nodes in the LSF farm.
+
+Default Values
+--------------
+
+A basic underlying question is how to deal with missing values. In some cases, no value in a BigWig file implicitly means 0, typically when working with coverage statistics or peaks. However, sometimes, you want positions with no values to be disregarded. 
+
+* To deal with this, every iterator has a default value. By default, any file being read has a default value of 0. The default value of composed iterators is computed from their inputs. For example, if B is equal to A multiplied by 10, then the default value of B is 10 times that of A. The default value of an iterator can be directly set with the *default* keyword:
+
+```
+wiggletools sum test/fixedStep.wig test/variableStep.wig
+wiggletools sum test/fixedStep.wig default 10 test/variableStep.wig
+```
+
+* When a set of iterators A1, A2 ... is composed by a n-ary iterator M, M will skip the regions which are skipped by all the input iterators. However, in the presence of more than one input iterators that do not perfectly overlap, there will be regions which are covered by say A1, but not A2. Two behaviours are defined: if M is *strict*, it skips those regions, else it replaces missing values with the corresponding default values. 
+
+By default, n-ary iterators are not strict, but they can be made so with the *strict* keyword after the n-ary function name:
+
+```
+wiggletools sum test/fixedStep.wig test/variableStep.wig
+wiggletools sum strict test/fixedStep.wig test/variableStep.wig
+```
+
+* However, when integrating statistics across the genome, or regions of the genome, missing values are discarded by default, because it is not known which regions need to be filled in. 
+
+The *fillIn* operator allows you to define which regions should be filled in with the default value. It takes in two iterators, and behaves like a default multiplexer. Wherever possible, it takes the value of the second iterator, and otherwise takes the default_value of the second iterator. Note that this incurs a slight processing cost, so only use this operator at the last step of your computations, right before computing a statistic. 
+
+```
+wiggletools test/variableStep.wig
+wiggletools meanI - test/variableStep.wig
+wiggletools fillIn test/fixedStep.wig test/variableStep.wig
+wiggletools meanI - fillIn test/fixedStep.wig test/variableStep.wig
+```
+
+For convenience, the fillIn keyword can be used in the apply commands, as is:
+
+```
+wiggletools apply meanI unit test/variableStep.bw test/fixedStep.bw
+wiggletools apply meanI fillIn unit test/variableStep.bw test/fixedStep.bw
+```
