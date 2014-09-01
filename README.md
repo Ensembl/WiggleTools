@@ -444,9 +444,7 @@ Writing multidimensional wiggles into files
 
 Sometimes, for your own reasons, you may want to print out multiple wiggles side by side. This can be done with the designated *mwrite* and *mwrite_bg* operators
 
-* Warning
-
-Multidimensional wiggles are not part of the BigWig/BedGraph specs, an will probably spark an error with the Kent apps. These are designed for your own usage.
+**Warning!!** Multidimensional wiggles are not part of the BigWig/BedGraph specs, and will probably spark an error with the Kent apps. These are solely designed for your own usage.
 
 ```
 wiggletools mwrite_bg - test/overlapping.bed test/fixedStep.bw
