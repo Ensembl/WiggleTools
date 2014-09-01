@@ -439,6 +439,19 @@ wiggletools write_bg - test/fixedStep.wig
 
 Note that BedGraphs and the BedGraph sections within wiggle files are 0-based, whereas the `normal' wiggle lines have 1-based coordinates.
 
+Writing multidimensional wiggles into files
+-------------------------------------------
+
+Sometimes, for your own reasons, you may want to print out multiple wiggles side by side. This can be done with the designated *mwrite* and *mwrite_bg* operators
+
+* Warning
+
+Multidimensional wiggles are not part of the BigWig/BedGraph specs, an will probably spark an error with the Kent apps. These are designed for your own usage.
+
+```
+wiggletools mwrite_bg - test/overlapping.bed test/fixedStep.bw
+```
+
 Statistics
 ----------
 
@@ -526,15 +539,17 @@ wiggletools print - meanI varI minI maxI test/fixedStep.bw
 
 * Apply
 
-The apply function reads the regions from one iterator, then computes a given statistic on another iterator across those regions. It ignores regions with value 0.
+The *apply* function reads the regions from one iterator, then computes a given statistic on another iterator across those regions. It ignores regions with value 0. You can chain the operators as above. Because of this feature, the *apply* operator returns a multiplexer (i.e. a multidimensional wiggle), hence the *mwrite* operator before it: 
 
 ```
-wiggletools apply meanI unit test/variableStep.bw test/fixedStep.bw
+wiggletools mwrite_bg - apply meanI stddevI unit test/variableStep.bw test/fixedStep.bw
 ```
+
+For convenience, if the *apply* operator is used in a context which expects a standard unidimensional wiggle, it is transformed into one. In particular, if you computed multiple statistics in parallel as above, only the first is retained. 
 
 * Apply and Paste
 
-This is a convenience wrapper around the above function: it reads the regions directly from a Bed file, then prints out each line of the file, with the resulting statistic appended at the end of the line. This is useful to keep identifiers and other metadata contained in the same file as the results:
+This is a convenience wrapper around the above function: it reads the regions directly from a Bed file, then prints out each line of the file, with the resulting statistic appended at the end of the line. This is useful to keep identifiers and other metadata contained in the same file as the results. Note that the *mwrite* operator is unnecessary in this case:
 
 ```
 wiggletools apply_paste output_file.txt meanI test/overlapping.bed test/fixedStep.bw
