@@ -536,7 +536,7 @@ wiggletools print - meanI varI minI maxI test/fixedStep.bw
 
 * Apply
 
-The *apply* function reads the regions from one iterator, then computes a given statistic on another iterator across those regions. It ignores regions with value 0. You can chain the operators as above. Because of this feature, the *apply* operator returns a multiplexer (i.e. a multidimensional wiggle), hence the *mwrite* operator before it: 
+The *apply* function reads the regions from one iterator, then computes a given statistic on another iterator across those regions. You can chain the statistics as above. Because of this feature, the *apply* operator returns a multiplexer (i.e. a multidimensional wiggle), hence the *mwrite* operator before it: 
 
 ```
 wiggletools mwrite_bg - apply meanI stddevI unit test/variableStep.bw test/fixedStep.bw
