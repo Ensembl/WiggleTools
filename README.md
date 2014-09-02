@@ -172,7 +172,7 @@ Operators
 
 However, iterators can be constructed from other iterators, allowing arbitrarily complex constructs to be built. We call these iterators operators. In all the examples below, the iterators are built off simple file readers (for simplicity), but you are free to replace the inputs with other iterators.
 
-1 Unary operators
+**1 Unary operators**
 
 The following operators are the most straightforward, because they only read data from a single other iterator.
 
@@ -216,7 +216,6 @@ Returns an iterator's output added to a scalar (i.e. decimal number):
 wiggletools offset 10 test/fixedStep.bw 
 ```
 
-
 * gt
 
 Returns 1 if the iterator is strictly greater than a given cutoff, 0 otherwise, and merges contiguous positions with the same output value into blocks:
@@ -253,7 +252,7 @@ Outputs only the points of an iterator within a given genomic region:
 wiggletools seek chr1 2 8 test/fixedStep.bw 
 ```
 
-2 Binary operators
+**2 Binary operators**
 
 The following operators read data from exactly two iterators, allowing comparisons:
 
@@ -281,7 +280,7 @@ Returns the output of the second iterator that overlaps regions of the first.
 wiggletools overlaps test/fixedStep.bw test/variableStep.bw 
 ```
 
-3 Multiplexed iterators
+**3 Multiplexed iterators**
 
 However, sometimes you want to compute statistics across many iterators. In this case, the function is followed by an arbitrary list of iterators, separated by spaces. The list is terminated by a colon (:) separated by spaces from other words. At the very end of a command string, the colon can be omitted (see example in the example for *sum*)
 
@@ -374,7 +373,7 @@ Computes the maximum of the subsequent list of iterators at each position:
 wiggletools max test/fixedStep.bw test/variableStep.bw 
 ```
 
-4 Comparing sets of sets
+**4 Comparing sets of sets**
 
 * Welch's t-test
 
@@ -394,7 +393,7 @@ wiggletools wilcoxon test/fixedStep.bw test/variableStep.bw test/fixedStep.wig \
             : test/fixedStep.wig test/variableStep.bw test/fixedStep.wig
 ```
 
-5 Mapping a unary function to an iterator list:
+**5 Mapping a unary function to an iterator list:**
 
 If you wish to apply the same function to a list of iterators without typing redundant keywords, you can use the *map* function, which applies said operator to each element of the list:
 
