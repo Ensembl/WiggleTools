@@ -59,7 +59,7 @@ make
 Obtaining WiggleTools
 ---------------------
 
-If you didnt download WiggleTools yet:
+If you didn't download WiggleTools yet:
 
 ```
 git clone https://github.com/Ensembl/WiggleTools.git
@@ -519,7 +519,8 @@ Computes the Pearson correlation between two iterators across all their points:
 wiggletools print - pearson test/fixedStep.bw test/fixedStep.bw 
 ```
 
-* Chaining statistics:
+Chaining statistics
+-------------------
 
 All the above functions are actually iterators that transmit the same data as they are given, e.g.:
 
@@ -534,7 +535,8 @@ This allows you to plug multiple statistics in a dandelion chain off the same it
 wiggletools print - meanI varI minI maxI test/fixedStep.bw 
 ```
 
-* Apply
+Apply
+-----
 
 The *apply* function reads the regions from one iterator, then computes a given statistic on another iterator across those regions. You can chain the statistics as above. Because of this feature, the *apply* operator returns a multiplexer (i.e. a multidimensional wiggle), hence the *mwrite* operator before it: 
 
