@@ -1,4 +1,4 @@
-CFLAGS=-g -Wall -O3
+CFLAGS=-g -Wall -O3 -std=gnu99
 LIBDIR=../lib
 BINDIR=../bin
 INC=-I${SAMTOOLS} -I${KENT_SRC}/inc -I${TABIX_SRC}
