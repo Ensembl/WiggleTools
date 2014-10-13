@@ -638,3 +638,8 @@ For convenience, the fillIn keyword can be used in the apply commands, as is:
 wiggletools apply meanI unit test/variableStep.bw test/fixedStep.bw
 wiggletools apply meanI fillIn unit test/variableStep.bw test/fixedStep.bw
 ```
+
+Citing WiggleTools
+------------------
+
+[Zerbino DR, Johnson N, Juettemann T, Wilder SP and Flicek PR: **WiggleTools: parallel processing of large collections of genome-wide datasets for visualization and statistical analysis.** *Bioinformatics* 2014 **30**:1008-1009.](http://bioinformatics.oxfordjournals.org/content/30/7/1008)
