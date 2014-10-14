@@ -98,7 +98,7 @@ def main():
 				options.a = tmp
 			
 			result = wiggletools.wiggleDB.request_compute(cursor, options)
-			if 'location' in result:
+			if result['status'] == 'DONE':
 				base_url = 'http://s3-%s.amazonaws.com/%s/' % (s3_region, s3_bucket)
 				url = re.sub(working_directory, base_url, result['location'])		
 				ensembl = 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (ensembl_server, ensembl_species, ensembl_gene, url)

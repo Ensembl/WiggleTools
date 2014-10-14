@@ -337,6 +337,8 @@ function report_result(data) {
     modal.find('#url').attr('href',data['url']);
     modal.find('#view').attr('href',data['view']);
     modal.modal();
+  } else if (data["status"] == "EMPTY") {
+    $('#Empty_modal').modal();	
   } else if (data["status"] == "ERROR") {
     $('#Failure_modal').modal();	
   } else if (data["status"] == "UNKNOWN") {

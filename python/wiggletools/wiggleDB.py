@@ -14,8 +14,14 @@ import parallelWiggleTools
 import multiJob
 
 verbose = False
-# The batch system is either SGE, LSF, local:
-batchSystem = 'SGE'
+
+###########################################
+## Configuration file
+###########################################
+
+def read_config_file(filename):
+	return dict(line.strip().split('\t') for line in open(filename) if line[0] != '#' and len(line) > 1)
+
 
 ###########################################
 ## Command line interface
@@ -40,20 +46,20 @@ def get_options():
 	parser.add_argument('--assembly','-y',dest='assembly',help='File with chromosome lengths')
 	parser.add_argument('--clean',dest='clean',help='Delete cached datasets older than X days', type=int)
 	parser.add_argument('--dump_cache',dest='dump_cache',help='Dump cache info', action='store_true')
+	parser.add_argument('--datasets',dest='datasets',help='Print dataset info', action='store_true')
 	parser.add_argument('--clear_cache',dest='clear_cache',help='Reset cache info', action='store_true')
 	parser.add_argument('--remember',dest='remember',help='Preserve dataset from garbage collection', action='store_true')
 	parser.add_argument('--dry-run',dest='dry_run',help='Do not run the command, print wiggletools command', action='store_true')
 	parser.add_argument('--result','-r',dest='result',help='Return status or end result of job', type=int)
 	parser.add_argument('--attributes','-t',dest='attributes',help='Print JSON hash of attributes and values', action='store_true')
 	parser.add_argument('--verbose','-v',dest='verbose',help='Turn on status output',action='store_true')
-	parser.add_argument('--debug','-g',dest='verbose',help='Turn on status output',action='store_true')
-	parser.add_argument('--s3','-s',dest='s3',help='S3 bucket to copy into')
+	parser.add_argument('--config','-c',dest='config',help='Configuration file')
 	parser.add_argument('--annotations','-n',dest='annotations',help='Print list of annotation names', action='store_true')
 
 	options = parser.parse_args()
 	if options.load is not None:
 		assert not os.path.exists(options.db), "Cannot overwrite pre-existing database %s" % options.db
-	if all(X is None for X in [options.load, options.clean, options.result, options.load_assembly]) and not options.dump_cache and  not options.clear_cache and not options.attributes and not options.annotations:
+	if all(X is None for X in [options.load, options.clean, options.result, options.load_assembly, options.datasets]) and not options.dump_cache and  not options.clear_cache and not options.attributes and not options.annotations:
 		assert options.a is not None, 'No dataset selection to run on'
 		assert options.wa is not None, 'No dataset transformation to run on'
 		assert options.assembly is not None, 'No assembly name specified'
@@ -64,9 +70,14 @@ def get_options():
 	options.wb = normalise_spaces(options.wb)	
 	options.fun_merge = normalise_spaces(options.fun_merge)
 
+	if options.config is not None:
+		config = read_config_file(options.config)
+	else:
+		config = None
+
 	global verbose
 	verbose = options.verbose
-	return options
+	return options, config
 
 ###########################################
 ## Creating a database
@@ -148,7 +159,7 @@ def clean_database(cursor, days):
 		os.remove(location[0])
 	cursor.execute('DELETE FROM cache WHERE julianday(\'now\') - julianday(last_query) > %i AND remember = 0' % days)
 
-	for temp in cursor.execute('SELECT temp FROM jobs WHERE status="DONE"').fetchall():
+	for temp in cursor.execute('SELECT temp FROM jobs WHERE status="DONE" OR status="EMPTY"').fetchall():
 		if verbose:
 			print 'Removing %s and derived files' % temp[0]
 		multiJob.clean_temp_file(temp[0])
@@ -171,6 +182,9 @@ def get_attribute_values(cursor):
 
 def get_annotations(cursor, assembly):
 	return [X[0] for X in cursor.execute('SELECT name FROM datasets WHERE assembly=? AND annotation', (assembly,)).fetchall()]
+
+def get_datasets(cursor):
+	return cursor.execute('SELECT * FROM datasets').fetchall()
 
 def attribute_selector(attribute, params):
 	return "( %s )" % " OR ".join("%s=:%s_%i" % (attribute,attribute,index) for index in range(len(params[attribute])))
@@ -223,7 +237,7 @@ def get_job_location(db, jobID):
 	return res
 
 def get_precomputed_location(cursor, cmd):
-	reports = cursor.execute('SELECT location FROM jobs NATURAL JOIN cache WHERE status="DONE" AND query = \'%s\'' % cmd).fetchall()
+	reports = cursor.execute('SELECT location FROM jobs NATURAL JOIN cache WHERE status="DONE" OR status="EMPTY" AND query = \'%s\'' % cmd).fetchall()
 	if len(reports) > 0:
 		reset_time_stamp(cursor, cmd)
 		if verbose:
@@ -243,7 +257,7 @@ def reuse_or_write_precomputed_location(cursor, cmd, working_directory):
 		fh, destination = tempfile.mkstemp(suffix='.bw',dir=working_directory)
 		return 'write %s %s' % (destination, cmd), destination, True
 
-def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form):
+def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batchSystem):
 	destination = None
 	destinationA = None
 	destinationB = None
@@ -291,7 +305,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 			if computeB:
 				cmds.append(cmd_B2)
 			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
-			assert len(data_B) == 1, "Cannot apply_paste to multiplle files %s\n" % " ".join(data_B)
+			assert len(data_B) == 1, "Cannot apply_paste to multiple files %s\n" % " ".join(data_B)
 			apply_paste = " ".join(['apply_paste', destination, 'AUC', data_B[0], destinationA])
 		else:
 			fh, destination = tempfile.mkstemp(suffix='.bw',dir=options.working_directory)
@@ -325,7 +339,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 		files = ['NO FILES']
 		jobID = -1
 
-	finishCmd = 'wiggleDB_finish.py --db %s --jobID %s --temp %s' % (options.db, jobID, " ".join(files))
+	finishCmd = 'wiggleDB_finish.py --db %s --jobID %s --temp %s --config %s' % (options.db, jobID, " ".join(files), options.config)
 	if histogram is not None:
 		if fun_B is not None:
 			finishCmd += ' --histogram \'%s\' --labels Overall Regions' % (histogram)
@@ -335,9 +349,6 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 			finishCmd += ' --histogram \'%s\' --labels Overall' % (histogram)
 	elif apply_paste is not None:
 		finishCmd += ' --apply_paste \'%s\'' % (apply_paste)
-
-	if options.s3 is not None:
-		finishCmd += ' --s3 ' + options.s3
 
 	if options.dry_run:
 		return ";".join(cmds + [finishCmd])
@@ -369,7 +380,7 @@ def make_normalised_form(fun_merge, fun_A, data_A, fun_B, data_B):
 
 	return res
 
-def request_compute(cursor, options):
+def request_compute(cursor, options, batchSystem):
 	fun_A = options.wa 
 	data_A = get_dataset_locations(cursor, options.a, options.assembly)
 	assert len(data_A) > 0
@@ -387,25 +398,23 @@ def request_compute(cursor, options):
 	normalised_form = make_normalised_form(options.fun_merge, fun_A, data_A, fun_B, data_B)
 	prior_jobID = get_precomputed_jobID(cursor, normalised_form)
 	if prior_jobID is not None:
-		status, info = query_result(cursor, prior_jobID)
-		if status == 'DONE':
-			return {'ID': prior_jobID, 'location': info}
-		else:
-			return {'ID':prior_jobID}
+		return query_result(cursor, prior_jobID)
 	else:
-		return {'ID':launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form)}
+		return {'ID':launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batchSystem), 'status':'WAITING'}
 
-def query_result(cursor, jobID):
+def query_result(cursor, jobID, batchSystem):
 	reports = cursor.execute('SELECT status, lsf_id2 FROM jobs WHERE job_id =?', (jobID,)).fetchall()
 
 	if len(reports) == 0:
-		return "UNKNOWN", jobID
+		return {'ID':jobID, 'status':'UNKNOWN'}
 	else:
 		assert len(reports) == 1, 'Found %i status reports for job %s' % (len(reports), jobID)
 
 	status, lsfID = reports[0]
 	if status == 'DONE':
-		return 'DONE', get_job_location_2(cursor, jobID)
+		return {'ID':jobID, 'status':'DONE', 'location':get_job_location_2(cursor, jobID)}
+	elif status == 'EMPTY':
+		return {'ID':jobID, 'status':'EMPTY'}
 	elif batchSystem == 'LSF':
 		p = subprocess.Popen(['bjobs','-noheader',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		ret = p.wait()
@@ -416,7 +425,7 @@ def query_result(cursor, jobID):
 			items = re.split('\W*', line)
 			if len(items) > 2:
 				values.append(items[2])
-		return "WAITING", " ".join(values)
+		return {'ID':jobID, 'status':"WAITING", 'return_values':values}
 	elif batchSystem == 'SGE':
 		p = subprocess.Popen(['qstat','-j',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		ret = p.wait()
@@ -428,7 +437,7 @@ def query_result(cursor, jobID):
 				if items[0] == 'usage':
 					count += 1
 			values = '%i RUNNING' % (count)
-			return "WAITING", " ".join(values), ret
+			return {'ID':jobID, 'status':"WAITING", 'return_values':values}
 		else:
 			p = subprocess.Popen(['qacct','-j',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 			p.wait()
@@ -447,32 +456,93 @@ def query_result(cursor, jobID):
 					else:
 						values.append(items[1])
 			if any(X != '0' for X in values):
-				return 'ERROR', " ".join(values)
+				return 'ERROR', " ".join(values) + " " + str(lsfID)
+				return {'ID':jobID, 'status':"ERROR", 'return_values':values, 'LSF_ID':lsfID}
 			else:
-				return 'DONE', " ".join(values)
+				return {'ID':jobID, 'status':"WAITING", 'return_values':values, 'LSF_ID':lsfID}
 			  
 	else:
 		raise NameError
+		return {'ID':jobID, 'status':'CONFIG_ERROR'}
 
 ###########################################
 ## When a job finishes:
 ###########################################
 
-def mark_job_as_done(db, jobID):
+def mark_job_as_done(db, jobID, empty=False):
 	conn = sqlite3.connect(db)
 	cursor = conn.cursor()
-	cursor.execute('UPDATE jobs SET status = \'DONE\' WHERE job_id = \'%s\'' % jobID)
+	if empty:
+		cursor.execute('UPDATE jobs SET status = \'EMPTY\' WHERE job_id = \'%s\'' % jobID)
+	else:
+		cursor.execute('UPDATE jobs SET status = \'DONE\' WHERE job_id = \'%s\'' % jobID)
 	conn.commit()
 	conn.close()
+
+def send_SMTP(msg, email, config):
+	import smtplib
+	s = smtplib.SMTP(config['smtp'])
+	s.sendmail(config['reply_to'], [email], msg.as_string())
+	s.quit()
+
+def send_email(text, email, config):
+	from email.mime.text import MIMEText
+	msg = MIMEText(text)
+	msg['Subject'] = '[WiggleTools] Job succeeded'
+	msg['From'] = reply_to
+	msg['To'] = email
+	send_SMTP(msg, email, config)
+
+def visible_url(location, config):
+	if 's3_bucket' in config:
+		base_url = 'http://s3-%s.amazonaws.com/%s/' % (config['s3_region'], config['s3_bucket'])
+		return re.sub(config['working_directory'], base_url, location)		
+	else:
+		return location
+
+def report_to_user(email, jobID, data, config):
+	if email is None:
+		return
+	else:
+		url = visible_url(data, config)
+		text = "Hello\n\n"
+		text += "Your job %i is now finished, please refer to the WiggleTools server for your results\n\n" % jobID
+		text += "You can download all the results here:\n\n"
+		text += url + "\n\n"
+		if url[-3] == '.bw' or url[:-3] == ".bb":
+			text += "Or you can view them directly on Ensembl:\n\n"
+			text += 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (config['ensembl_server'], config['ensembl_species'], config['ensembl_gene'], url)
+		else:
+			text += "Or you can view the graphic:\n\n"
+			text += url + ".pdf"
+		text += "\nBest regards,\n\n"
+		text += "The WiggleTools team"
+		send_email(text, email, config)
+
+def report_empty_to_user(email, jobID, config):
+	if email is None:
+		return
+	else:
+		url = visible_url(data, config)
+		text = "Hello\n\n"
+		text += "Your job %i is now finished, but returned empty results\n\n" % jobID
+		text += "\nBest regards,\n\n"
+		text += "The WiggleTools team"
+		send_email(text, email, config)
 
 ###########################################
 ## Main
 ###########################################
 
 def main():
-	options = get_options()
+	options, config = get_options()
 	options.conn = sqlite3.connect(options.db)
 	cursor = options.conn.cursor()
+
+	if config is None or 'batchSystem' not in config:
+		batchSystem = 'SGE'
+	else:
+		batchSystem = config['batchSystem']
 
 	if options.load is not None:
 		create_database(cursor, options.load)
@@ -481,7 +551,7 @@ def main():
 	elif options.clean is not None:
 		clean_database(cursor, options.clean)
 	elif options.result is not None:
-		print ": ".join(query_result(cursor, options.result))
+		print json.dumps(query_result(cursor, options.result, batchSystem)
 	elif options.dump_cache:
 		for entry in cursor.execute('SELECT * FROM cache').fetchall():
 			print entry
@@ -492,6 +562,8 @@ def main():
 		create_job_table(cursor)
 	elif options.attributes:
 		print json.dumps(get_attribute_values(cursor))
+	elif options.datasets:
+		print json.dumps(get_datasets(cursor))
 	elif options.annotations:
 		print json.dumps(get_annotations(cursor, options.assembly))
 	else:
@@ -499,7 +571,7 @@ def main():
 			options.a = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.a))
 		if options.b is not None:
 			options.b = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.b))
-		print request_compute(cursor, options)
+		print json.dumps(request_compute(cursor, options, batchSystem))
 
 	options.conn.commit()
 	options.conn.close()

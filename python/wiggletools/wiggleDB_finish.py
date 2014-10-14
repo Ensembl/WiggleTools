@@ -20,31 +20,58 @@ def get_options():
 	parser.add_argument('--apply_paste','-v',dest='apply_paste', help='Run Apply_paste command')
 	parser.add_argument('--labels','-l',dest='labels', help='Labels for plot categories', nargs='*')
 	parser.add_argument('--email','-e',dest='emails', help='Notification e-mail addresses', nargs='*')
-	parser.add_argument('--s3',dest='s3', help='S3 bucket')
+	parser.add_argument('--config','-c',dest='conf', help='Config file')
 	return parser.parse_args()
 
-def main():
-	options = get_options()
-	data = wiggleDB.get_job_location(options.db_name, options.jobID)
-	if options.temps is not None:
-		multiJob.clean_temp_files(options.temps)
-	if options.histogram is not None:
-		if subprocess.call("wiggletools "  + options.histogram, shell=True):
-			print "Failed to construct histogram"
-			sys.exit(1)
-		wigglePlots.make_histogram(data, options.labels, data + ".pdf")
-	if options.apply_paste is not None:
-		if subprocess.call("wiggletools "  + options.apply_paste, shell=True):
-			print "Failed to construct overlap graph"
-			sys.exit(1)
-		wigglePlots.make_overlaps(data, data + ".pdf")
-	if options.s3 is not None:
-		cmd = "aws s3 cp %s s3://%s/%s --acl public-read" % (data, options.s3, os.path.basename(data))
+def copy_to_longterm(data, config):
+	if 's3_bucket' in config:
+		cmd = "aws s3 cp %s s3://%s/%s --acl public-read" % (data, os.path.basename(data), s3)
 		if subprocess.call(cmd, shell=True):
 			print "Failed to copy over results"
 			print cmd
 			sys.exit(1)
-	wiggleDB.mark_job_as_done(options.db_name, options.jobID)
+
+def main():
+	options = get_options()
+	config = wiggleDB.read_config_file(options.conf)
+	data = wiggleDB.get_job_location(options.db_name, options.jobID)
+	empty = os.path.exists(data + ".empty")
+
+	# Optional graphics
+	if options.histogram is not None:
+		if subprocess.call("wiggletools "  + options.histogram, shell=True):
+			print "Failed to construct histogram"
+			sys.exit(1)
+		if options.getsize(data) > 0:
+			wigglePlots.make_histogram(data, options.labels, data + ".pdf")
+		else:
+			empty = True
+	elif options.apply_paste is not None:
+		if subprocess.call("wiggletools "  + options.apply_paste, shell=True):
+			print "Failed to construct overlap graph"
+			sys.exit(1)
+		if options.getsize(data) > 0:
+			wigglePlots.make_overlaps(data, data + ".pdf")
+		else:
+			empty = True
+
+	# Move data to longterm storage
+	if options.getsize(data) > 0:
+		copy_to_longterm(data, config)
+		if os.path.exists(data + ".pdf"):
+			copy_to_longterm(data + ".pdf", config)
+
+	# Housekeeping
+	if options.temps is not None:
+		multiJob.clean_temp_files(options.temps)
+
+	# Signing off
+	if empty:
+		wiggleDB.report_empty_to_user(options.email, options.jobID, config)
+	else:
+		wiggleDB.report_to_user(options.email, options.jobID, data, config)
+
+	wiggleDB.mark_job_as_done(options.db_name, options.jobID, empty=empty)
 
 if __name__ == "__main__":
 	main()
