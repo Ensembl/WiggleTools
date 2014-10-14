@@ -2,6 +2,7 @@ CFLAGS=-g -Wall -O3
 LIBDIR=../lib
 BINDIR=../bin
 TABIX_SRC=../../tabix
+KENT_SRC=../../userApps/kent/src/
 INC=-I${SAMTOOLS} -I${KENT_SRC}/inc -I${TABIX_SRC}
 LIB_PATHS=-L${KENT_SRC}/lib/${MACHTYPE} -L${SAMTOOLS} -L${SAMTOOLS}/bcftools -L${LIBDIR} -L${TABIX_SRC}
 LIBS= ${LIBDIR}/libwiggletools.a ${KENT_SRC}/lib/local/jkweb.a -lbam -lbcf -lz -lpthread -lssl -lcrypto -ldl -lgsl -lm -ltabix
