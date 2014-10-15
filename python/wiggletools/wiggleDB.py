@@ -191,10 +191,12 @@ def get_attribute_values(cursor):
 	return dict((attribute, get_attribute_values_2(cursor, attribute)) for attribute in get_dataset_attributes(cursor))
 
 def get_annotations(cursor, assembly):
-	return [X[0] for X in cursor.execute('SELECT name FROM datasets WHERE assembly=? AND annotation', (assembly,)).fetchall()]
+	return cursor.execute('SELECT * FROM datasets WHERE assembly=? AND annotation', (assembly,)).fetchall()
 
 def get_datasets(cursor):
-	return cursor.execute('SELECT * FROM datasets').fetchall()
+	res = cursor.execute('SELECT * FROM datasets').fetchall()
+	desc = cursor.description
+	return [[X[0] for X in desc]] + res
 
 def attribute_selector(attribute, params):
 	return "( %s )" % " OR ".join("%s=:%s_%i" % (attribute,attribute,index) for index in range(len(params[attribute])))
@@ -578,9 +580,9 @@ def main():
 	elif options.attributes:
 		print json.dumps(get_attribute_values(cursor))
 	elif options.datasets:
-		print json.dumps(get_datasets(cursor))
+		print "\n".join("\t".join(map(str, X)) for X in get_datasets(cursor))
 	elif options.annotations:
-		print json.dumps(get_annotations(cursor, options.assembly))
+		print "\n".join("\t".join(map(str, X)) for X in get_annotations(cursor, options.assembly))
 	else:
 		if options.a is not None:
 			options.a = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.a))
