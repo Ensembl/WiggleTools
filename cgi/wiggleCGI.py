@@ -67,7 +67,7 @@ def main():
 
 		elif 'annotations' in form:
 			assembly = form['assembly'].value
-			print json.dumps({"annotations": wiggletools.wiggleDB.get_annotations(cursor, assembly)})
+			print json.dumps({"annotations": [X[1] for X in wiggletools.wiggleDB.get_annotations(cursor, assembly)]})
 
 		elif 'wa' in form:
 			options = WiggleDBOptions()
