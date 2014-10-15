@@ -269,7 +269,7 @@ def reuse_or_write_precomputed_location(cursor, cmd, working_directory):
 		fh, destination = tempfile.mkstemp(suffix='.bw',dir=working_directory)
 		return 'write %s %s' % (destination, cmd), destination, True
 
-def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batchSystem):
+def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batch_system):
 	destination = None
 	destinationA = None
 	destinationB = None
@@ -337,7 +337,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 
 	chrom_sizes = get_chrom_sizes(cursor, options.assembly)
 	if len(cmds) > 0 and not options.dry_run:
-		lsfID, files = parallelWiggleTools.run(cmds, chrom_sizes, batchSystem=batchSystem, tmp=options.working_directory)
+		lsfID, files = parallelWiggleTools.run(cmds, chrom_sizes, batch_system=batch_system, tmp=options.working_directory)
 		cursor.execute('INSERT INTO jobs (lsf_id, status) VALUES (%i, "LAUNCHED")' % int(lsfID))
 		jobID = cursor.execute('SELECT LAST_INSERT_ROWID()').fetchall()[0][0]
 		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',1,\'%s\',\'%i\',date(\'now\'),\'%s\')' % (jobID, normalised_form, int(options.remember), destination))
@@ -365,7 +365,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 	if options.dry_run:
 		return ";".join(cmds + [finishCmd])
 	else:
-		lsfID2, temp = multiJob.submit([finishCmd], batchSystem=batchSystem, dependency=lsfID, working_directory=options.working_directory)
+		lsfID2, temp = multiJob.submit([finishCmd], batch_system=batch_system, dependency=lsfID, working_directory=options.working_directory)
 		cursor.execute('UPDATE jobs SET lsf_id2=\'%s\',temp=\'%s\' WHERE job_id=\'%s\'' % (lsfID2, temp, jobID))
 		return jobID
 
@@ -392,7 +392,7 @@ def make_normalised_form(fun_merge, fun_A, data_A, fun_B, data_B):
 
 	return res
 
-def request_compute(cursor, options, batchSystem):
+def request_compute(cursor, options, batch_system):
 	fun_A = options.wa 
 	data_A = get_dataset_locations(cursor, options.a, options.assembly)
 	assert len(data_A) > 0
@@ -412,9 +412,9 @@ def request_compute(cursor, options, batchSystem):
 	if prior_jobID is not None:
 		return query_result(cursor, prior_jobID)
 	else:
-		return {'ID':launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batchSystem), 'status':'WAITING'}
+		return {'ID':launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batch_system), 'status':'WAITING'}
 
-def query_result(cursor, jobID, batchSystem):
+def query_result(cursor, jobID, batch_system):
 	reports = cursor.execute('SELECT status, lsf_id2 FROM jobs WHERE job_id =?', (jobID,)).fetchall()
 
 	if len(reports) == 0:
@@ -427,7 +427,7 @@ def query_result(cursor, jobID, batchSystem):
 		return {'ID':jobID, 'status':'DONE', 'location':get_job_location_2(cursor, jobID)}
 	elif status == 'EMPTY':
 		return {'ID':jobID, 'status':'EMPTY'}
-	elif batchSystem == 'LSF':
+	elif batch_system == 'LSF':
 		p = subprocess.Popen(['bjobs','-noheader',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		ret = p.wait()
 		(stdout, stderr) = p.communicate()
@@ -438,7 +438,7 @@ def query_result(cursor, jobID, batchSystem):
 			if len(items) > 2:
 				values.append(items[2])
 		return {'ID':jobID, 'status':"WAITING", 'return_values':values}
-	elif batchSystem == 'SGE':
+	elif batch_system == 'SGE':
 		p = subprocess.Popen(['qstat','-j',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		ret = p.wait()
 		(stdout, stderr) = p.communicate()
@@ -556,10 +556,10 @@ def main():
 	options.conn = sqlite3.connect(options.db)
 	cursor = options.conn.cursor()
 
-	if config is None or 'batchSystem' not in config:
-		batchSystem = 'SGE'
+	if config is None or 'batch_system' not in config:
+		batch_system = 'SGE'
 	else:
-		batchSystem = config['batchSystem']
+		batch_system = config['batch_system']
 
 	if options.load is not None:
 		create_database(cursor, options.load)
@@ -568,7 +568,7 @@ def main():
 	elif options.clean is not None:
 		clean_database(cursor, options.clean)
 	elif options.result is not None:
-		print json.dumps(query_result(cursor, options.result, batchSystem)
+		print json.dumps(query_result(cursor, options.result, batch_system))
 	elif options.dump_cache:
 		for entry in cursor.execute('SELECT * FROM cache').fetchall():
 			print entry
@@ -588,7 +588,7 @@ def main():
 			options.a = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.a))
 		if options.b is not None:
 			options.b = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.b))
-		print json.dumps(request_compute(cursor, options, batchSystem))
+		print json.dumps(request_compute(cursor, options, batch_system))
 
 	options.conn.commit()
 	options.conn.close()
