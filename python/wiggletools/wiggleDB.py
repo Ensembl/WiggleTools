@@ -481,7 +481,11 @@ def mark_job_as_done(db, jobID, empty=False):
 
 def send_SMTP(msg, email, config):
 	import smtplib
-	s = smtplib.SMTP(config['smtp'])
+	s = smtplib.SMTP(config['smtp_server'], config['smtp_port'])
+        s.ehlo()
+        s.starttls()
+        s.ehlo()
+        s.login(config['user'], config['password'])
 	s.sendmail(config['reply_to'], [email], msg.as_string())
 	s.quit()
 
@@ -489,8 +493,9 @@ def send_email(text, email, config):
 	from email.mime.text import MIMEText
 	msg = MIMEText(text)
 	msg['Subject'] = '[WiggleTools] Job succeeded'
-	msg['From'] = reply_to
+	msg['From'] = config['reply_to']
 	msg['To'] = email
+        msg['sendername'] = config['sendername']
 	send_SMTP(msg, email, config)
 
 def visible_url(location, config):
