@@ -580,7 +580,13 @@ To generate a histogram of values across the iterator, simply use the *histogram
 wiggletools histogram results.txt 10 test/fixedStep.wig
 ```
 
-The format of the output is hopefully rather self explanatory: each line starts with the lower bound of a bin, and the value for that bin. The last line contains the upper bound of the last bin. 
+A histogram can hold multiple distributions:
+
+```
+wiggletools histogram results.txt 10 test/fixedStep.wig test/variableStep.wig
+```
+
+The format of the output is hopefully rather self explanatory: each line starts with the midpoint value of a bin, and the values for that bin, tabbed-delimited.
 
 The algorithm used to compute these histograms is approximate: it adapts the width of the bins to the data received, and requires very little memory or computation. However, the values of the bins is not quite exact, as some points might be counted in a neighbouring bin to the one they should belong to. Normally, over a large datasets, these approximations should roughly even out. 
 
