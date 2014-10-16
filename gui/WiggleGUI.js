@@ -46,7 +46,7 @@ var reduction_opts = {
 var comparison_opts = {
   "regions": {"Intersection":"unit mult", "Union":"unit sum", "Difference": "unit diff"},
   "signal": {"Difference":"diff", "Ratio":"ratio", "Log Ratio":"ln ratio", "T-test":"t-test", "Wilcoxon rank test":"wilcoxon"},
-  "mixed": {"Distribution":"histogram 100", "Profile curve":"profile 100", "Profile matrix":"profiles 100"}
+  "mixed": {"Distribution":"histogram", "Profile curve":"profile", "Profile matrix":"profiles"}
 };
 
 //////////////////////////////////////////
