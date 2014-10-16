@@ -100,16 +100,16 @@ def readChromSizes(file):
 	fh.close()
 	return chrom_sizes
 
-def run(cmds, chrom_file, batchSystem='local', tmp='.'):
+def run(cmds, chrom_file, batch_system='local', tmp='.'):
 	for cmd in cmds:
 		if re.search('(apply_paste|histogram)', cmd) is not None:
 			print "Cannot parallelize the computation of histograms or apply_paste operations"
 			sys.exit(1)
 	chrom_sizes = readChromSizes(chrom_file)
 	mapCommands = sum((makeMapCommand(cmd, chrom_file, chrom_sizes, region_size=3e7) for cmd in cmds), [])
-	jobID1, filename1 = multiJob.submit(mapCommands, batchSystem=batchSystem, working_directory=tmp)
+	jobID1, filename1 = multiJob.submit(mapCommands, batch_system=batch_system, working_directory=tmp)
 	reduceCommands = sum((makeReduceCommands(cmd) for cmd in cmds), [])
-	jobID2, filename2 = multiJob.submit(reduceCommands, dependency = jobID1, batchSystem=batchSystem, mem=8, working_directory=tmp)
+	jobID2, filename2 = multiJob.submit(reduceCommands, dependency = jobID1, batch_system=batch_system, mem=8, working_directory=tmp)
 	return jobID2, [filename1, filename2]
 
 def main():
