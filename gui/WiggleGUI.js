@@ -343,6 +343,10 @@ function report_result(data) {
     $('#Failure_modal').modal();	
   } else if (data["status"] == "UNKNOWN") {
     $('#Unknown_modal').modal();	
+  } else if (data['status'] == "LAUNCHED") {
+    var modal = $("#JobSent_modal").clone();
+    modal.find("#job_id").text(data["ID"]);
+    modal.modal();
   } else {
     $('#Waiting_modal').modal();	
   }
@@ -353,24 +357,14 @@ function get_result() {
   $.getJSON(CGI_URL + "result=" + $('#result_box').val()).done(report_result).fail(catch_JSON_error);
 }
 
-function return_ticket(data) {
-  if ('status' in data) {
-    report_result(data);
-  } else {
-    var modal = $("#JobSent_modal").clone();
-    modal.find("#job_id").text(data["ID"]);
-    modal.modal();
-  }
-}
-
 // Send job to server 
 function submit_query(query) {
-  $.getJSON(CGI_URL + "assembly=" + assembly + "&" + query).done(return_ticket).fail(catch_JSON_error);
+  $.getJSON(CGI_URL + "assembly=" + assembly + "&" + query).done(report_result).fail(catch_JSON_error);
 }
 
 // Request summary
 function summary() {
-  submit_query(panel_query($('#choose')) + '&wa=' + $('#choose').find('#reduction').val()); 
+  submit_query(panel_query($('#choose')) + '&wa=' + panel_reduction($('#choose'))); 
 }
 
 // Request comparison
