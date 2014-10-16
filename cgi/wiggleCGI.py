@@ -41,6 +41,12 @@ class WiggleDBOptions(object):
 		self.remember = False
 		self.db = database_location
 
+def report_result(result):
+	base_url = 'http://s3-%s.amazonaws.com/%s/' % (config['s3_region'], config['s3_bucket'])
+	url = re.sub(working_directory, base_url, info)		
+	ensembl = 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (config['ensembl_server'], config['ensembl_species'], config['ensembl_gene'], url)
+	print json.dumps({'status':result['status'], 'url':result['url'], 'view':result['ensembl']})
+
 def main():
 	print "Content-Type: application/json"
 	print
@@ -52,10 +58,7 @@ def main():
 		if "result" in form:
 			status, info = wiggletools.wiggleDB.query_result(cursor, form["result"].value)
 			if status == "DONE":
-				base_url = 'http://s3-%s.amazonaws.com/%s/' % (s3_region, s3_bucket)
-				url = re.sub(working_directory, base_url, info)		
-				ensembl = 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (ensembl_server, ensembl_species, ensembl_gene, url)
-				print json.dumps({'status':status, 'url':url, 'view':ensembl})
+				report_result(result)
 			else:
 				print json.dumps({'status':status})
 
@@ -99,10 +102,7 @@ def main():
 			
 			result = wiggletools.wiggleDB.request_compute(cursor, options)
 			if result['status'] == 'DONE':
-				base_url = 'http://s3-%s.amazonaws.com/%s/' % (s3_region, s3_bucket)
-				url = re.sub(working_directory, base_url, result['location'])		
-				ensembl = 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (ensembl_server, ensembl_species, ensembl_gene, url)
-				print json.dumps({'ID':result['ID'], 'status':'DONE', 'url':url, 'view':ensembl})
+				report_result(result)
 			else:
 				print json.dumps(result)
 
