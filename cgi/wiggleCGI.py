@@ -1,22 +1,5 @@
 #!/usr/bin/env python
 
-# SQLite3 file location
-database_location = "/data/wiggletools/datasets.sqlite3"
-# Empty directory to catch CGI log files
-logdir = '/data/wiggletools/log/'
-# Directory to catch results files
-working_directory = '/data/wiggletools/tmp/'
-# S3 references
-s3_bucket = 'wiggletools-data'
-s3_region = 'eu-west-1'
-# Ensembl server
-ensembl_server = 'www.ensembl.org'
-ensembl_species = 'Homo_sapiens'
-ensembl_gene = 'ENSG00000130544'
-
-# Debugging flag:
-DEBUG = False
-
 import sys
 import cgi
 import cgitb
@@ -25,7 +8,11 @@ import sqlite3
 import re
 import wiggletools.wiggleDB
 
-cgitb.enable(logdir=logdir)
+DEBUG = False
+CONFIG_FILE = '/data/wiggletools/wiggletools.conf'
+
+config = wiggletools.wiggleDB.read_config_file(CONFIG_FILE)
+cgitb.enable(logdir=config['logdir'])
 
 class WiggleDBOptions(object):
 	def __init__(self):
@@ -39,7 +26,9 @@ class WiggleDBOptions(object):
 		self.b = None
 		self.dry_run = DEBUG
 		self.remember = False
-		self.db = database_location
+		self.db = config['database_location']
+		self.config = CONFIG_FILE
+		
 
 def report_result(result):
 	base_url = 'http://s3-%s.amazonaws.com/%s/' % (config['s3_region'], config['s3_bucket'])
@@ -53,14 +42,14 @@ def main():
 
 	try:
 		form = cgi.FieldStorage()
-		conn = sqlite3.connect(database_location)
+		conn = sqlite3.connect(config['database_location'])
 		cursor = conn.cursor()
 		if "result" in form:
-			status, info = wiggletools.wiggleDB.query_result(cursor, form["result"].value)
-			if status == "DONE":
+			result = wiggletools.wiggleDB.query_result(cursor, form["result"].value, config['batch_system'])
+			if result['status'] == "DONE":
 				report_result(result)
 			else:
-				print json.dumps({'status':status})
+				print json.dumps({'status':result['status']})
 
 		elif "count" in form:
 			assembly = form['assembly'].value
@@ -77,8 +66,8 @@ def main():
 			options.conn = conn
 			options.assembly = form['assembly'].value
 			options.wa = form['wa'].value
-			options.working_directory = working_directory
-			options.s3 = s3_bucket
+			options.working_directory = config['working_directory']
+			options.s3 = config['s3_bucket']
 
 			if 'wb' in form:
 				options.wb = form['wb'].value
@@ -100,7 +89,7 @@ def main():
 				options.b = options.a
 				options.a = tmp
 			
-			result = wiggletools.wiggleDB.request_compute(cursor, options)
+			result = wiggletools.wiggleDB.request_compute(cursor, options, config['batch_system'])
 			if result['status'] == 'DONE':
 				report_result(result)
 			else:
