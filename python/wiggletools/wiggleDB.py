@@ -133,7 +133,7 @@ def create_cache(cursor):
 def create_dataset_table(cursor, filename):
 	file = open(filename)
 	items = file.readline().strip().split('\t')
-	assert items[:4] == list(('location','name','type','annotation','assembly')), "Badly formed dataset table, please ensure the first three columns refer to location, annotation and assembly"
+	assert items[:5] == list(('location','name','type','annotation','assembly')), "Badly formed dataset table, please ensure the first five columns refer to location, name, type, annotation and assembly"
 	header = '''
 			CREATE TABLE IF NOT EXISTS 
 			datasets 
@@ -144,7 +144,7 @@ def create_dataset_table(cursor, filename):
 			annotation bit, 
 			assembly varchar(100),
 		 '''
-	cursor.execute('\n'.join([header] + [",\n".join(['%s varchar(255)' % X for X in items[4:]])] + [')']))
+	cursor.execute('\n'.join([header] + [",\n".join(['%s varchar(255)' % X for X in items[5:]])] + [')']))
 
 	for line in file:
 		cursor.execute('INSERT INTO datasets VALUES (%s)' % ",".join("'%s'" % X for X in line.strip().split('\t')))
