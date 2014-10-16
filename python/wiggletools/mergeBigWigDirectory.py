@@ -10,7 +10,7 @@ directory = sys.argv[1]
 bigwigs = glob.glob(os.path.join(directory + "x", '*.bw'))
 
 if len(bigwigs) > 0:
-	command = ['catBigWigs', directory] + bigwigs
+	command = ['bigWigCat', directory] + bigwigs
 	p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	return_code = p.wait()
 
