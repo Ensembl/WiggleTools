@@ -416,9 +416,9 @@ def request_compute(cursor, options, batch_system):
 	normalised_form = make_normalised_form(options.fun_merge, fun_A, data_A, fun_B, data_B)
 	prior_jobID = get_precomputed_jobID(cursor, normalised_form)
 	if prior_jobID is not None:
-		return query_result(cursor, prior_jobID)
+		return query_result(cursor, prior_jobID, batch_system)
 	else:
-		return {'ID':launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batch_system), 'status':'WAITING'}
+		return {'ID':launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batch_system), 'status':'LAUNCHED'}
 
 def query_result(cursor, jobID, batch_system):
 	reports = cursor.execute('SELECT status, lsf_id2 FROM jobs WHERE job_id =?', (jobID,)).fetchall()
@@ -474,7 +474,6 @@ def query_result(cursor, jobID, batch_system):
 					else:
 						values.append(items[1])
 			if any(X != '0' for X in values):
-				return 'ERROR', " ".join(values) + " " + str(lsfID)
 				return {'ID':jobID, 'status':"ERROR", 'return_values':values, 'LSF_ID':lsfID}
 			else:
 				return {'ID':jobID, 'status':"WAITING", 'return_values':values, 'LSF_ID':lsfID}
