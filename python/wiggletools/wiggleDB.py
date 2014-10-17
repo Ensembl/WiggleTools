@@ -55,7 +55,7 @@ def get_options():
 	parser.add_argument('--verbose','-v',dest='verbose',help='Turn on status output',action='store_true')
 	parser.add_argument('--config','-c',dest='config',help='Configuration file')
 	parser.add_argument('--annotations','-n',dest='annotations',help='Print list of annotation names', action='store_true')
-	parser.add_argument('--jobs','-j',dest='jobs',help='Print list of jobs', action='store_true')
+	parser.add_argument('--jobs','-j',dest='jobs',help='Print list of jobs',nargs='*')
 
 	options = parser.parse_args()
 	if options.load is not None:
@@ -194,15 +194,23 @@ def get_attribute_values(cursor):
 def get_annotations(cursor, assembly):
 	return cursor.execute('SELECT * FROM datasets WHERE assembly=? AND annotation', (assembly,)).fetchall()
 
-def get_jobs(cursor):
-	res = cursor.execute('SELECT * FROM jobs').fetchall()
-	desc = cursor.description
-	return [[X[0] for X in desc]] + res
+def get_job(cursor, job):
+	res = cursor.execute('SELECT * FROM jobs WHERE job_id = ?', (job,)).fetchall()
+	if len(res) == 0:
+		return [job, None, None, None, None, None]
+	else:
+		return res[0]
+
+def get_jobs(cursor, joblist):
+	if len(joblist) == 0:
+		res = cursor.execute('SELECT * FROM jobs').fetchall()
+	else:
+		res = [get_job(cursor, X) for X in joblist]
+	return [[X[0] for X in cursor.description]] + res
 
 def get_datasets(cursor):
 	res = cursor.execute('SELECT * FROM datasets').fetchall()
-	desc = cursor.description
-	return [[X[0] for X in desc]] + res
+	return [[X[0] for X in cursor.description]] + res
 
 def attribute_selector(attribute, params):
 	return "( %s )" % " OR ".join("%s=:%s_%i" % (attribute,attribute,index) for index in range(len(params[attribute])))
@@ -584,8 +592,8 @@ def main():
 		create_job_table(cursor)
 	elif options.attributes:
 		print json.dumps(get_attribute_values(cursor))
-	elif options.jobs:
-		print "\n".join("\t".join(map(str, X)) for X in get_jobs(cursor))
+	elif options.jobs is not None:
+		print "\n".join("\t".join(map(str, X)) for X in get_jobs(cursor, options.jobs))
 	elif options.datasets:
 		print "\n".join("\t".join(map(str, X)) for X in get_datasets(cursor))
 	elif options.annotations:
