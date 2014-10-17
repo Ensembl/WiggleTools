@@ -58,8 +58,6 @@ def get_options():
 	parser.add_argument('--jobs','-j',dest='jobs',help='Print list of jobs',nargs='*')
 
 	options = parser.parse_args()
-	if options.load is not None:
-		assert not os.path.exists(options.db), "Cannot overwrite pre-existing database %s" % options.db
 	if all(X is None for X in [options.load, options.clean, options.result, options.load_assembly, options.datasets]) and not options.dump_cache and  not options.clear_cache and not options.attributes and not options.annotations:
 		assert options.a is not None, 'No dataset selection to run on'
 		assert options.wa is not None, 'No dataset transformation to run on'
@@ -89,12 +87,12 @@ def create_database(cursor, filename):
 		print 'Creating database'
 	create_assembly_table(cursor)
 	create_cache(cursor)
-	create_dataset_table(cursor, filename)
 	create_job_table(cursor)
+	create_dataset_table(cursor, filename)
 
 def create_assembly_table(cursor):
 	cursor.execute('''
-	CREATE TABLE
+	CREATE TABLE IF NOT EXISTS
 	assemblies
 	(
 	name varchar(255),
@@ -104,7 +102,7 @@ def create_assembly_table(cursor):
 
 def create_job_table(cursor):
 	cursor.execute('''
-	CREATE TABLE
+	CREATE TABLE IF NOT EXISTS
 	jobs
 	(
 	job_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,7 +116,7 @@ def create_job_table(cursor):
 
 def create_cache(cursor):
 	cursor.execute('''
-	CREATE TABLE
+	CREATE TABLE IF NOT EXISTS
 	cache
 	(
 	job_id int,
@@ -145,6 +143,10 @@ def create_dataset_table(cursor, filename):
 			assembly varchar(100),
 		 '''
 	cursor.execute('\n'.join([header] + [",\n".join(['%s varchar(255)' % X for X in items[5:]])] + [')']))
+
+	cursor.execute('SELECT * FROM datasets').fetchall()
+	column_names = [X[0] for X in cursor.description]
+	assert column_names == items, 'Mismatch between the expected columns: \n%s\nAnd the columns in file:\n%s' % ("\t".join(column_names), '\t'.join(items))
 
 	for line in file:
 		cursor.execute('INSERT INTO datasets VALUES (%s)' % ",".join("'%s'" % X for X in line.strip().split('\t')))
