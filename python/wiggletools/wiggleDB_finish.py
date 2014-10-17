@@ -42,7 +42,7 @@ def main():
 		if subprocess.call("wiggletools "  + options.histogram, shell=True):
 			print "Failed to construct histogram"
 			sys.exit(1)
-		if options.getsize(data) > 0:
+		if os.path.getsize(data) > 0:
 			wigglePlots.make_histogram(data, options.labels, data + ".pdf")
 		else:
 			empty = True
@@ -50,13 +50,13 @@ def main():
 		if subprocess.call("wiggletools "  + options.apply_paste, shell=True):
 			print "Failed to construct overlap graph"
 			sys.exit(1)
-		if options.getsize(data) > 0:
+		if os.path.getsize(data) > 0:
 			wigglePlots.make_overlaps(data, data + ".pdf")
 		else:
 			empty = True
 
 	# Move data to longterm storage
-	if options.getsize(data) > 0:
+	if os.path.getsize(data) > 0:
 		copy_to_longterm(data, config)
 		if os.path.exists(data + ".pdf"):
 			copy_to_longterm(data + ".pdf", config)
@@ -67,7 +67,7 @@ def main():
 
 	# Signing off
 	if empty:
-		wiggleDB.report_empty_to_user(options.email, options.jobID, config)
+		wiggleDB.report_empty_to_user(options.emails, options.jobID, config)
 	else:
 		wiggleDB.report_to_user(options.email, options.jobID, data, config)
 
