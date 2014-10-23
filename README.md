@@ -17,7 +17,7 @@ To speed up the process you can use the easy installation script:
 ```
 easy_install.sh
 ```
-It will test for the presence of pre-existing installations, prompt you before each download then install as appropriate. If you already installed Tabix or the Kent source code, be sure to set the $TABIX_SRC and $KENT_SRC environment variables to avoid a redundant installation. Because C libraries are being installed, root permissions are required. 
+It will test for the presence of pre-existing installations, prompt you before each download then install as appropriate. If you already installed Tabix or the Kent source code, be sure to set the $TABIX_SRC and $KENT_SRC environment variables to avoid a redundant installation. Because C libraries are being installed (see below), root permissions are required. If those libraries are already installed, the script runs happily without root privileges. 
 
 If you are on Mac or Ubuntu, the script will use HomeBrew or apt-get. If you have a different package installer, it should be pretty easy to install hooks for it in the script. 
 
@@ -26,9 +26,16 @@ Note that this script is quite experimental, and your system is different from m
 Installation
 ------------
 
-WiggleTools requires three dependencies, the Kent and GSL (GNU scientific) libraries:
+WiggleTools requires three dependencies: the Kent, Tabix and GSL (GNU scientific) libraries, which have their own dependencies. 
+First ensure that you have the following libraries (if you don't have root privileges on your system, ask your local systems administrator):
 
-Installing the Kent library
+* [libssl](http://www.openssl.org/)
+* [libpng](http://www.libpng.org/pub/png/libpng.html)
+* [GSL](http://www.gnu.org/software/gsl/)
+* [MySQL](http://dev.mysql.com/)
+* Compiling MySQL requires [cmake](http://www.cmake.org/)
+
+**Installing the Kent library**
 
 First download the code:
 
@@ -45,7 +52,7 @@ export KENT_SRC=$PWD/kent/src
 ```
 Ensure that your path points to the userApps/bin directory.
 
-Installing the Tabix library
+**Installing the Tabix library**
 
 ```
 git clone https://github.com/samtools/tabix.git
