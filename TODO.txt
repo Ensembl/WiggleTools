@@ -3,4 +3,4 @@ Seekable apply_paste
 Memory tracking & cleaning of chrom labels
 Read strand in BigBed files?
 Read score in BigBed files? => Handling overlapping iterators with value in unit and filter
-HMM app? (requires reverse iterators...)
+Read data in VCF file?

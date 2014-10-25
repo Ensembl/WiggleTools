@@ -15,8 +15,13 @@
 // Local header
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
-#include "wiggleIterator.h"
+#include "multiplexer.h"
+
+const int MAX_BUFFER = 1e6;
+const int MAX_BUFFER_SUM = 1e6;
+const int MAX_SEEK = 1e6;
 
 //////////////////////////////////////////////////////
 // Buffered wiggleIterator
@@ -29,35 +34,139 @@ typedef struct bufferedWiggleIteratorData_st {
 	int index;
 	int length;
 	double * values;
+	bool * set;
 	struct bufferedWiggleIteratorData_st * next;
+	double default_value;
 } BufferedWiggleIteratorData;
 
+static BufferedWiggleIteratorData * createBufferedWiggleIteratorData(char * chrom, int start, int finish, float default_value) {
+	BufferedWiggleIteratorData * bufferedData = (BufferedWiggleIteratorData *) calloc(1, sizeof(BufferedWiggleIteratorData));
+	if (!bufferedData) {
+		fprintf(stderr, "Could not calloc %li bytes\n", sizeof(BufferedWiggleIteratorData));
+		abort();
+	}
+	bufferedData->chrom = chrom;
+	bufferedData->start = start;
+	bufferedData->finish = finish;
+	bufferedData->index = 0;
+	bufferedData->length = finish - start;
+	if (bufferedData->length < MAX_BUFFER) {
+		bufferedData->values = (double *) calloc(bufferedData->length, sizeof(double));
+		bufferedData->set = (bool *) calloc(bufferedData->length, sizeof(bool));
+	}
+	bufferedData->default_value = default_value;
+	return bufferedData;
+}
+
 void destroyBufferedWiggleIteratorData(BufferedWiggleIteratorData * data) {
-	free(data->values);
+	if (data->values) {
+		free(data->values);
+		free(data->set);
+	}
 	free(data);
 }
 
-void BufferedWiggleIteratorPop(WiggleIterator * wi) {
-	BufferedWiggleIteratorData * data = (BufferedWiggleIteratorData *) wi->data;
-	if (data->index < data->length) {
-		wi->start = data->index;
-		wi->finish = wi->start + 1;
-		wi->value = data->values[data->index];
-		data->index++;
-	} else {
-		wi->done = true;
+void LooseBufferedWiggleIteratorPop(WiggleIterator * apply) {
+	BufferedWiggleIteratorData * data = (BufferedWiggleIteratorData *) apply->data;
+	if (apply->done)
+		;
+	else if (data->index == data->length)
+		apply->done = true;
+	else {
+		apply->start = data->index;
+		if (data->set[data->index]) {
+			apply->value = data->values[data->index];
+			data->index++;
+		} else {
+			apply->value = apply->default_value;
+			while (data->index < data->length && !data->set[data->index])
+				data->index++;
+		}
+		apply->finish = data->index;
 	}
 }
 
-void BufferedWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+void StrictBufferedWiggleIteratorPop(WiggleIterator * apply) {
+	BufferedWiggleIteratorData * data = (BufferedWiggleIteratorData *) apply->data;
+	while (data->index < data->length) {
+		if (data->set[data->index]) {
+			apply->start = data->index;
+			apply->finish = apply->start + 1;
+			apply->value = data->values[data->index];
+			data->index++;
+			return;
+		} else
+			data->index++;
+	}
+	apply->done = true;
+}
+
+void BufferedWiggleIteratorSeek(WiggleIterator * apply, const char * chrom, int start, int finish) {
 	fprintf(stderr, "Cannot seek on buffered iterator!");
 	exit(1);
 }
 
-WiggleIterator * BufferedWiggleIterator(BufferedWiggleIteratorData * data) {
-	WiggleIterator * wi = newWiggleIterator(data, &BufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek);
-	wi->chrom = data->chrom;
-	return wi;
+WiggleIterator * BufferedWiggleIterator(BufferedWiggleIteratorData * data, bool strict) {
+	WiggleIterator * apply;
+	if (strict)
+		apply = newWiggleIterator(data, &StrictBufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value);
+	else
+		apply = newWiggleIterator(data, &LooseBufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value);
+	apply->chrom = data->chrom;
+	return apply;
+}
+
+//////////////////////////////////////////////////////
+// Fill in wiggleIterator
+//////////////////////////////////////////////////////
+
+typedef struct fillInUnaryData_st {
+	char * chrom;
+	int start;
+	int finish;
+	bool first;
+	WiggleIterator * source;
+} FillInUnaryData;
+
+void FillInUnaryPop(WiggleIterator * wi) {
+	FillInUnaryData * data = (FillInUnaryData*) wi->data;
+	WiggleIterator * source = data->source;
+
+	if (data->first) {
+		wi->chrom = data->chrom;
+		wi->finish = data->start;
+		data->first = false;
+	}
+	
+	if (source->done) {
+		if (wi->finish == data->finish)
+			wi->done = true;
+		else {
+			wi->start = wi->finish;
+			wi->finish = data->finish;
+			wi->value = wi->default_value;
+		}
+	} else if (source->start > wi->finish) {
+		wi->start = wi->finish;
+		wi->finish = source->start;
+		wi->value = wi->default_value;
+	} else {
+		wi->start = source->start;
+		wi->finish = source->finish;
+		wi->value = source->value;
+		pop(data->source);
+	}
+}
+
+WiggleIterator * FillInUnaryWiggleIterator(WiggleIterator * source, char * chrom, int start, int finish) {
+	FillInUnaryData * data = (FillInUnaryData*) calloc(1, sizeof(FillInUnaryData));
+	data->chrom = chrom;
+	data->start = start;
+	data->finish = finish;
+	data->source = source;
+	data->first = true;
+	seek(source, chrom, start, finish);
+	return newWiggleIterator(data, &FillInUnaryPop, NULL, source->default_value);
 }
 
 //////////////////////////////////////////////////////
@@ -66,26 +175,19 @@ WiggleIterator * BufferedWiggleIterator(BufferedWiggleIteratorData * data) {
 
 typedef struct applyWiggleIteratorData_st {
 	WiggleIterator * regions;
-	double (*statistic)(WiggleIterator *);
-	double * valuePtr;
+	WiggleIterator * (**statistics)(WiggleIterator *);
 	int profile_width;
+	bool strict;
 	WiggleIterator * input;
 	BufferedWiggleIteratorData * head;
 	BufferedWiggleIteratorData * tail;
-} ApplyWiggleIteratorData;
+} ApplyMultiplexerData;
 
-static void createTarget(ApplyWiggleIteratorData * data) {
-	BufferedWiggleIteratorData * bufferedData = (BufferedWiggleIteratorData *) calloc(1, sizeof(BufferedWiggleIteratorData));
-	if (!bufferedData) {
-		fprintf(stderr, "Could not calloc %li bytes\n", sizeof(BufferedWiggleIteratorData));
-		abort();
-	}
-	bufferedData->chrom = data->regions->chrom;
-	bufferedData->start = data->regions->start;
-	bufferedData->finish = data->regions->finish;
-	bufferedData->index = 0;
-	bufferedData->length = data->regions->finish - data->regions->start;
-	bufferedData->values = (double *) calloc(bufferedData->length, sizeof(double));
+static BufferedWiggleIteratorData * createTarget(ApplyMultiplexerData * data) {
+	return createBufferedWiggleIteratorData(data->regions->chrom, data->regions->start, data->regions->finish, data->input->default_value);
+}
+
+static void addTarget(ApplyMultiplexerData * data, BufferedWiggleIteratorData * bufferedData) {
 	if (!data->head)
 		data->head = bufferedData;
 	else
@@ -93,16 +195,29 @@ static void createTarget(ApplyWiggleIteratorData * data) {
 	data->tail = bufferedData;
 }
 
-static void createTargets(ApplyWiggleIteratorData * data) {
-	// NOTE: the 10kb added allows the system to pull neighbouring regions together 
-	while(!data->regions->done && (!data->head || (data->regions->start <= data->tail->finish + 1000000 && !strcmp(data->regions->chrom, data->tail->chrom)))) {
-		if (data->regions->value)
-			createTarget(data);
+static void createTargets(ApplyMultiplexerData * data) {
+	int length;
+	int total_buffers = 0;
+
+	if (data->regions->finish - data->regions->start >= MAX_BUFFER) {
+		addTarget(data, createTarget(data));
 		pop(data->regions);
+	} else {
+		while(!data->regions->done 
+		      && (length = data->regions->finish - data->regions->start) < MAX_BUFFER
+		      && (!data->head 
+			  || ((total_buffers += length) < MAX_BUFFER_SUM && data->regions->finish <= data->head->start + MAX_SEEK && !strcmp(data->regions->chrom, data->tail->chrom))
+			 )
+		     ) 
+		{
+			addTarget(data, createTarget(data));
+			pop(data->regions);
+		}
+		seek(data->input, data->head->chrom, data->head->start, data->tail->finish);	
 	}
 }
 
-static void pushDataOnBuffer(ApplyWiggleIteratorData * data, BufferedWiggleIteratorData * bufferedData) {
+static void pushDataOnBuffer(ApplyMultiplexerData * data, BufferedWiggleIteratorData * bufferedData) {
 	int pos, start, finish;
 
 	if (bufferedData->start > data->input->start)
@@ -115,12 +230,14 @@ static void pushDataOnBuffer(ApplyWiggleIteratorData * data, BufferedWiggleItera
 	else
 		finish = data->input->finish - bufferedData->start;
 
-	for (pos = start; pos < finish; pos++)
+	for (pos = start; pos < finish; pos++) {
 		bufferedData->values[pos] = data->input->value;
+		bufferedData->set[pos] = true;
+	}
 
 }
 
-static void pushData(ApplyWiggleIteratorData * data) {
+static void pushData(ApplyMultiplexerData * data) {
 	BufferedWiggleIteratorData * bufferedData;
 
 	for (bufferedData = data->head; bufferedData; bufferedData = bufferedData->next) {
@@ -131,49 +248,88 @@ static void pushData(ApplyWiggleIteratorData * data) {
 	}
 }
 
-void ApplyWiggleIteratorPop(WiggleIterator * wi) {
-	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) wi->data;
-
-	// If no ongoing jobs, create some
-	if (data->head == NULL) {
-		createTargets(data);
-		if (data->head) {
-			seek(data->input, data->head->chrom, data->head->start, data->tail->finish);	
-		} else {
-			wi->done = true;
-			return;
-		}
-	}
-
-	// If ongoing jobs are running:
-	// Push enough data to finish the first job
-	while (!data->input->done && !strcmp(data->input->chrom, data->head->chrom) && data->input->start < data->head->finish) {
-		pushData(data);
-		pop(data->input);
-	}
-
-	// Return value
-	wi->chrom = data->head->chrom;
-	wi->start = data->head->start;
-	wi->finish = data->head->finish;
-	if (data->statistic)
-		wi->value = data->statistic(BufferedWiggleIterator(data->head));
-	else {
-		wi->valuePtr = data->valuePtr;
-		regionProfile(BufferedWiggleIterator(data->head), wi->valuePtr, data->profile_width, wi->finish - wi->start, false);
-	}
-
-	// Discard struct
+BufferedWiggleIteratorData * popApplyMultiplexerData(ApplyMultiplexerData * data) {
 	BufferedWiggleIteratorData * bufferedData = data->head;
 	if (data->tail == data->head) 
 		data->tail = data->head = NULL;
 	else
 		data->head = data->head->next;
+	return bufferedData;
+}
+
+void computeApplyValues(Multiplexer * apply, ApplyMultiplexerData * data, BufferedWiggleIteratorData * bufferedData) {
+	WiggleIterator * wi;
+	if (bufferedData->values)
+		wi = BufferedWiggleIterator(bufferedData, data->strict);
+	else if (data->strict) {
+		wi = data->input;
+		seek(wi, bufferedData->chrom, bufferedData->start, bufferedData->finish);
+	} else
+		wi = FillInUnaryWiggleIterator(data->input, bufferedData->chrom, bufferedData->start, bufferedData->finish);
+
+	if (data->statistics) {
+		int i;
+		for (i = apply->count-1; i >= 0; i--)
+			wi = (data->statistics[i])(wi);
+		runWiggleIterator(wi);
+		i=0;
+		while (wi->append) {
+			apply->values[i] = *((double*) (wi->data));
+			WiggleIterator * tmp = wi;
+			wi = wi->append;
+			if (tmp->data)
+				free(tmp->data);
+			free(tmp);
+			i++;
+		}
+	} else
+		regionProfile(wi, apply->values, apply->count, apply->finish - apply->start, false);
+
+	if (wi != data->input) {
+		// Careful not to destroy buffered data. It requires special function and is destroyed elsewhere.
+		if (wi->data != bufferedData)
+			free(wi->data);
+		free(wi);
+	}
+}
+
+void  updateApplyMultiplexer(Multiplexer * apply, ApplyMultiplexerData * data, BufferedWiggleIteratorData * bufferedData) {
+	apply->chrom = bufferedData->chrom;
+	apply->start = bufferedData->start;
+	apply->finish = bufferedData->finish;
+	computeApplyValues(apply, data, bufferedData);
+}
+
+void ApplyMultiplexerPop(Multiplexer * apply) {
+	ApplyMultiplexerData * data = (ApplyMultiplexerData *) apply->data;
+
+	// If no ongoing jobs, create some
+	if (data->head == NULL) {
+		// Note: only exit if no more regions AND no targets waiting 
+		if (data->regions->done) {
+			apply->done = true;
+			return;
+		} 
+		createTargets(data);
+	}
+
+	// If ongoing targets are reading:
+	// Push enough data to finish the first job
+	if (data->head->values) {
+		while (!data->input->done && data->input->start < data->head->finish && !strcmp(data->input->chrom, data->head->chrom)) {
+			pushData(data);
+			pop(data->input);
+		}
+	}
+
+	// Return value
+	BufferedWiggleIteratorData * bufferedData = popApplyMultiplexerData(data);
+	updateApplyMultiplexer(apply, data, bufferedData);
 	destroyBufferedWiggleIteratorData(bufferedData);
 }
 
-void ApplyWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) wi->data;
+void ApplyMultiplexerSeek(Multiplexer * apply, const char * chrom, int start, int finish) {
+	ApplyMultiplexerData * data = (ApplyMultiplexerData *) apply->data;
 	BufferedWiggleIteratorData * bufferedData;
 	while (data->head) {
 		bufferedData = data->head;
@@ -184,19 +340,29 @@ void ApplyWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start,
 	seek(data->regions, chrom, start, finish);
 }
 
-WiggleIterator * ApplyWiggleIterator(WiggleIterator * regions, double (*statistic)(WiggleIterator *), WiggleIterator * dataset) {
-	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) calloc(1, sizeof(ApplyWiggleIteratorData));
+Multiplexer * ApplyMultiplexer(WiggleIterator * regions, WiggleIterator * (**statistics)(WiggleIterator *), int count, WiggleIterator * dataset, bool strict) {
+	ApplyMultiplexerData * data = (ApplyMultiplexerData *) calloc(1, sizeof(ApplyMultiplexerData));
 	data->regions = regions;
-	data->statistic = statistic;
+	data->statistics = statistics;
 	data->input = dataset;
-	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL);
+	data->strict = strict;
+	Multiplexer * res = newCoreMultiplexer(data, count, &ApplyMultiplexerPop, &ApplyMultiplexerSeek);
+	int i;
+	for (i=0; i < count; i++)
+		res->default_values[i] = NAN;
+	popMultiplexer(res);
+	return res;
 }
 
-WiggleIterator * ProfileWiggleIterator(WiggleIterator * regions, int width, WiggleIterator * dataset) {
-	ApplyWiggleIteratorData * data = (ApplyWiggleIteratorData *) calloc(1, sizeof(ApplyWiggleIteratorData));
+Multiplexer * ProfileMultiplexer(WiggleIterator * regions, int width, WiggleIterator * dataset) {
+	ApplyMultiplexerData * data = (ApplyMultiplexerData *) calloc(1, sizeof(ApplyMultiplexerData));
 	data->regions = regions;
-	data->profile_width = width;
 	data->input = dataset;
-	data->valuePtr = calloc(width, sizeof(double));
-	return newWiggleIterator(data, &ApplyWiggleIteratorPop, NULL);
+	data->strict = false;
+	Multiplexer * res = newCoreMultiplexer(data, width, &ApplyMultiplexerPop, &ApplyMultiplexerSeek);
+	int i;
+	for (i=0; i < width; i++)
+		res->default_values[i] = NAN;
+	popMultiplexer(res);
+	return res;
 }

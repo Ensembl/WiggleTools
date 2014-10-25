@@ -55,7 +55,7 @@ void openBigBedFile(BigFileReaderData * data, char * filename) {
 WiggleIterator * BigBedReader(char * f) {
 	BigFileReaderData * data = (BigFileReaderData *) calloc(1, sizeof(BigFileReaderData));
 	openBigBedFile(data, f);
-	WiggleIterator * res = newWiggleIterator(data, &BigFileReaderPop, &BigFileReaderSeek);
+	WiggleIterator * res = newWiggleIterator(data, &BigFileReaderPop, &BigFileReaderSeek, 0);
 	res->overlaps = true;
 	return res;
 }	

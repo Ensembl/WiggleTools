@@ -109,5 +109,5 @@ WiggleIterator * BcfReader(char * filename) {
 	BCFReaderData * data = (BCFReaderData *) calloc(1, sizeof(BCFReaderData));
 	OpenTabixFile(data, filename);
 	launchBufferedReader(&downloadTabixFile, data, &(data->bufferedReaderData));
-	return newWiggleIterator(data, &BCFReaderPop, &BcfReaderSeek);
+	return newWiggleIterator(data, &BCFReaderPop, &BcfReaderSeek, 0);
 }

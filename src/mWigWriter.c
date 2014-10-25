@@ -19,7 +19,7 @@
 #include <stdint.h>
 
 // Local header
-#include "wiggleIterator.h"
+#include "multiplexer.h"
 
 //////////////////////////////////////////////////////
 // Tee operator
@@ -32,16 +32,17 @@ typedef struct BlockData_st {
 	char * chroms[BLOCK_LENGTH];
 	int starts[BLOCK_LENGTH];
 	int finishes[BLOCK_LENGTH];
-	double values[BLOCK_LENGTH];
+	double * values;
 	int count;
+	int width;
 	bool bedGraph;
 	struct BlockData_st * next;
 } BlockData;
 
-typedef struct TeeWiggleIteratorData_st {
+typedef struct TeeMultiplexerData_st {
 	FILE * infile;
 	FILE * outfile;
-	WiggleIterator * iter;
+	Multiplexer * in;
 	BlockData * dataBlocks;
 	BlockData * lastBlock;
 	int count;
@@ -50,7 +51,7 @@ typedef struct TeeWiggleIteratorData_st {
 	pthread_cond_t continue_cond;
 	bool done;
 	bool bedGraph;
-} TeeWiggleIteratorData;
+} TeeMultiplexerData;
 
 static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 	int i, j;
@@ -77,12 +78,22 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 			if (makeHeader || (pointByPoint && (lastChrom != *chromPtr || *startPtr > lastFinish)))
 				fprintf(outfile, "fixedStep chrom=%s start=%i step=1\n", *chromPtr, *startPtr);
 			makeHeader = false;
-			for (j = 0; j < *finishPtr - *startPtr; j++)
-				fprintf(outfile, "%lf\n", *valuePtr);
-		} else if (!infile)
+			for (j = 0; j < *finishPtr - *startPtr; j++) {
+				int k;
+				double * ptr = valuePtr;
+				for (k = 0; k < block->width; k++)
+					fprintf(outfile, "\t%lf", *(ptr++));
+				fprintf(outfile, "\n");
+			}
+			valuePtr += block->width;
+		} else if (!infile) {
 			// Careful bedgraph lines are 0 based
-			fprintf(outfile, "%s\t%i\t%i\t%lf\n", *chromPtr, *startPtr-1, *finishPtr-1, *valuePtr);
-		else {
+			fprintf(outfile, "%s\t%i\t%i", *chromPtr, *startPtr-1, *finishPtr-1);
+			int k;
+			for (k = 0; k < block->width; k++)
+				fprintf(outfile, "\t%lf", *(valuePtr++));
+			fprintf(outfile, "\n");
+		} else {
 			// Read next line in infile
 			if (!fgets(buffer, 5000, infile)) {
 				fprintf(stderr, "Could not paste data to file lines, inconsistent number of lines.\n");
@@ -98,15 +109,19 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 			}
 
 			// Strip end of line symbols
-			int i;
-			for (i = strlen(buffer)-1; i >= 0; i--) {
-				if (buffer[i] == '\n' || buffer[i] == '\r')
-					buffer[i] = '\0';
+			int k;
+			for (k = strlen(buffer)-1; k >= 0; k--) {
+				if (buffer[k] == '\n' || buffer[k] == '\r')
+					buffer[k] = '\0';
 				else
 					break;
 			}
+
 			// Print out
-			fprintf(outfile, "%s\t%lf\n", buffer, *valuePtr);
+			fprintf(outfile, "%s", buffer);
+			for (k = 0; k < block->width; k++)
+				fprintf(outfile, "\t%lf", *(valuePtr++));
+			fprintf(outfile, "\n");
 		}
 
 		lastChrom = *chromPtr;
@@ -114,11 +129,10 @@ static void printBlock(FILE * infile, FILE * outfile, BlockData * block) {
 		chromPtr++;
 		startPtr++;
 		finishPtr++;
-		valuePtr++;
 	}
 }
 
-static bool goToNextBlock(TeeWiggleIteratorData * data) {
+static bool goToNextBlock(TeeMultiplexerData * data) {
 	BlockData * ptr = data->dataBlocks;
 	static int i = 0;
 	i++;
@@ -137,12 +151,13 @@ static bool goToNextBlock(TeeWiggleIteratorData * data) {
 
 	// Step forward
 	data->dataBlocks = data->dataBlocks->next;
+	free(ptr->values);
 	free(ptr);
 	return false;
 }
 
 static void * printToFile(void * args) {
-	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) args;
+	TeeMultiplexerData * data = (TeeMultiplexerData *) args;
 
 	// Wait for first block to arrive
 	pthread_mutex_lock(&data->continue_mutex);
@@ -161,21 +176,26 @@ static void * printToFile(void * args) {
 	return NULL;
 }
 
-void TeeWiggleIteratorPop(WiggleIterator * wi) {
-	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) wi->data;
-	WiggleIterator * iter = data->iter;
-	if (!data->iter->done) {
-		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = iter->finish;
-		wi->value = iter->value;
+static void TeeMultiplexerPop(Multiplexer * multi) {
+	TeeMultiplexerData * data = (TeeMultiplexerData *) multi->data;
+	Multiplexer * in = data->in;
+	if (!data->in->done) {
+		multi->chrom = in->chrom;
+		multi->start = in->start;
+		multi->finish = in->finish;
+		// No need to copy values, pointer points to the source multipliexers values' array
+		//multi->value = in->value;
 
 		if (data->threadID) {
 			int index = data->lastBlock->count;
-			data->lastBlock->chroms[index] =  iter->chrom;
-			data->lastBlock->starts[index] =  iter->start;
-			data->lastBlock->finishes[index] =  iter->finish;
-			data->lastBlock->values[index] =  iter->value;
+			data->lastBlock->chroms[index] =  in->chrom;
+			data->lastBlock->starts[index] =  in->start;
+			data->lastBlock->finishes[index] =  in->finish;
+			int i;
+			double * ptr = data->lastBlock->values + (index * multi->count);
+			for (i = 0; i < multi->count; i++)
+				*(ptr++) = in->values[i];
+
 			if (++data->lastBlock->count >= BLOCK_LENGTH) {
 				// Communications
 				pthread_mutex_lock(&data->continue_mutex);
@@ -186,29 +206,33 @@ void TeeWiggleIteratorPop(WiggleIterator * wi) {
 				pthread_mutex_unlock(&data->continue_mutex);
 
 				data->lastBlock->next = (BlockData*) calloc(1, sizeof(BlockData));
+				data->lastBlock->next->values = (double*) calloc(BLOCK_LENGTH * multi->count, sizeof(double));
+				data->lastBlock->width = in->count;
 				data->lastBlock = data->lastBlock->next;
 				data->lastBlock->bedGraph = data->bedGraph;
 			}
 		}
-		pop(iter);
+		popMultiplexer(in);
 	} else if (data->threadID) {
 		pthread_mutex_lock(&data->continue_mutex);
 		data->count++;
 		data->done = true;
 		pthread_cond_signal(&data->continue_cond);
 		pthread_mutex_unlock(&data->continue_mutex);
-		wi->done = true;
+		multi->done = true;
 		pthread_join(data->threadID, NULL);
 	}
 }
 
-static void launchWriter(TeeWiggleIteratorData * data) {
+static void launchWriter(TeeMultiplexerData * data, int width) {
 	// Initialize variables
 	data->count = 0;
 	data->done = false;
 	pthread_cond_init(&data->continue_cond, NULL);
 	pthread_mutex_init(&data->continue_mutex, NULL);
 	data->dataBlocks = data->lastBlock = (BlockData*) calloc(1, sizeof(BlockData));
+	data->dataBlocks->values = (double*) calloc(BLOCK_LENGTH * width, sizeof(double));
+	data->dataBlocks->width = width;
 	data->lastBlock->bedGraph = data->bedGraph;
 
 	// Launch pthread
@@ -219,7 +243,7 @@ static void launchWriter(TeeWiggleIteratorData * data) {
 	}
 }
 
-static void killWriter(TeeWiggleIteratorData * data) {
+static void killWriter(TeeMultiplexerData * data) {
 	BlockData * block;
 	
 	if (!data->threadID)
@@ -241,6 +265,7 @@ static void killWriter(TeeWiggleIteratorData * data) {
 	while (data->dataBlocks) {
 		block = data->dataBlocks;
 		data->dataBlocks = block->next;
+		free(block->values);
 		free(block);
 	}
 
@@ -248,54 +273,55 @@ static void killWriter(TeeWiggleIteratorData * data) {
 	data->lastBlock = NULL;
 }
 
-void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
-	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) wi->data;
+static void TeeMultiplexerSeek(Multiplexer * multi, const char * chrom, int start, int finish) {
+	TeeMultiplexerData * data = (TeeMultiplexerData *) multi->data;
 	killWriter(data);
 	fflush(data->outfile);
-	seek(data->iter, chrom, start, finish);
-	wi->done = false;
-	launchWriter(data);
-	pop(wi);
+	seekMultiplexer(data->in, chrom, start, finish);
+	multi->done = false;
+	launchWriter(data, multi->count);
+	popMultiplexer(multi);
 }
 
-WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedGraph, bool holdFire) {
-	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
-	data->iter = CompressionWiggleIterator(i);
+Multiplexer * TeeMultiplexer(Multiplexer * in, FILE * outfile, bool bedGraph, bool holdFire) {
+	TeeMultiplexerData * data = (TeeMultiplexerData *) calloc(1, sizeof(TeeMultiplexerData));
+	data->in = in;
 	data->outfile = outfile;
 	data->bedGraph = bedGraph;
 	// Hold fire means that you wait for the first seek before doing any writing
 	if (!holdFire)
-		launchWriter(data);
+		launchWriter(data, in->count);
 
-	return newWiggleIterator(data, &TeeWiggleIteratorPop, &TeeWiggleIteratorSeek, i->default_value);
+	Multiplexer * res = newCoreMultiplexer(data, in->count, &TeeMultiplexerPop, &TeeMultiplexerSeek);
+	res->values = in->values;
+	res->inplay = in->inplay;
+	res->default_values = in->default_values;
+	popMultiplexer(res);
+	return res;
 }
 
-void toFile(WiggleIterator * wi, char * filename, bool bedGraph, bool holdFire) {
-	FILE * file = fopen(filename, "w");
-	if (!file) {
-		fprintf(stderr, "Could not open file %s\n", filename);
-		exit(1);
-	}
-	runWiggleIterator(TeeWiggleIterator(wi, file, bedGraph, holdFire));
-}
-
-void toStdout(WiggleIterator * wi, bool bedGraph, bool holdFire) {
-	runWiggleIterator(TeeWiggleIterator(wi, stdout, bedGraph, holdFire));
+void toStdoutMultiplexer(Multiplexer * in, bool bedGraph, bool holdFire) {
+	runMultiplexer(TeeMultiplexer(in, stdout, bedGraph, holdFire));
 }
 
 //////////////////////////////////////////////////////////
 // Paste Iterator
 //////////////////////////////////////////////////////////
 
-WiggleIterator * PasteWiggleIterator(WiggleIterator * i, FILE * infile, FILE * outfile, bool holdFire) {
-	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
-	data->iter = i;
+Multiplexer * PasteMultiplexer(Multiplexer * in, FILE * infile, FILE * outfile, bool holdFire) {
+	TeeMultiplexerData * data = (TeeMultiplexerData *) calloc(1, sizeof(TeeMultiplexerData));
+	data->in = in;
 	data->infile = infile;
 	data->bedGraph = true;
 	data->outfile = outfile;
 	// Hold fire means that you wait for the first seek before doing any writing
 	if (!holdFire)
-		launchWriter(data);
+		launchWriter(data, in->count);
 
-	return newWiggleIterator(data, &TeeWiggleIteratorPop, NULL, i->default_value);
+	Multiplexer * res = newCoreMultiplexer(data, in->count, &TeeMultiplexerPop, &TeeMultiplexerSeek);
+	res->values = in->values;
+	res->default_values = in->default_values;
+	res->inplay = in->inplay;
+	popMultiplexer(res);
+	return res;
 }

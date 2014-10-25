@@ -1,13 +1,19 @@
-default: Samtools Wiggletools Parallel
+default: binaries
 
-Samtools:
+Samtools-lib:
 	cd samtools; make
 
-Wiggletools:
-	cd src; make
+bin:
+	mkdir -p bin
 
-Parallel:
-	cd python/wiggletools; make
+Wiggletools: Samtools-lib bin
+	cd src; make -e
+
+Parallel: Wiggletools
+	cd parallel; make
+
+binaries: Parallel
+	chmod 755 bin/*
 
 test: tests
 

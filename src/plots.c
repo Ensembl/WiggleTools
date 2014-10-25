@@ -27,6 +27,9 @@
 static void updateProfile(WiggleIterator * wig, double compression, double * profile, int profile_width, bool stranded) {
 	int start, finish, pos;
 
+	if (isnan(wig->value))
+		return;
+
 	if (!stranded || wig->strand > 0) {
 		start = (int) round(wig->start * compression);
 		finish = (int) round(wig->finish * compression); 
@@ -168,7 +171,9 @@ Histogram * histogram(WiggleIterator ** wigs, int count, int width) {
 		hist->values[row] = calloc(width, sizeof(double));
 		hist->count++;
 		WiggleIterator * wig = wigs[row];
-		
+		while (isnan(wig->value)) {
+			pop(wig);
+		}
 		if (row == 0) {
 			hist->min = hist->max = wig->value;
 			hist->values[0][0] = wig->finish - wig->start;
@@ -176,7 +181,8 @@ Histogram * histogram(WiggleIterator ** wigs, int count, int width) {
 		}
 
 		for (; !wig->done; pop(wig))
-			updateHistogram(hist, wig, row);
+			if (!isnan(wig->value))
+				updateHistogram(hist, wig, row);
 	}
 
 	return hist;
