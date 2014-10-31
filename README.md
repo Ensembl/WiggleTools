@@ -652,6 +652,22 @@ wiggletools apply meanI unit test/variableStep.bw test/fixedStep.bw
 wiggletools apply meanI fillIn unit test/variableStep.bw test/fixedStep.bw
 ```
 
+Creating your own functions
+---------------------------
+
+If you're looking for guidance on creating your own iterators, you can have a look at:
+* Iterator -> Float: src/statistics.c, MeanIntegrator
+* Iterator -> Iterator: src/unaryOps.c, ScaleWiggleIterator
+* Set of iterators -> Iterator: src/reducers.c, MaxReduction
+* Set of Set of Iterators -> Iterator: src/setComparisons.c, TTestReduction
+
+More info on the basic objects at:
+* wiggleIterator.h: Simple iterator.
+* multiplexer.h: Set of synchronised iterators.
+* multiSet.h: Set of set of synchronised iterators.
+
+You may need some help hooking your new functions to the parser, we can help you out.
+
 Citing WiggleTools
 ------------------
 
