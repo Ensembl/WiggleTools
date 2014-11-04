@@ -49,7 +49,7 @@ def get_options():
 	parser.add_argument('--clean',dest='clean',help='Delete cached datasets older than X days', type=int)
 	parser.add_argument('--cache',dest='cache',help='Dump cache info', action='store_true')
 	parser.add_argument('--datasets',dest='datasets',help='Print dataset info', action='store_true')
-	parser.add_argument('--clear_cache',dest='clear_cache',help='Reset cache info',type=int,nargs='*')
+	parser.add_argument('--clear_cache',dest='clear_cache',help='Reset cache info', nargs='*')
 	parser.add_argument('--remember',dest='remember',help='Preserve dataset from garbage collection', action='store_true')
 	parser.add_argument('--dry-run',dest='dry_run',help='Do not run the command, print wiggletools command', action='store_true')
 	parser.add_argument('--result','-r',dest='result',help='Return status or end result of job', type=int)
@@ -168,6 +168,14 @@ def load_assembly(cursor, assembly_name, chrom_sizes):
 ## Garbage cleaning 
 ###########################################
 
+def remove_job(cursor, job):
+	cursor.execute('DELETE FROM cache WHERE job_id = ?', (job,))
+	cursor.execute('DELETE FROM jobs WHERE job_id = ?', (job,))
+
+def remove_jobs(cursor, jobs):
+	for job in jobs:
+		remove_job(cursor, job)
+
 def clean_database(cursor, days):
 	for location in cursor.execute('SELECT location FROM cache WHERE julianday(\'now\') - julianday(last_query) > %i AND remember = 0' % days).fetchall():
 		if verbose:
@@ -181,22 +189,8 @@ def clean_database(cursor, days):
 			print 'Removing %s and derived files' % temp[0]
 		multiJob.clean_temp_file(temp[0])
 
-	cursor.execute('DELETE FROM cache WHERE job_id IN (SELECT job_id FROM jobs WHERE status = "ERROR")')
-	cursor.execute('DELETE FROM jobs WHERE status = "ERROR"')
-
-def clear_cache(cursor):
-	cursor.execute('DROP TABLE cache')
-	create_cache(cursor)
-	cursor.execute('DROP TABLE jobs')
-	create_job_table(cursor)
-
-def remove_job(cursor, job):
-	cursor.execute('DELETE FROM cache WHERE job_id = ?', (job,))
-	cursor.execute('DELETE FROM jobs WHERE job_id = ?', (job,))
-
-def remove_jobs(cursor, jobs):
-	for job in jobs:
-		remove_job(cursor, job)
+	cursor.execute('DELETE FROM cache WHERE job_id IN (SELECT job_id FROM jobs WHERE status = "ERROR")' % days)
+	cursor.execute('DELETE FROM jobs WHERE status = "ERROR"' % days)
 
 ###########################################
 ## Search datasets
@@ -307,13 +301,13 @@ def reuse_or_write_precomputed_location(cursor, cmd, working_directory):
 		fh, destination = tempfile.mkstemp(suffix='.bw',dir=working_directory)
 		return 'write %s %s' % (destination, cmd), destination, True
 
-def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batch_system):
+def launch_compute(conn, cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batch_system):
 	destination = None
 	destinationA = None
 	destinationB = None
 	cmds = None
-	histogram = None
-	apply_paste = None
+	options.histogram = None
+	options.apply_paste = None
 
 	cmd_A = " ".join([fun_A] + data_A + [':'])
 	cmd_A2, destinationA, computeA = reuse_or_write_precomputed_location(cursor, cmd_A, options.working_directory)
@@ -339,9 +333,9 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 
 			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
 			if fun_B is not None:
-		        	histogram = "histogram %s %s %s mult %s %s" % (destination, width, destinationA, destinationA, destinationB)
+		        	options.histogram = "histogram %s %s %s mult %s %s" % (destination, width, destinationA, destinationA, destinationB)
 			elif data_B is not None:
-				histogram = "histogram %s %s %s" % (destination, width, " ".join("mult %s %s" % (destinationA, X) for X in data_B))
+				options.histogram = "histogram %s %s %s %s" % (destination, width, destinationA, " ".join("mult %s %s" % (destinationA, X) for X in data_B))
 		elif merge_words[0] == 'profile':
 			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
 			cmds = [" ".join(['profile', destination, merge_words[1], cmd_B2, cmd_A2])]
@@ -356,7 +350,7 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 				cmds.append(cmd_B2)
 			fh, destination = tempfile.mkstemp(suffix='.txt',dir=options.working_directory)
 			assert len(data_B) == 1, "Cannot apply_paste to multiple files %s\n" % " ".join(data_B)
-			apply_paste = " ".join(['apply_paste', destination, 'AUC', data_B[0], destinationA])
+			options.apply_paste = " ".join(['apply_paste', destination, 'AUC', data_B[0], destinationA])
 		else:
 			fh, destination = tempfile.mkstemp(suffix='.bw',dir=options.working_directory)
 			cmds = [" ".join(['write', destination, fun_merge, cmd_A2, cmd_B2])]
@@ -366,17 +360,9 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 		destination = destinationA
 		destinationA = None
 
-	if verbose:
-		print "PARALLEL CMDS : " + "\n".join(cmds)
-		if histogram is not None:
-			print "HISTOGRAM " + histogram
-		if apply_paste is not None:
-			print "APPLY PASTE : " + apply_paste
-		return None
-
 	chrom_sizes = get_chrom_sizes(cursor, options.assembly)
 	if len(cmds) > 0:
-		lsfID, files = parallelWiggleTools.run(cmds, chrom_sizes, batch_system=batch_system, tmp=options.working_directory)
+		lsfID, options.temps = parallelWiggleTools.run(cmds, chrom_sizes, batch_system=batch_system, tmp=options.working_directory)
 		cursor.execute('INSERT INTO jobs (lsf_id, status) VALUES (?, "LAUNCHED")', (lsfID,))
 		jobID = cursor.execute('SELECT LAST_INSERT_ROWID()').fetchall()[0][0]
 		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',1,\'%s\',\'%i\',date(\'now\'),\'%s\')' % (jobID, normalised_form, int(options.remember), destination))
@@ -384,41 +370,43 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 			cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',0,\'%s\',\'0\',date(\'now\'),\'%s\')' % (jobID, cmd_A, destinationA))
 		if computeB:
 			cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',0,\'%s\',\'0\',date(\'now\'),\'%s\')' % (jobID, cmd_B, destinationB))
-		options.conn.commit()
+		conn.commit()
 	else:
 		lsfID = None
 		cursor.execute('INSERT INTO jobs (lsf_id, status) VALUES (NULL, "LAUNCHED")')
 		jobID = cursor.execute('SELECT LAST_INSERT_ROWID()').fetchall()[0][0]
-		if histogram is not None:
-			cmd = histogram
-		elif apply_paste is not None:
-			cmd = apply_paste
+		if options.histogram is not None:
+			cmd = options.histogram
+		elif options.apply_paste is not None:
+			cmd = options.apply_paste
 		assert cmd is not None and destination is not None
 		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',1,\'%s\',\'%i\',date(\'now\'),\'%s\')' % (jobID, cmd, int(options.remember), destination))
-		files = None
+		options.temps = None
 
-	finishCmd = 'wiggleDB_finish.py --db %s --jobID %s --config %s' % (options.db, jobID, options.config)
-	if histogram is not None:
+	options.jobID = jobID
+	options.data = destination
+	if options.histogram is not None:
 		if fun_B is not None:
-			finishCmd += ' --histogram \'%s\' --labels Overall Regions' % (histogram)
+			options.labels = ['Overall', 'Regions']
 		elif data_B is not None:
-			finishCmd += ' --histogram \'%s\' --labels %s' % (histogram, " ".join(".".join(os.path.basename(X).split(".")[:-1] for X in data_B)))
+			options.labels = options.b['name']
 		else:
-			finishCmd += ' --histogram \'%s\' --labels Overall' % (histogram)
-	if apply_paste is not None:
-		finishCmd += ' --apply_paste \'%s\'' % (apply_paste)
-	if options.emails is not None:
-		finishCmd += ' --emails ' + " ".join(options.emails) 
-	if files is not None:
-		finishCmd += ' --temp ' + " ".join(files) 
+			options.labels = ['Overall']
+	else:
+		options.labels = None
 
+	fh, options_file = tempfile.mkstemp(dir=options.working_directory)
+	# To ensure object can be serialised and to avoid side effects
+	f = open(options_file, 'w')
+	json.dump(options.__dict__, f)
+	f.close()
+	finishCmd = 'wiggleDB_finish.py ' + options_file
 	lsfID2, temp = multiJob.submit([finishCmd], batch_system=batch_system, dependency=lsfID, working_directory=options.working_directory)
 	cursor.execute('UPDATE jobs SET lsf_id2=\'%s\',temp=\'%s\' WHERE job_id=\'%s\'' % (lsfID2, temp, jobID))
 	return jobID
 
 def get_chrom_sizes(cursor, assembly):
 	res = cursor.execute('SELECT location FROM assemblies WHERE name = \'%s\'' % (assembly)).fetchall()
-	assert len(res) == 1, 'Could not find any match to the query %s' % query
 	return res[0][0]
 
 def make_normalised_form(fun_merge, fun_A, data_A, fun_B, data_B):
@@ -439,16 +427,20 @@ def make_normalised_form(fun_merge, fun_A, data_A, fun_B, data_B):
 
 	return res
 
-def request_compute(cursor, options, batch_system):
+def request_compute(conn, cursor, options, config, batch_system):
 	fun_A = options.wa 
 	data_A = get_dataset_locations(cursor, options.a, options.assembly)
-	assert len(data_A) > 0, "Nothing fit " + str(options.a)
+	options.countA = len(data_A)
+	if len(data_A) ==  0:
+		 return {'status':'INVALID'}
 	cmd_A = " ".join([fun_A] + data_A)
 
 	if options.b is not None:
 		fun_B = options.wb
 		data_B = get_dataset_locations(cursor, options.b, options.assembly)
-		assert len(data_B) > 0
+		options.countB = len(data_B)
+		if len(data_B) ==  0:
+			 return {'status':'INVALID'}
 	else:
 		data_B = None
 		fun_B = None
@@ -457,9 +449,19 @@ def request_compute(cursor, options, batch_system):
 	normalised_form = make_normalised_form(options.fun_merge, fun_A, data_A, fun_B, data_B)
 	prior_jobID = get_precomputed_jobID(cursor, normalised_form)
 	if prior_jobID is not None:
-		return query_result(cursor, prior_jobID, batch_system)
+		res = query_result(cursor, prior_jobID, batch_system)
+		options.jobID = res['ID']
+		if res['status'] == 'DONE':
+			options.data = res['location']
+			report_to_user(options, config)
+		else:
+			acknowledge_job_to_user(options, config)
 	else:
-		return {'ID':launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batch_system), 'status':'LAUNCHED'}
+		res = {'ID':launch_compute(conn, cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batch_system), 'status':'LAUNCHED'}
+		options.jobID = res['ID']
+		acknowledge_job_to_user(options, config)
+
+	return res
 
 
 ####################################################
@@ -511,7 +513,7 @@ def query_result(cursor, jobID, batch_system):
 		return {'ID':jobID, 'status':'DONE', 'location':get_job_location_2(cursor, jobID)}
 	elif status == 'EMPTY':
 		return {'ID':jobID, 'status':'EMPTY'}
-	elif status == 'ERROR':
+	elif status == 'ERROR' or lsfID is None or lsfID2 is None:
 		return {'ID':jobID, 'status':'ERROR'}
 	elif batch_system == 'LSF':
 		p = subprocess.Popen(['bjobs','-noheader',str(lsfID2)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -561,10 +563,10 @@ def send_SMTP(msg, emails, config):
 	s.sendmail(config['reply_to'], emails, msg.as_string())
 	s.quit()
 
-def send_email(text, emails, config):
+def send_email(text, title, emails, config):
 	from email.mime.text import MIMEText
 	msg = MIMEText(text, 'html')
-	msg['Subject'] = '[WiggleTools] Job succeeded'
+	msg['Subject'] = '[WiggleTools] ' + title
 	msg['From'] = config['reply_to']
 	msg['To'] = ", ".join(emails)
         msg['sendername'] = config['sendername']
@@ -577,11 +579,101 @@ def visible_url(location, config):
 	else:
 		return location
 
-def report_to_user(emails, jobID, data, config):
-	if emails is None:
+def job_description(options):
+	text = "<table>"
+	if options.b is None:
+		text += "<tr>"
+		text += "<td>"
+		text += "Selector"
+		text += "</td>"
+		text += "<td>"
+		text += " AND ".join("(" + " OR ".join("%s=%s" % (X, Y) for Y in options.a[X]) + ")" for X in options.a)
+		text += "</td>"
+		text += "</tr>"
+		text += "<tr>"
+		text += "<td>"
+		text += "Count"
+		text += "</td>"
+		text += "<td>"
+		text += str(options.countA)
+		text += "</td>"
+		text += "</tr>"
+		text += "<tr>"
+		text += "<td>"
+		text += "Operation"
+		text += "</td>"
+		text += "<td>"
+		text += options.wa 
+		text += "</td>"
+		text += "</tr>"
+	else:
+		text += "<tr>"
+		text += "<td>"
+		text += "Lefthand selector"
+		text += "</td>"
+		text += "<td>"
+		text += " AND ".join("(" + " OR ".join("%s=%s" % (X, Y) for Y in options.a[X]) + ")" for X in options.a)
+		text += "</td>"
+		text += "</tr>"
+		text += "<tr>"
+		text += "<td>"
+		text += "Lefthand count"
+		text += "</td>"
+		text += "<td>"
+		text += str(options.countA)
+		text += "</td>"
+		text += "</tr>"
+		text += "<tr>"
+		text += "<td>"
+		text += "Lefthand operation"
+		text += "</td>"
+		text += "<td>"
+		text += options.wa 
+		text += "</td>"
+		text += "</tr>"
+		
+		text += "<tr>"
+		text += "<td>"
+		text += "Righthand selector"
+		text += "</td>"
+		text += "<td>"
+		text += " AND ".join("(" + " OR ".join("%s=%s" % (X, Y) for Y in options.b[X]) + ")" for X in options.b)
+		text += "</td>"
+		text += "</tr>"
+		text += "<tr>"
+		text += "<td>"
+		text += "Righthand count"
+		text += "</td>"
+		text += "<td>"
+		text += str(options.countB)
+		text += "</td>"
+		text += "</tr>"
+		text += "<tr>"
+		text += "<td>"
+		text += "Righthand operation"
+		text += "</td>"
+		text += "<td>"
+		text += options.wb
+		text += "</td>"
+		text += "</tr>"
+
+		text += "<tr>"
+		text += "<td>"
+		text += "Final operation"
+		text += "</td>"
+		text += "<td>"
+		text += options.fun_merge
+		text += "</td>"
+		text += "</tr>"
+
+	text += "</table>"
+	return text	
+
+def report_to_user(options, config):
+	if options.emails is None:
 		return
 	else:
-		url = visible_url(data, config)
+		url = visible_url(options.data, config)
 		text = "<html>"
 		text += "<head>"
 		text += "</head>"
@@ -590,7 +682,7 @@ def report_to_user(emails, jobID, data, config):
 		text += "Hello"
 		text += "</p>"
 		text += "<p>"
-		text += "Your job %i is now finished, please refer to the WiggleTools server for your results." % jobID
+		text += "Your job %i is now finished, please refer to the WiggleTools server for your results." % options.jobID
 		text += "</p>"
 		text += "<p>"
 		text += "You can download all the results <a href=%s>here</a>" % url
@@ -605,24 +697,68 @@ def report_to_user(emails, jobID, data, config):
 			text += "</a>"
 			text += "</center>"
 		text += "</p>"
+		text += job_description(options)
+		text += "<p>"
 		text += "Best regards,"
+		text += "</p>"
+		text += "<p>"
+		text += "The WiggleTools team"
+		text += "<p>"
+		text += "</body>"
+		text += "<html>"
+		send_email(text, 'Job %i succeeded' % options.jobID, options.emails, config)
+
+def acknowledge_job_to_user(options, config):
+	if options.emails is None:
+		return
+	else:
+		text = "<html>"
+		text += "<head>"
+		text += "</head>"
+		text += "<body>"
+		text += "<p>"
+		text += "Hello"
+		text += "</p>"
+		text += "<p>"
+		text += "Your job %i has been despatched with options:" % options.jobID
+		text += "</p>"
+		text += job_description(options)
+		text += "<p>"
+		text += "Best regards,"
+		text += "</p>"
 		text += "<p>"
 		text += "</p>"
 		text += "The WiggleTools team"
 		text += "<p>"
 		text += "</body>"
-		text += "<html>"
-		send_email(text, emails, config)
+		text += "</html>"
+		send_email(text, 'Job %i dispatched' % options.jobID, options.emails, config)
 
-def report_empty_to_user(emails, jobID, config):
-	if emails is None:
+def report_empty_to_user(options, config):
+	if options.emails is None:
 		return
 	else:
-		text = "Hello\n\n"
-		text += "Your job %i is now finished, but returned empty results.\n\n" % jobID
-		text += "Best regards,\n\n"
+		text = "<html>"
+		text += "<head>"
+		text += "</head>"
+		text += "<body>"
+		text += "<p>"
+		text += "Hello"
+		text += "</p>"
+		text += "<p>"
+		text += "Your job %i is now finished, but returned empty results.\n\n" % options.jobID
+		text += "</p>"
+		text += job_description(options)
+		text += "<p>"
+		text += "Best regards,"
+		text += "</p>"
+		text += "<p>"
+		text += "</p>"
 		text += "The WiggleTools team"
-		send_email(text, emails, config)
+		text += "<p>"
+		text += "</body>"
+		text += "</html>"
+		send_email(text, 'Job %i returned an empty result' % options.jobID, options.emails, config)
 
 ###########################################
 ## Main
@@ -630,8 +766,8 @@ def report_empty_to_user(emails, jobID, config):
 
 def main():
 	options, config = get_options()
-	options.conn = sqlite3.connect(options.db)
-	cursor = options.conn.cursor()
+	conn = sqlite3.connect(options.db)
+	cursor = conn.cursor()
 
 	if config is None or 'batch_system' not in config:
 		batch_system = 'SGE'
@@ -651,7 +787,10 @@ def main():
 			print entry
 	elif options.clear_cache is not None:
 		if len(options.clear_cache) == 0:
-			clear_cache(cursor)
+			cursor.execute('DROP TABLE cache')
+			create_cache(cursor)
+			cursor.execute('DROP TABLE jobs')
+			create_job_table(cursor)
 		else:
 			remove_jobs(cursor, options.clear_cache)
 	elif options.attributes:
@@ -679,10 +818,10 @@ def main():
 					res[attribute] = []
 				res[attribute].append(value)
 			options.b = res
-		print json.dumps(request_compute(cursor, options, batch_system))
+		print json.dumps(request_compute(conn, cursor, options, config, batch_system))
 
-	options.conn.commit()
-	options.conn.close()
+	conn.commit()
+	conn.close()
 
 if __name__=='__main__':
 	main()
