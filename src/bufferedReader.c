@@ -58,7 +58,7 @@ static BlockData * createBlockData() {
 	new->chrom = (char **) calloc(BLOCK_SIZE, sizeof(char*));
 	new->start = (int *) calloc(BLOCK_SIZE, sizeof(int));
 	new->finish = (int *) calloc(BLOCK_SIZE, sizeof(int));
-	new->value = (int *) calloc(BLOCK_SIZE, sizeof(double));
+	new->value = (double *) calloc(BLOCK_SIZE, sizeof(double));
 	return new;
 }
 
