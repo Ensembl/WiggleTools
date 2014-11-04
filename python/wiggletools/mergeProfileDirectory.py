@@ -34,7 +34,7 @@ if len(files) > 0:
 	file.close()
 
 	# Do a little drawing
-	wigglePlots.make_profile_curve(target, target + ".pdf")
+	wigglePlots.make_profile_curve(target, target + ".png", format='png')
 else:
 	# Create empty file with .empty suffix
 	open(target + ".empty", "w").close()
