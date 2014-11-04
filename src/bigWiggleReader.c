@@ -81,7 +81,7 @@ bool readBigWigBuffer(BigFileReaderData * data) {
 	return false;
 }
 
-static void openBigWigFile(BigFileReaderData * data, char * filename) {
+static void openBigWigFile(BigFileReaderData * data, char * filename, bool holdFire) {
 	data->filename = filename;
 	data->bwf = bigWigFileOpen(data->filename);
 	data->isSwapped = data->bwf->isSwapped;
@@ -89,11 +89,12 @@ static void openBigWigFile(BigFileReaderData * data, char * filename) {
 	data->udc = data->bwf->udc;
 	data->readBuffer = &readBigWigBuffer;
 	data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
-	launchBufferedReader(&downloadBigFile, data, &(data->bufferedReaderData));
+	if (!holdFire)
+		launchBufferedReader(&downloadBigFile, data, &(data->bufferedReaderData));
 }
 
-WiggleIterator * BigWiggleReader(char * f) {
+WiggleIterator * BigWiggleReader(char * f, bool holdFire) {
 	BigFileReaderData * data = (BigFileReaderData *) calloc(1, sizeof(BigFileReaderData));
-	openBigWigFile(data, f);
+	openBigWigFile(data, f, holdFire);
 	return newWiggleIterator(data, &BigFileReaderPop, &BigFileReaderSeek, 0);
 }	

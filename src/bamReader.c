@@ -197,10 +197,11 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 	data->stop = finish;
 }
 
-WiggleIterator * BamReader(char * filename) {
+WiggleIterator * BamReader(char * filename, bool holdFire) {
 	BamReaderData * data = (BamReaderData *) calloc(1, sizeof(BamReaderData));
 	setSamtoolsDefaultConf(data);
 	OpenBamFile(data, filename);
-	launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));
+	if (!holdFire)
+		launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));
 	return newWiggleIterator(data, &BamReaderPop, &BamReaderSeek, 0);
 }

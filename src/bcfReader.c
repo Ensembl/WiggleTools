@@ -105,9 +105,10 @@ void BcfReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 	data->stop = finish;
 }
 
-WiggleIterator * BcfReader(char * filename) {
+WiggleIterator * BcfReader(char * filename, bool holdFire) {
 	BCFReaderData * data = (BCFReaderData *) calloc(1, sizeof(BCFReaderData));
 	OpenTabixFile(data, filename);
-	launchBufferedReader(&downloadTabixFile, data, &(data->bufferedReaderData));
+	if (!holdFire)
+		launchBufferedReader(&downloadTabixFile, data, &(data->bufferedReaderData));
 	return newWiggleIterator(data, &BCFReaderPop, &BcfReaderSeek, 0);
 }

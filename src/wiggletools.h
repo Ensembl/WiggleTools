@@ -29,16 +29,16 @@ typedef struct multiset_st Multiset;
 typedef struct histogram_st Histogram;
 
 // Creators
-WiggleIterator * SmartReader (char *);
+WiggleIterator * SmartReader (char *, bool);
 WiggleIterator * CatWiggleIterator (char **, int);
 // Secondary creators (to force file format recognition if necessary)
 WiggleIterator * WiggleReader (char *);
-WiggleIterator * BigWiggleReader (char *);
+WiggleIterator * BigWiggleReader (char *, bool);
 WiggleIterator * BedReader (char *);
-WiggleIterator * BigBedReader (char *);
-WiggleIterator * BamReader (char *);
+WiggleIterator * BigBedReader (char *, bool);
+WiggleIterator * BamReader (char *, bool);
 WiggleIterator * VcfReader (char *);
-WiggleIterator * BcfReader (char *);
+WiggleIterator * BcfReader (char *, bool);
 
 // Generic class functions 
 void seek(WiggleIterator *, const char *, int, int);

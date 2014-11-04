@@ -724,10 +724,10 @@ WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int width) {
 // Convenience file reader
 //////////////////////////////////////////////////////
 
-WiggleIterator * SmartReader(char * filename) {
+WiggleIterator * SmartReader(char * filename, bool holdFire) {
 	size_t length = strlen(filename);
 	if (!strcmp(filename + length - 3, ".bw"))
-		return BigWiggleReader(filename);
+		return BigWiggleReader(filename, holdFire);
 	else if (!strcmp(filename + length - 3, ".bg"))
 		return WiggleReader(filename);
 	else if (!strcmp(filename + length - 4, ".wig"))
@@ -735,13 +735,13 @@ WiggleIterator * SmartReader(char * filename) {
 	else if (!strcmp(filename + length - 4, ".bed"))
 		return BedReader(filename);
 	else if (!strcmp(filename + length - 3, ".bb"))
-		return BigBedReader(filename);
+		return BigBedReader(filename, holdFire);
 	else if (!strcmp(filename + length - 4, ".bam"))
-		return BamReader(filename);
+		return BamReader(filename, holdFire);
 	else if (!strcmp(filename + length - 4, ".vcf"))
 		return VcfReader(filename);
 	else if (!strcmp(filename + length - 4, ".bcf"))
-		return BcfReader(filename);
+		return BcfReader(filename, holdFire);
 	else if (!strcmp(filename, "-"))
 		return WiggleReader(filename);
 	else {
@@ -772,7 +772,7 @@ void CatWiggleIteratorPop(WiggleIterator * wi) {
 		pop(iter);
 	} else if (data->index < data->count - 1) {
 		while (++data->index < data->count) {
-			iter = data->iter = SmartReader(data->filenames[data->index]);
+			iter = data->iter = SmartReader(data->filenames[data->index], false);
 			while (!iter->done && (strcmp(wi->chrom, iter->chrom) >= 0 || (strcmp(wi->chrom, iter->chrom) == 0 && wi->finish >= iter->finish)))
 				pop(iter);
 			if (!iter->done) {
@@ -800,6 +800,6 @@ WiggleIterator * CatWiggleIterator(char ** filenames, int count) {
 	CatWiggleIteratorData * data = (CatWiggleIteratorData *) calloc(1, sizeof(CatWiggleIteratorData));
 	data->count = count;
 	data->filenames = filenames;
-	data->iter = SmartReader(data->filenames[0]);
+	data->iter = SmartReader(data->filenames[0], false);
 	return newWiggleIterator(data, &CatWiggleIteratorPop, &CatWiggleIteratorSeek, 0);
 }

@@ -41,7 +41,7 @@ bool readBigBedBuffer(BigFileReaderData * data) {
 	return false;
 }
 
-void openBigBedFile(BigFileReaderData * data, char * filename) {
+void openBigBedFile(BigFileReaderData * data, char * filename, bool holdFire) {
 	data->filename = filename;
 	data->bwf = bigBedFileOpen(data->filename);
 	data->isSwapped = data->bwf->isSwapped;
@@ -49,12 +49,13 @@ void openBigBedFile(BigFileReaderData * data, char * filename) {
 	data->udc = data->bwf->udc;
 	data->readBuffer = &readBigBedBuffer;
 	data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
-	launchBufferedReader(&downloadBigFile, data, &(data->bufferedReaderData));
+	if (!holdFire)
+		launchBufferedReader(&downloadBigFile, data, &(data->bufferedReaderData));
 }
 
-WiggleIterator * BigBedReader(char * f) {
+WiggleIterator * BigBedReader(char * f, bool holdFire) {
 	BigFileReaderData * data = (BigFileReaderData *) calloc(1, sizeof(BigFileReaderData));
-	openBigBedFile(data, f);
+	openBigBedFile(data, f, holdFire);
 	WiggleIterator * res = newWiggleIterator(data, &BigFileReaderPop, &BigFileReaderSeek, 0);
 	res->overlaps = true;
 	return res;
