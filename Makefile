@@ -6,7 +6,10 @@ Samtools-lib:
 bin:
 	mkdir -p bin
 
-Parallel:
+Wiggletools: Samtools-lib bin
+	cd src; make -e
+
+Parallel: Wiggletools
 	cd python/wiggletools; make
 
 binaries: Parallel
