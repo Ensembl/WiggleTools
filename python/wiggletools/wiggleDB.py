@@ -22,7 +22,6 @@ verbose = False
 def read_config_file(filename):
 	return dict(line.strip().split('\t') for line in open(filename) if line[0] != '#' and len(line) > 1)
 
-
 ###########################################
 ## Command line interface
 ###########################################
@@ -36,18 +35,21 @@ def normalise_spaces(string):
 def get_options():
 	parser = argparse.ArgumentParser(description='WiggleDB backend.')
 	parser.add_argument('--db', '-d', dest='db', help='Database file',required=True)
+	parser.add_argument('--wd', dest='working_directory', help='Data directory')
 	parser.add_argument('-a',dest='a',help='A set of SQL constraints',nargs='*')
 	parser.add_argument('-wa',dest='wa',help='WiggleTools command for A')
 	parser.add_argument('-b',dest='b',help='A second set of SQL constraints',nargs='*')
 	parser.add_argument('-wb',dest='wb',help='WiggleTools command for B')
 	parser.add_argument('--wiggletools','-w',dest='fun_merge',help='Wiggletools command')
+	parser.add_argument('--emails','-e',dest='emails',help='List of e-mail addresses for reminder',nargs='*')
+
 	parser.add_argument('--load','-l',dest='load',help='Datasets to load in database')
 	parser.add_argument('--load_assembly','-la',dest='load_assembly',help='Assembly name and path to file with chromosome lengths',nargs=2)
 	parser.add_argument('--assembly','-y',dest='assembly',help='File with chromosome lengths')
 	parser.add_argument('--clean',dest='clean',help='Delete cached datasets older than X days', type=int)
-	parser.add_argument('--dump_cache',dest='dump_cache',help='Dump cache info', action='store_true')
+	parser.add_argument('--cache',dest='cache',help='Dump cache info', action='store_true')
 	parser.add_argument('--datasets',dest='datasets',help='Print dataset info', action='store_true')
-	parser.add_argument('--clear_cache',dest='clear_cache',help='Reset cache info', action='store_true')
+	parser.add_argument('--clear_cache',dest='clear_cache',help='Reset cache info',type=int,nargs='*')
 	parser.add_argument('--remember',dest='remember',help='Preserve dataset from garbage collection', action='store_true')
 	parser.add_argument('--dry-run',dest='dry_run',help='Do not run the command, print wiggletools command', action='store_true')
 	parser.add_argument('--result','-r',dest='result',help='Return status or end result of job', type=int)
@@ -58,7 +60,7 @@ def get_options():
 	parser.add_argument('--jobs','-j',dest='jobs',help='Print list of jobs',nargs='*')
 
 	options = parser.parse_args()
-	if all(X is None for X in [options.load, options.clean, options.result, options.load_assembly, options.datasets]) and not options.dump_cache and  not options.clear_cache and not options.attributes and not options.annotations:
+	if all(X is None for X in [options.load, options.clean, options.result, options.load_assembly, options.datasets, options.clear_cache]) and not options.cache and not options.attributes and not options.annotations:
 		assert options.a is not None, 'No dataset selection to run on'
 		assert options.wa is not None, 'No dataset transformation to run on'
 		assert options.assembly is not None, 'No assembly name specified'
@@ -71,6 +73,8 @@ def get_options():
 
 	if options.config is not None:
 		config = read_config_file(options.config)
+		if options.working_directory is None:
+			options.working_directory = config['working_directory']
 	else:
 		config = None
 
@@ -109,8 +113,7 @@ def create_job_table(cursor):
 	lsf_id int,
 	lsf_id2 int,
 	temp varchar(1000),
-	status varchar(255),
-	email varchar(255)
+	status varchar(255)
 	)
 	''')
 
@@ -169,13 +172,31 @@ def clean_database(cursor, days):
 	for location in cursor.execute('SELECT location FROM cache WHERE julianday(\'now\') - julianday(last_query) > %i AND remember = 0' % days).fetchall():
 		if verbose:
 			print 'Removing %s' % location[0]
-		os.remove(location[0])
+		if os.path.exists(location[0]):
+			os.remove(location[0])
 	cursor.execute('DELETE FROM cache WHERE julianday(\'now\') - julianday(last_query) > %i AND remember = 0' % days)
 
 	for temp in cursor.execute('SELECT temp FROM jobs WHERE status="DONE" OR status="EMPTY"').fetchall():
 		if verbose:
 			print 'Removing %s and derived files' % temp[0]
 		multiJob.clean_temp_file(temp[0])
+
+	cursor.execute('DELETE FROM cache WHERE job_id IN (SELECT job_id FROM jobs WHERE status = "ERROR")')
+	cursor.execute('DELETE FROM jobs WHERE status = "ERROR"')
+
+def clear_cache(cursor):
+	cursor.execute('DROP TABLE cache')
+	create_cache(cursor)
+	cursor.execute('DROP TABLE jobs')
+	create_job_table(cursor)
+
+def remove_job(cursor, job):
+	cursor.execute('DELETE FROM cache WHERE job_id = ?', (job,))
+	cursor.execute('DELETE FROM jobs WHERE job_id = ?', (job,))
+
+def remove_jobs(cursor, jobs):
+	for job in jobs:
+		remove_job(cursor, job)
 
 ###########################################
 ## Search datasets
@@ -225,10 +246,11 @@ def get_dataset_locations(cursor, params, assembly):
 	assert not any(re.match('\W', X) is not None for X in params)
 	params['assembly'] = [assembly]
 	query = " AND ".join(attribute_selector(X, params) for X in params)
+	if verbose:
+		print 'Query: SELECT location FROM datasets WHERE ' + query
+		print 'Where:' + str(denormalize_params(params))
 	res = cursor.execute('SELECT location FROM datasets WHERE ' + query, denormalize_params(params)).fetchall()
 	if verbose:
-		query_txt = " AND ".join("%s=%s" % (X,params[X]) for X in params)
-		print 'Query: SELECT location FROM datasets WHERE ' + query_txt
 		print 'Found:\n' + "\n".join(X[0] for X in res)
 	return sorted(X[0] for X in res)
 
@@ -265,7 +287,7 @@ def get_job_location(db, jobID):
 	return res
 
 def get_precomputed_location(cursor, cmd):
-	reports = cursor.execute('SELECT location FROM jobs NATURAL JOIN cache WHERE status="DONE" OR status="EMPTY" AND query = \'%s\'' % cmd).fetchall()
+	reports = cursor.execute('SELECT location FROM jobs NATURAL JOIN cache WHERE (status="DONE" OR status="EMPTY") AND query = ?', (cmd,)).fetchall()
 	if len(reports) > 0:
 		reset_time_stamp(cursor, cmd)
 		if verbose:
@@ -350,11 +372,12 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 			print "HISTOGRAM " + histogram
 		if apply_paste is not None:
 			print "APPLY PASTE : " + apply_paste
+		return None
 
 	chrom_sizes = get_chrom_sizes(cursor, options.assembly)
-	if len(cmds) > 0 and not options.dry_run:
+	if len(cmds) > 0:
 		lsfID, files = parallelWiggleTools.run(cmds, chrom_sizes, batch_system=batch_system, tmp=options.working_directory)
-		cursor.execute('INSERT INTO jobs (lsf_id, status) VALUES (%i, "LAUNCHED")' % int(lsfID))
+		cursor.execute('INSERT INTO jobs (lsf_id, status) VALUES (?, "LAUNCHED")', (lsfID,))
 		jobID = cursor.execute('SELECT LAST_INSERT_ROWID()').fetchall()[0][0]
 		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',1,\'%s\',\'%i\',date(\'now\'),\'%s\')' % (jobID, normalised_form, int(options.remember), destination))
 		if computeA: 
@@ -364,26 +387,34 @@ def launch_compute(cursor, fun_merge, fun_A, data_A, fun_B, data_B, options, nor
 		options.conn.commit()
 	else:
 		lsfID = None
-		files = ['NO FILES']
-		jobID = -1
+		cursor.execute('INSERT INTO jobs (lsf_id, status) VALUES (NULL, "LAUNCHED")')
+		jobID = cursor.execute('SELECT LAST_INSERT_ROWID()').fetchall()[0][0]
+		if histogram is not None:
+			cmd = histogram
+		elif apply_paste is not None:
+			cmd = apply_paste
+		assert cmd is not None and destination is not None
+		cursor.execute('INSERT INTO cache (job_id,primary_loc,query,remember,last_query,location) VALUES (\'%s\',1,\'%s\',\'%i\',date(\'now\'),\'%s\')' % (jobID, cmd, int(options.remember), destination))
+		files = None
 
-	finishCmd = 'wiggleDB_finish.py --db %s --jobID %s --temp %s --config %s' % (options.db, jobID, " ".join(files), options.config)
+	finishCmd = 'wiggleDB_finish.py --db %s --jobID %s --config %s' % (options.db, jobID, options.config)
 	if histogram is not None:
 		if fun_B is not None:
 			finishCmd += ' --histogram \'%s\' --labels Overall Regions' % (histogram)
 		elif data_B is not None:
-			finishCmd += ' --histogram \'%s\' --labels %s' % (histogram, " ".join(".".join(os.path.basename(X).split(".")[:-1])))
+			finishCmd += ' --histogram \'%s\' --labels %s' % (histogram, " ".join(".".join(os.path.basename(X).split(".")[:-1] for X in data_B)))
 		else:
 			finishCmd += ' --histogram \'%s\' --labels Overall' % (histogram)
-	elif apply_paste is not None:
+	if apply_paste is not None:
 		finishCmd += ' --apply_paste \'%s\'' % (apply_paste)
+	if options.emails is not None:
+		finishCmd += ' --emails ' + " ".join(options.emails) 
+	if files is not None:
+		finishCmd += ' --temp ' + " ".join(files) 
 
-	if options.dry_run:
-		return ";".join(cmds + [finishCmd])
-	else:
-		lsfID2, temp = multiJob.submit([finishCmd], batch_system=batch_system, dependency=lsfID, working_directory=options.working_directory)
-		cursor.execute('UPDATE jobs SET lsf_id2=\'%s\',temp=\'%s\' WHERE job_id=\'%s\'' % (lsfID2, temp, jobID))
-		return jobID
+	lsfID2, temp = multiJob.submit([finishCmd], batch_system=batch_system, dependency=lsfID, working_directory=options.working_directory)
+	cursor.execute('UPDATE jobs SET lsf_id2=\'%s\',temp=\'%s\' WHERE job_id=\'%s\'' % (lsfID2, temp, jobID))
+	return jobID
 
 def get_chrom_sizes(cursor, assembly):
 	res = cursor.execute('SELECT location FROM assemblies WHERE name = \'%s\'' % (assembly)).fetchall()
@@ -411,7 +442,7 @@ def make_normalised_form(fun_merge, fun_A, data_A, fun_B, data_B):
 def request_compute(cursor, options, batch_system):
 	fun_A = options.wa 
 	data_A = get_dataset_locations(cursor, options.a, options.assembly)
-	assert len(data_A) > 0
+	assert len(data_A) > 0, "Nothing fit " + str(options.a)
 	cmd_A = " ".join([fun_A] + data_A)
 
 	if options.b is not None:
@@ -430,24 +461,63 @@ def request_compute(cursor, options, batch_system):
 	else:
 		return {'ID':launch_compute(cursor, options.fun_merge, fun_A, data_A, fun_B, data_B, options, normalised_form, batch_system), 'status':'LAUNCHED'}
 
+
+####################################################
+## Querying jobs
+####################################################
+
+def sge_job_running(lsfID):
+	return subprocess.Popen(['qstat','-j',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE).wait() == 0
+
+def sge_job_return_values(lsfID):
+	p = subprocess.Popen(['qacct','-j',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	p.wait()
+	(stdout, stderr) = p.communicate()
+	assert p.returncode == 0, 'Error when polling SGE job %i' % lsfID
+	values = []
+	failedTask = False
+	for line in stdout.split('\n'):
+		items = re.split('\W*', line)
+		if items[0] == 'failed' and items[1] != '0':
+			values.append(" ".join(items[1:]))
+			failedTask = True
+		elif items[0] == 'exit_status': 
+			if failedTask:
+				failedTaskID = False
+			else:
+				values.append(items[1])
+	return values
+
+def mark_job_status2(cursor, jobID, status):
+	cursor.execute('UPDATE jobs SET status = \'%s\' WHERE job_id = \'%s\'' % (status, jobID))
+
+def mark_job_status(db, jobID, status):
+	conn = sqlite3.connect(db)
+	cursor = conn.cursor()
+	mark_job_status2(cursor, jobID, status)
+	conn.commit()
+	conn.close()
+
 def query_result(cursor, jobID, batch_system):
-	reports = cursor.execute('SELECT status, lsf_id2 FROM jobs WHERE job_id =?', (jobID,)).fetchall()
+	reports = cursor.execute('SELECT status, lsf_id, lsf_id2 FROM jobs WHERE job_id =?', (jobID,)).fetchall()
 
 	if len(reports) == 0:
 		return {'ID':jobID, 'status':'UNKNOWN'}
 	else:
 		assert len(reports) == 1, 'Found %i status reports for job %s' % (len(reports), jobID)
 
-	status, lsfID = reports[0]
+	status, lsfID, lsfID2 = reports[0]
 	if status == 'DONE':
 		return {'ID':jobID, 'status':'DONE', 'location':get_job_location_2(cursor, jobID)}
 	elif status == 'EMPTY':
 		return {'ID':jobID, 'status':'EMPTY'}
+	elif status == 'ERROR':
+		return {'ID':jobID, 'status':'ERROR'}
 	elif batch_system == 'LSF':
-		p = subprocess.Popen(['bjobs','-noheader',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		p = subprocess.Popen(['bjobs','-noheader',str(lsfID2)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		ret = p.wait()
 		(stdout, stderr) = p.communicate()
-		assert ret == 0, 'Error when polling LSF job %i' % lsfID
+		assert ret == 0, 'Error when polling LSF job %i' % lsfID2
 		values = []
 		for line in stdout.split('\n'):
 			items = re.split('\W*', line)
@@ -455,38 +525,23 @@ def query_result(cursor, jobID, batch_system):
 				values.append(items[2])
 		return {'ID':jobID, 'status':"WAITING", 'return_values':values}
 	elif batch_system == 'SGE':
-		p = subprocess.Popen(['qstat','-j',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		ret = p.wait()
-		(stdout, stderr) = p.communicate()
-		if ret == 0:
-			count = 0
-			for line in stdout.split('\n'):
-				items = re.split('\W*', line)
-				if items[0] == 'usage':
-					count += 1
-			values = '%i RUNNING' % (count)
-			return {'ID':jobID, 'status':"WAITING", 'return_values':values}
-		else:
-			p = subprocess.Popen(['qacct','-j',str(lsfID)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-			p.wait()
-			(stdout, stderr) = p.communicate()
-			assert p.returncode == 0, 'Error when polling SGE job %i' % lsfID
-			values = []
-			failedTask = False
-			for line in stdout.split('\n'):
-				items = re.split('\W*', line)
-				if items[0] == 'failed' and items[1] != '0':
-					values.append(" ".join(items[1:]))
-					failedTask = True
-				elif items[0] == 'exit_status': 
-					if failedTask:
-						failedTaskID = False
-					else:
-						values.append(items[1])
-			if any(X != '0' for X in values):
-				return {'ID':jobID, 'status':"ERROR", 'return_values':values, 'LSF_ID':lsfID}
+		if sge_job_running(lsfID2):
+			if sge_job_running(lsfID):
+				return {'ID':jobID, 'status':"WAITING", 'LSF_ID':lsfID}
 			else:
-				return {'ID':jobID, 'status':"WAITING", 'return_values':values, 'LSF_ID':lsfID}
+				values = sge_job_return_values(lsfID)
+				if any(X != '0' for X in values):
+					mark_job_status2(cursor, jobID, 'ERROR')
+					return {'ID':jobID, 'status':"ERROR", 'return_values':values, 'LSF_ID':lsfID}
+				else:
+					return {'ID':jobID, 'status':"WAITING", 'LSF_ID':lsfID}
+		else:
+			values = sge_job_return_values(lsfID2)
+			if any(X != '0' for X in values):
+				mark_job_status2(cursor, jobID, 'ERROR')
+				return {'ID':jobID, 'status':"ERROR", 'return_values':values, 'LSF_ID':lsfID2}
+			else:
+				return {'ID':jobID, 'status':"WAITING", 'LSF_ID':lsfID}
 			  
 	else:
 		raise NameError
@@ -496,34 +551,24 @@ def query_result(cursor, jobID, batch_system):
 ## When a job finishes:
 ###########################################
 
-def mark_job_as_done(db, jobID, empty=False):
-	conn = sqlite3.connect(db)
-	cursor = conn.cursor()
-	if empty:
-		cursor.execute('UPDATE jobs SET status = \'EMPTY\' WHERE job_id = \'%s\'' % jobID)
-	else:
-		cursor.execute('UPDATE jobs SET status = \'DONE\' WHERE job_id = \'%s\'' % jobID)
-	conn.commit()
-	conn.close()
-
-def send_SMTP(msg, email, config):
+def send_SMTP(msg, emails, config):
 	import smtplib
 	s = smtplib.SMTP(config['smtp_server'], config['smtp_port'])
         s.ehlo()
         s.starttls()
         s.ehlo()
         s.login(config['user'], config['password'])
-	s.sendmail(config['reply_to'], [email], msg.as_string())
+	s.sendmail(config['reply_to'], emails, msg.as_string())
 	s.quit()
 
-def send_email(text, email, config):
+def send_email(text, emails, config):
 	from email.mime.text import MIMEText
-	msg = MIMEText(text)
+	msg = MIMEText(text, 'html')
 	msg['Subject'] = '[WiggleTools] Job succeeded'
 	msg['From'] = config['reply_to']
-	msg['To'] = email
+	msg['To'] = ", ".join(emails)
         msg['sendername'] = config['sendername']
-	send_SMTP(msg, email, config)
+	send_SMTP(msg, emails, config)
 
 def visible_url(location, config):
 	if 's3_bucket' in config:
@@ -532,35 +577,52 @@ def visible_url(location, config):
 	else:
 		return location
 
-def report_to_user(email, jobID, data, config):
-	if email is None:
+def report_to_user(emails, jobID, data, config):
+	if emails is None:
 		return
 	else:
 		url = visible_url(data, config)
-		text = "Hello\n\n"
-		text += "Your job %i is now finished, please refer to the WiggleTools server for your results\n\n" % jobID
-		text += "You can download all the results here:\n\n"
-		text += url + "\n\n"
-		if url[-3] == '.bw' or url[:-3] == ".bb":
-			text += "Or you can view them directly on Ensembl:\n\n"
-			text += 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (config['ensembl_server'], config['ensembl_species'], config['ensembl_gene'], url)
+		text = "<html>"
+		text += "<head>"
+		text += "</head>"
+		text += "<body>"
+		text += "<p>"
+		text += "Hello"
+		text += "</p>"
+		text += "<p>"
+		text += "Your job %i is now finished, please refer to the WiggleTools server for your results." % jobID
+		text += "</p>"
+		text += "<p>"
+		text += "You can download all the results <a href=%s>here</a>" % url
+		if url[-3:] == '.bw' or url[-3:] == ".bb":
+			ensembl_link = 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (config['ensembl_server'], config['ensembl_species'], config['ensembl_gene'], url)
+			text += ", or you can view them directly on <a href=%s>Ensembl</a>" % ensembl_link
 		else:
-			text += "Or you can view the graphic:\n\n"
-			text += url + ".pdf"
-		text += "\nBest regards,\n\n"
+			text += ".</p><p>"
+			text += "<center>"
+			text += "<a href='%s.png'>" % url
+			text += "<img src='%s.png'>" % url
+			text += "</a>"
+			text += "</center>"
+		text += "</p>"
+		text += "Best regards,"
+		text += "<p>"
+		text += "</p>"
 		text += "The WiggleTools team"
-		send_email(text, email, config)
+		text += "<p>"
+		text += "</body>"
+		text += "<html>"
+		send_email(text, emails, config)
 
-def report_empty_to_user(email, jobID, config):
-	if email is None:
+def report_empty_to_user(emails, jobID, config):
+	if emails is None:
 		return
 	else:
-		url = visible_url(data, config)
 		text = "Hello\n\n"
-		text += "Your job %i is now finished, but returned empty results\n\n" % jobID
-		text += "\nBest regards,\n\n"
+		text += "Your job %i is now finished, but returned empty results.\n\n" % jobID
+		text += "Best regards,\n\n"
 		text += "The WiggleTools team"
-		send_email(text, email, config)
+		send_email(text, emails, config)
 
 ###########################################
 ## Main
@@ -584,14 +646,14 @@ def main():
 		clean_database(cursor, options.clean)
 	elif options.result is not None:
 		print json.dumps(query_result(cursor, options.result, batch_system))
-	elif options.dump_cache:
+	elif options.cache:
 		for entry in cursor.execute('SELECT * FROM cache').fetchall():
 			print entry
-	elif options.clear_cache:
-		cursor.execute('DROP TABLE cache')
-		create_cache(cursor)
-		cursor.execute('DROP TABLE jobs')
-		create_job_table(cursor)
+	elif options.clear_cache is not None:
+		if len(options.clear_cache) == 0:
+			clear_cache(cursor)
+		else:
+			remove_jobs(cursor, options.clear_cache)
 	elif options.attributes:
 		print json.dumps(get_attribute_values(cursor))
 	elif options.jobs is not None:
@@ -602,9 +664,21 @@ def main():
 		print "\n".join("\t".join(map(str, X)) for X in get_annotations(cursor, options.assembly))
 	else:
 		if options.a is not None:
-			options.a = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.a))
+			res = dict()
+			for constraint in options.a:
+				attribute, value = constraint.split("=")
+				if attribute not in res:
+					res[attribute] = []
+				res[attribute].append(value)
+			options.a = res
 		if options.b is not None:
-			options.b = dict((X[0],X[1]) for X in (Y.split('=') for Y in options.b))
+			res = dict()
+			for constraint in options.b:
+				attribute, value = constraint.split("=")
+				if attribute not in res:
+					res[attribute] = []
+				res[attribute].append(value)
+			options.b = res
 		print json.dumps(request_compute(cursor, options, batch_system))
 
 	options.conn.commit()
