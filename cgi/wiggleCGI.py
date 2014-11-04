@@ -28,13 +28,17 @@ class WiggleDBOptions(object):
 		self.remember = False
 		self.db = config['database_location']
 		self.config = CONFIG_FILE
+		self.emails = None
 		
 
 def report_result(result):
 	base_url = 'http://s3-%s.amazonaws.com/%s/' % (config['s3_region'], config['s3_bucket'])
-	url = re.sub(working_directory, base_url, info)		
-	ensembl = 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (config['ensembl_server'], config['ensembl_species'], config['ensembl_gene'], url)
-	print json.dumps({'status':result['status'], 'url':result['url'], 'view':result['ensembl']})
+	url = re.sub(config['working_directory'], base_url, result['location'])		
+	if result['location'][-3:] == ".bw" or result['location'][-3:] == ".bb":
+		ensembl = 'http://%s/%s/Location/View?g=%s;contigviewbottom=url:%s' % (config['ensembl_server'], config['ensembl_species'], config['ensembl_gene'], url)
+	else:
+		ensembl = url + ".png"
+	print json.dumps({'status':result['status'], 'url':url, 'view':ensembl})
 
 def main():
 	print "Content-Type: application/json"
@@ -68,6 +72,8 @@ def main():
 			options.wa = form['wa'].value
 			options.working_directory = config['working_directory']
 			options.s3 = config['s3_bucket']
+			if 'email' in form:
+				options.emails = form.getlist('email')
 
 			if 'wb' in form:
 				options.wb = form['wb'].value
