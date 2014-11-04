@@ -21,6 +21,7 @@ bool readBigWigBuffer(BigFileReaderData * data) {
 	double value;
 	char *blockPt = data->uncompressBuf;
 	struct bwgSectionHead head;
+	start = finish = 0;
 	
 	bwgSectionHeadFromMem(&(blockPt), &(head), data->isSwapped);
 
