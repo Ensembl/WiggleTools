@@ -49,6 +49,11 @@ var comparison_opts = {
   "mixed": {"Distribution":"histogram", "Profile curve":"profile", "Profile matrix":"profiles"}
 };
 
+var annotation_opts = {
+  "regions": {"Intersection":"unit mult", "Union":"unit sum", "Difference": "unit diff"},
+  "signal": {"Distribution":"histogram", "Profile curve":"profile", "Profile matrix":"profiles", "Enrichment":"apply_paste"}
+};
+
 //////////////////////////////////////////
 // Creating multiselects 
 //////////////////////////////////////////
@@ -207,7 +212,7 @@ function update_panel_count(panel) {
   url = CGI_URL + "count=true&assembly=" + assembly + "&" + panel_query(panel);
   $.getJSON(url).done(
    function(data, textStatus, jqXHR) {
-     panel.find("#count").text(data["count"] + " elements selected");
+     panel.find("#count").text("(" + data["count"] + " elements selected)");
    }
   ).fail(catch_JSON_error);
 }
@@ -254,8 +259,32 @@ function add_width_selector(div) {
   $("<input>").attr('type','text').attr('id','width_val').attr('value','100').appendTo(width);
 }
 
+function update_tab_annotation(tab) {
+  var count = 0;  
+  tab.find("[id*=choose]").each(function (index, panel) {
+    if (get_panel_type($(panel)) == "regions" 
+        || $(panel).find('#threshold_val').val() != "") {
+      count += 1;
+    }
+  });
+  var select = tab.find("#annotation");
+  var div = select.parent().parent();
+
+  if (count == 1) {
+    fill_select(select, annotation_opts["regions"]);
+    div.find("#width").remove();
+  } else {
+    fill_select(select, annotation_opts["signal"]);
+    div.find("#width").remove();
+    add_threshold_selector(div);
+  }
+}
+
 function update_tab_comparison(tab) {
-  if (tab.attr('id') != 'compare' && tab.attr('id') != 'annotate') {
+  if (tab.attr('id') == 'annotate') {
+    update_tab_annotation(tab);
+  }
+  if (tab.attr('id') != 'compare') {
     return;
   } 
   var count = 0;  
@@ -333,12 +362,22 @@ function update_my_panel() {
 
 function report_result(data) {
   if (data["status"] == "DONE") {
-    var modal = $('#Success_modal').clone();
-    modal.find('#url').attr('href',data['url']);
-    modal.find('#view').attr('href',data['view']);
-    modal.modal();
+    if (data['url'].substr(-4,4) == ".txt") {
+      var modal = $('#Image_modal').clone();
+      modal.find('#url').attr('href',data['url']);
+      modal.find('img').attr('src',data['view']);
+      modal.find('#photo_url').attr('href',data['view']);
+      modal.modal();
+    } else {
+      var modal = $('#Success_modal').clone();
+      modal.find('#url').attr('href',data['url']);
+      modal.find('#view').attr('href',data['view']);
+      modal.modal();
+    }
   } else if (data["status"] == "EMPTY") {
     $('#Empty_modal').modal();	
+  } else if (data["status"] == "INVALID") {
+    $('#Invalid_modal').modal();	
   } else if (data["status"] == "ERROR") {
     $('#Failure_modal').modal();	
   } else if (data["status"] == "UNKNOWN") {
@@ -362,9 +401,16 @@ function submit_query(query) {
   $.getJSON(CGI_URL + "assembly=" + assembly + "&" + query).done(report_result).fail(catch_JSON_error);
 }
 
+// Get list of emails separated by ampersands
+function emails(panel) {
+  var array = panel.find('#email').val().split(/[ ;,]+/);
+  return array.map(function (value, index, array) {return "email="+value;}).join("&");
+}
+
 // Request summary
 function summary() {
-  submit_query(panel_query($('#choose')) + '&wa=' + panel_reduction($('#choose'))); 
+  var panel = $('#choose');
+  submit_query(panel_query(panel) + '&wa=' + panel_reduction(panel) + "&" + emails(panel)); 
 }
 
 // Request comparison
@@ -386,26 +432,28 @@ function comparison() {
       panel_query(panelB),
       'wa='+panel_reduction(panelA),
       'wb='+panel_reduction(panelB),
-      'w='+comparison
+      'w='+comparison,
+      emails($('#compare'))
     ].join("&")
   ); 
 }
 
 // Request annotation
 function annotation() {
-  var comparison = $('#annoation').val();
+  var comparison = $('#annotation').val();
   var width = $('#annotation').parent().parent().find('#width_val')
   if (width.length) {
     comparison = comparison + " " + width.val()
   }
-  var panelA = $('#chooseA');
+  var panelA = $('#chooseA2');
   submit_query(
     [ 
       panel_query(panelA),
       $('#refs').val().map(function (str) {return "B_name="+str}).join("&"),
       'B_type=regions',
       'wa='+panel_reduction(panelA),
-      'w='+comparison
+      'w='+comparison,
+      emails($('#annotate'))
     ].join("&")
   ); 
 }

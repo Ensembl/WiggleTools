@@ -34,185 +34,170 @@
           <li><a href="#about" data-toggle="tab">About</a></li>
         </ul>
 
-	<div class="tab-content" id="myTabContent">
-	  <div class="tab-pane active" id="summarise">
+        <div class="tab-content" id="myTabContent">
+          <div class="tab-pane active" id="summarise">
             <table id="choose" width="100%">
-	      <tr>
+              <tr>
                 <td>
-		  <br> 
-		  <div style="border:2px solid gray;border-radius:5px;padding:10px">
-		    1. Select all:
-		    <div id="type" class="btn-group" data-toggle="buttons" panel="#choose">
-		      <label class="btn btn-primary active">
-			<input type="radio" name="options" value="regions"> Peaks
-		      </label>
-		      <label class="btn btn-primary">
-			<input type="radio" name="options" value="signal"> Signal
-		      </label>
-		    </div>
-		    such that:
-		    <br>
-		    <br>
-		    <div id='selection' class="panel-group">
-		      <!-- This is where the selectors go -->
-		    </div>
-		    <i id="count">
-		      <!-- This is where the selectors go -->
+                  <div style="border:2px solid gray;border-radius:5px;padding:10px">
+                    <br> 
+                    1. Select all:
+                    <div id="type" class="btn-group" data-toggle="buttons" panel="#choose">
+                      <label class="btn btn-primary active">
+                        <input type="radio" name="options" value="regions"> Regions
+                      </label>
+                      <label class="btn btn-primary">
+                        <input type="radio" name="options" value="signal"> Signal
+                      </label>
+                    </div>
+                    such that:
+                    <br>
+                    <br>
+                    <div id='selection' class="panel-group">
+                      <!-- This is where the selectors go -->
+                    </div>
+                    <i id="count">
+                      <!-- This is where the selectors go -->
                     </i>
-		  </div>
+                    <br>
+                    <br>
+                    ... then merge them by:
+                    <select id="reduction" class='form-control'>
+                      <!-- This is where the reduction options go -->
+                    </select>
+                  </div>
                 </td>
               </tr>
               <tr>
                 <td>
-		  <br>
-		  <div style="border:2px solid gray;border-radius:5px;padding:10px">
-		      2. Select operation:
-		      <select id="reduction" class='form-control'>
-			<!-- This is where the reduction options go -->
-		      </select>
-		  </div>
-                </td>
-              </tr>
-              <tr>
-                <td>
-		  <br>
-		  <div style="border:2px solid gray;border-radius:5px;padding:10px">
-		    3. Submit job:
-		    <br>
-		    Enter your email address (optional): <input type="text" name="email">  <button type='button' class="btn btn-primary" id='summary_button' type="submit">Submit</button>
-		  </div>
+                  <br>
+                  <div style="border:2px solid gray;border-radius:5px;padding:10px">
+                    2. Submit your job:
+                    <br>
+                    Enter your email address (optional): <input type="text" id="email">  <button type='button' class="btn btn-primary" id='summary_button' type="submit">Submit</button>
+                  </div>
                 </td>
               </tr>
             </table>
-	  </div>
+          </div>
 
-	  <div class="tab-pane" id="compare">
+          <div class="tab-pane" id="compare">
             <table width="100%" style="layout:fixed">
-	      <col width="50%">
-	      <col width="50%">
-	      <tr>
-		<td>
-                  <table id="chooseA" width=100%>
-                    <tr>
-                      <td>
-			<br> 
-			<div style="border:2px solid gray;border-radius:5px;padding:10px">
-			  1A. Select all:
-			  <div id="type" class="btn-group" data-toggle="buttons" panel="#chooseA">
-			    <label class="btn btn-primary active">
-			      <input type="radio" name="options" value="regions"> Peaks
-			    </label>
-			    <label class="btn btn-primary">
-			      <input type="radio" name="options" value="signal"> Signal
-			    </label>
-			  </div>
-			  such that:
-			  <br>
-			  <br>
-			  <div id='selection' class="panel-group">
-			    <!-- This is where the selectors go -->
-			  </div>
-			  <i id="count">
-			    <!-- This is where the count goes -->
-			  </i>
-			</div>
-                      </td>
-                    </tr>
-                    <tr>
-		      <td>
-			<br>
-			<div style="border:2px solid gray;border-radius:5px;padding:10px">
-			  2A. Select operation:
-			  <select class='form-control' id="reduction">
-			    <!-- This is where the reduction options go -->
-			  </select>
-			</div>
-		      </td>
-                    </tr>
-                  </table>
-		</td>
-		<td>
-                  <table id="chooseB" width=100%>
-                    <tr>
-		      <td>
-		      <br> 
-			<div style="border:2px solid gray;border-radius:5px;padding:10px;height:100%">
-			  1B. Select all:
-			    <div id="type" class="btn-group" data-toggle="buttons" panel="#chooseB">
-			      <label class="btn btn-primary active">
-				<input type="radio" name="options" value="regions"> Peaks
-			      </label>
-			      <label class="btn btn-primary">
-				<input type="radio" name="options" value="signal"> Signal
-			      </label>
-			    </div>
-			  such that:
-			  <br>
-			  <br>
-			  <div id='selection' class="panel-group">
-			    <!-- This is where the selectors go -->
-			  </div>
-			  <i id="count">
-			    <!-- This is where the count goes -->
-			  </i>
-			</div>
-		      </td>
-                    </tr>
-		    <tr>
-		      <td>
-			<br>
-			<div style="border:2px solid gray;border-radius:5px;padding:10px">
-			  2B. Select operation:
-			  <select class='form-control' id="reduction">
-			    <!-- This is where the reduction options go -->
-			  </select>
-			</div>
-		      </td>
-		    </tr>
-                  </table>
-		</td>
-              </tr>
-	      <tr>
-		<td colspan="2">
-		  <br>
-		  <div style="border:2px solid gray;border-radius:5px;padding:10px">
-		    3. Select comparison:
-		    <center>
-		    <select class='form-control' id="comparison">
-		      <!-- This is where the comparison options go -->
-		    </select>
-		    </center>
-		  </div>
-		</td>
-	      </tr>
+              <col width="50%">
+              <col width="50%">
               <tr>
-		<td colspan="2">
-		  <br>
-		  <div style="border:2px solid gray;border-radius:5px;padding:10px">
-		    4. Submit job:
-		    <br>
-		    Enter your email address (optional): <input type="text" name="email">  <button type='button' class="btn btn-primary" id="comparison_button" type="submit">Submit</button>
-		  </div>
-		</td>
+                <td>
+                  <div style="border:2px solid gray;border-radius:5px;padding:10px">
+                    <table id="chooseA" width=100%>
+                      <tr>
+                        <td>
+                          <br> 
+                          1A. Select all:
+                          <div id="type" class="btn-group" data-toggle="buttons" panel="#chooseA">
+                            <label class="btn btn-primary active">
+                              <input type="radio" name="options" value="regions"> Regions
+                            </label>
+                            <label class="btn btn-primary">
+                              <input type="radio" name="options" value="signal"> Signal
+                            </label>
+                          </div>
+                          such that:
+                          <br>
+                          <br>
+                          <div id='selection' class="panel-group">
+                            <!-- This is where the selectors go -->
+                          </div>
+                          <i id="count">
+                            <!-- This is where the count goes -->
+                          </i>
+                          <br>
+                          <br>
+                          ... then merge them by:
+                          <select class='form-control' id="reduction">
+                            <!-- This is where the reduction options go -->
+                          </select>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                </td>
+                <td>
+                  <div style="border:2px solid gray;border-radius:5px;padding:10px;height:100%">
+                    <table id="chooseB" width=100%>
+                      <tr>
+                        <td>
+                        <br> 
+                          1B. Select all:
+                            <div id="type" class="btn-group" data-toggle="buttons" panel="#chooseB">
+                              <label class="btn btn-primary active">
+                                <input type="radio" name="options" value="regions"> Regions
+                              </label>
+                              <label class="btn btn-primary">
+                                <input type="radio" name="options" value="signal"> Signal
+                              </label>
+                            </div>
+                          such that:
+                          <br>
+                          <br>
+                          <div id='selection' class="panel-group">
+                            <!-- This is where the selectors go -->
+                          </div>
+                          <i id="count">
+                            <!-- This is where the count goes -->
+                          </i>
+                          <br>
+                          <br>
+                          ... then merge them by:
+                          <select class='form-control' id="reduction">
+                            <!-- This is where the reduction options go -->
+                          </select>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <br>
+                  <div style="border:2px solid gray;border-radius:5px;padding:10px">
+                   2. Compare both of the above sets by:
+                    <center>
+                    <select class='form-control' id="comparison">
+                      <!-- This is where the comparison options go -->
+                    </select>
+                    </center>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <br>
+                  <div style="border:2px solid gray;border-radius:5px;padding:10px">
+                    3. Submit job:
+                    <br>
+                    Enter your email address (optional): <input type="text" id="email">  <button type='button' class="btn btn-primary" id="comparison_button" type="submit">Submit</button>
+                  </div>
+                </td>
               </tr>
             </table>
-	  </div>
+          </div>
 
-	  <div class="tab-pane" id="annotate">
+          <div class="tab-pane" id="annotate">
             <table width="100%" style="layout:fixed">
-	      <col width="50%">
-	      <col width="50%">
-	      <tr>
+              <col width="50%">
+              <col width="50%">
+              <tr>
                 <td>
-		  <table id="chooseA2" width="100%" style="layout:fixed">
-		    <tr>
-		      <td>
-			<br> 
-			  <div style="border:2px solid gray;border-radius:5px;padding:10px">
+		  <div style="border:2px solid gray;border-radius:5px;padding:10px">
+		    <table id="chooseA2" width="100%" style="layout:fixed">
+		      <tr>
+			<td>
+			  <br> 
 			  1A. Select all:
 			  <div id="type" class="btn-group" data-toggle="buttons" panel="#chooseA2">
 			    <label class="btn btn-primary active">
-			      <input type="radio" name="options" value="regions"> Peaks
+			      <input type="radio" name="options" value="regions"> Regions
 			    </label>
 			    <label class="btn btn-primary">
 			      <input type="radio" name="options" value="signal"> Signal
@@ -227,97 +212,81 @@
 			  <i id="count">
 			    <!-- This is where the count goes -->
 			  </i>
-			</div>
-		      </td>
-                    </tr>
-                    <tr>
-		      <td>
-			<br>
-			<div style="border:2px solid gray;border-radius:5px;padding:10px">
-			  2A. Select operation:
+			  <br>
+			  <br>
+			  ... then merge them using:
 			  <select class='form-control' id="reduction">
 			    <!-- This is where the reduction options go -->
 			  </select>
-			</div>
-		      </td>
-		    </tr>
-		  </table>
+			</td>
+		      </tr>
+		    </table>
+		  </div>
                 </td>
-		<td>
-		  <table id="references" width="100%" style="layout:fixed">
-		    <tr>
+                <td>
+                  <table id="references" width="100%" style="layout:fixed">
+                    <tr>
                       <td>
-			<br> 
-			<div style="border:2px solid gray;border-radius:5px;padding:10px;height:100%">
-			1B. Select annotations:
-			<div class="panel-group">
-			  <select id="refs" multiple>
-			    <!-- This is where the references go -->
-			  </select>
-			</div>
+                        <br> 
+                        <div style="border:2px solid gray;border-radius:5px;padding:10px;height:100%">
+                        1.B Choose some known annotations:
+                        <div class="panel-group">
+                          <select id="refs" multiple>
+                            <!-- This is where the references go -->
+                          </select>
+                        </div>
                       </td>
                     </tr>
-                    <tr>
-		      <td>
-			<br>
-			<div style="border:2px solid gray;border-radius:5px;padding:10px">
-			  2B. Select operation:
-			  <select class='form-control' id="reference_reduction">
-			    <!-- This is where the reduction options go -->
-			  </select>
-			</div>
-		      </td>
-		    </tr>
                   </table>
-		</td>
+                </td>
               </tr>
-	      <tr>
-		<td colspan="2">
-		  <br>
-		  <div style="border:2px solid gray;border-radius:5px;padding:10px">
-		    3. Select annotation:
-		    <center>
-		      <select class='form-control' id="annotation">
-			<!-- This is where the comparison options go -->
-		      </select>
-		    </center>
-		  </div>
-		</td>
-	      </tr>
               <tr>
-		<td colspan="2">
-		  <br>
-		  <div style="border:2px solid gray;border-radius:5px;padding:10px">
-		    4. Submit job:
-		    <br>
-		    Enter your email address (optional): <input type="text" name="email">  <button type="button" class="btn btn-primary" id="annotation_button" type="submit">Submit</button>
-		  </div>
-		</td>
+                <td colspan="2">
+                  <br>
+                  <div style="border:2px solid gray;border-radius:5px;padding:10px">
+                    2. Generate summary of the datasets on the left with respect to the annotations on the right:
+                    <center>
+                      <select class='form-control' id="annotation">
+                        <!-- This is where the comparison options go -->
+                      </select>
+                    </center>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <br>
+                  <div style="border:2px solid gray;border-radius:5px;padding:10px">
+                    3. Submit job:
+                    <br>
+                    Enter your email address (optional): <input type="text" id="email">  <button type="button" class="btn btn-primary" id="annotation_button" type="submit">Submit</button>
+                  </div>
+                </td>
               </tr>
             </table>
 
-	  </div>
+          </div>
 
-	  <div class="tab-pane" id="upload">
+          <div class="tab-pane" id="upload">
             <br>
             Under development.
             <br>
-	  </div>
+          </div>
 
-	  <div class="tab-pane" id="retrieve">
+          <div class="tab-pane" id="retrieve">
             <br>
             Enter your job ID: <input id="result_box" type="text" name="jobID">  <button type='button' class='btn btn-primary' id="result_button">Get report</button>
           </div>
 
-	  <div class="tab-pane" id="about">
+          <div class="tab-pane" id="about">
             <br>
             <p> WiggleTools was developed at <a href="http://ebi.ac.uk">EMBL-EBI</a> in collaboration with the <a href="http://blueprint-epigenome.eu">Blueprint consortium.</a></p>
-	    <p> For more information contact: <a href="mailto:wiggletools@ebi.ac.uk">wiggletools@ebi.ac.uk</a></p>
+            <p> For more information contact: <a href="mailto:wiggletools@ebi.ac.uk">wiggletools@ebi.ac.uk</a></p>
             <p> If you use this tool, please cite:<br> 
                 <i id="count"><a href="http://bioinformatics.oxfordjournals.org/content/30/7/1008">Daniel R. Zerbino, Nathan Johnson, Thomas Juettemann, Steven P. Wilder and Paul Flicek. WiggleTools: parallel processing of large collections of genome-wide datasets for visualization and statistical analysis. 2014 Bioinformatics 30(7):1008-1009.</a></i>
             </p>
           </div>
-	</div>
+        </div>
       </div>
 
 
@@ -328,110 +297,151 @@
 
       <!-- Success Modal -->
       <div class="modal fade" id="Success_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
-	  <div class="modal-content">
-	    <div class="modal-header">
-	      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	      <h4 class="modal-title" id="myModalLabel">Job done!</h4>
-	    </div>
-	    <div class="modal-body">
-	      Your job is done, you can download the results <a id="url">here</a>, or view them <a id="view">here</a>.
-	    </div>
-	    <div class="modal-footer">
-	      <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-	    </div>
-	  </div>
-	</div>
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title" id="myModalLabel">Job done!</h4>
+            </div>
+            <div class="modal-body">
+              Your job is done, you can download the results <a id="url">here</a>, or view them <a id="view">here</a>.
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Image Modal -->
+      <div class="modal fade" id="Image_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title" id="myModalLabel">Job done!</h4>
+            </div>
+            <div class="modal-body">
+              Your job is done, you can download the results <a id="url">here</a>:
+            </div>
+            <div>
+              <center>
+                <a id="photo_url"><img width="80%"></a>
+              </center>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Empty Modal -->
       <div class="modal fade" id="Empty_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
-	  <div class="modal-content">
-	    <div class="modal-header">
-	      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	      <h4 class="modal-title" id="myModalLabel">Job done!</h4>
-	    </div>
-	    <div class="modal-body">
-	      Your job is done, but the result is empty. Think about it.
-	    </div>
-	    <div class="modal-footer">
-	      <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-	    </div>
-	  </div>
-	</div>
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title" id="myModalLabel">Job done!</h4>
+            </div>
+            <div class="modal-body">
+              Your job is done, but the result is empty. Think about it.
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Failure Modal -->
       <div class="modal fade" id="Failure_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
-	  <div class="modal-content">
-	    <div class="modal-header">
-	      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	      <h4 class="modal-title" id="myModalLabel">Error</h4>
-	    </div>
-	    <div class="modal-body">
-	      Your job has failed, an e-mail was sent to the system administrators.
-	    </div>
-	    <div class="modal-footer">
-	      <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-	    </div>
-	  </div>
-	</div>
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title" id="myModalLabel">Error</h4>
+            </div>
+            <div class="modal-body">
+              Your job has failed, an e-mail was sent to the system administrators.
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Waiting Modal -->
       <div class="modal fade" id="Waiting_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
-	  <div class="modal-content">
-	    <div class="modal-header">
-	      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	      <h4 class="modal-title" id="myModalLabel">Patience...</h4>
-	    </div>
-	    <div class="modal-body">
-	      Your job is coming...
-	    </div>
-	    <div class="modal-footer">
-	      <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-	    </div>
-	  </div>
-	</div>
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title" id="myModalLabel">Patience...</h4>
+            </div>
+            <div class="modal-body">
+              Your job is coming...
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Unknown Modal -->
       <div class="modal fade" id="Unknown_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
-	  <div class="modal-content">
-	    <div class="modal-header">
-	      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	      <h4 class="modal-title" id="myModalLabel">Job unknown</h4>
-	    </div>
-	    <div class="modal-body">
-	      Nope, I've never heard of that job, sorry...
-	    </div>
-	    <div class="modal-footer">
-	      <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-	    </div>
-	  </div>
-	</div>
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title" id="myModalLabel">Job unknown</h4>
+            </div>
+            <div class="modal-body">
+              Nope, I've never heard of that job, sorry...
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty Modal -->
+      <div class="modal fade" id="Invalid_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title" id="myModalLabel">Invalid command</h4>
+            </div>
+            <div class="modal-body">
+              You requested an operation on 0 datasets, check your parameters.
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Job Sent Modal -->
       <div class="modal fade" id="JobSent_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
-	  <div class="modal-content">
-	    <div class="modal-header">
-	      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	      <h4 class="modal-title" id="myModalLabel">It's off!</h4>
-	    </div>
-	    <div class="modal-body">
-	      Your job has been registered, and issued ticket #<div id="job_id"></div>
-	    </div>
-	    <div class="modal-footer">
-	      <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
-	    </div>
-	  </div>
-	</div>
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h4 class="modal-title" id="myModalLabel">It's off!</h4>
+            </div>
+            <div class="modal-body">
+              Your job has been registered, and issued ticket #<div id="job_id"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div> <!-- /container -->
@@ -442,7 +452,7 @@
     <!-- Placed at the end of the document so the pages load faster -->
 
     <!-- Bootstrap core CSS -->
-    <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap.css" rel="stylesheet">
 
     <!-- Custom styles for this template -->
     <link href="css/justified-nav.css" rel="stylesheet">
@@ -451,7 +461,7 @@
     <script src="libs/jquery-1.11.1.min.js"></script>
 
     <!-- Bootstrap core JavaScript -->
-    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.js"></script>
+    <script src="libs/bootstrap.js"></script>
 
     <!-- Bootstrap multiselect -->
     <script src="libs/bootstrap-multiselect.js"></script>
