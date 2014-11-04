@@ -29,7 +29,7 @@ def copy_to_longterm(data, config):
 		if subprocess.call(cmd, shell=True):
 			print "Failed to copy over results"
 			print cmd
-			sys.exit(1)
+			sys.exit(100)
 
 def main():
 	options = get_options()
