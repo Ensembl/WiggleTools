@@ -384,10 +384,19 @@ wiggletools max test/fixedStep.bw test/variableStep.bw
 
 * Welch's t-test
 
-Computes the two-tailed p-value of Welch's t-test comparing to sets of numbers, each assumed to have a normal distribution:
+Computes the two-tailed p-value of Welch's t-test comparing two sets of numbers, each assumed to have a normal distribution:
 
 ```
 wiggletools ttest test/fixedStep.bw test/variableStep.bw test/fixedStep.wig \
+            : test/fixedStep.wig test/variableStep.bw test/fixedStep.wig
+```
+
+* F-test
+
+Computes the p-value of the F-test comparing sets of numbers, each assumed to have a normal distribution:
+
+```
+wiggletools ftest test/fixedStep.bw test/variableStep.bw test/fixedStep.wig \
             : test/fixedStep.wig test/variableStep.bw test/fixedStep.wig
 ```
 

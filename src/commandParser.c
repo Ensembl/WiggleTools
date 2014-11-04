@@ -42,16 +42,17 @@ puts("\twiggletools program");
 puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (extraction)");
-puts("\titerator = (filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex) (multiplex) | print (statistic)");
+puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (statistic)");
 puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | default (float) | isZero | (statistic)");
-puts("\toutput = (filename) | -");
-puts("\tfilename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
+puts("\toutput = (out_filename) | -");
+puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
 puts("\tstatistic = AUC | meanI | varI | minI | maxI | stddevI | CVI | pearson (iterator)");
 puts("\tbinary_operator = diff | ratio | overlaps | apply (statistic) | fillIn");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
+puts("\tsetComparison = ttest | ftest | wilcoxon");
+puts("\tmultiplex_list = (multiplex) | (multiplex) : (multiplex_list)");
 puts("\tmultiplex = (iterator_list) | map (unary_operator) (multiplex) | strict (multiplex)");
-puts("\titerator_list = (iterator) : | (iterator) (iterator_list)");
-puts("\tsetComparison = ttest | wilcoxon");
+puts("\titerator_list = (iterator) | (iterator) : (iterator_list)");
 puts("\textraction = profile (output) (int) (iterator) (iterator) | profiles (output) (int) (iterator) (iterator) | histogram (output) (width) (iterator_list) | mwrite (output) (multiplex) | mwrite_bg (output) (multiplex)");
 puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 
@@ -302,6 +303,28 @@ static Multiplexer * readMultiplexer() {
 	return readMultiplexerToken(token);
 }
 
+static Multiplexer ** readMultiplexerList(int * count) {
+	size_t buffer_size = 8;
+	char * token;
+	Multiplexer ** multis = (Multiplexer **) calloc(buffer_size, sizeof(Multiplexer*));
+	*count = 0;
+
+	for (token = nextToken(0,0); token != NULL && strcmp(token, ":"); token = nextToken(0,0)) {
+		if (*count == buffer_size) {
+			buffer_size *= 2;
+			multis = (Multiplexer **) realloc(multis, buffer_size * sizeof(Multiplexer*));
+		}
+		multis[(*count)++] = readMultiplexerToken(token);
+	}
+	return multis;
+}
+
+static Multiset * readMultiset() {
+	int count = 0; 
+	Multiplexer ** multis = readMultiplexerList(&count);
+	return newMultiset(multis, count);
+}
+
 static WiggleIterator * readTee() {
 	FILE * file = readOutputFilename();
 	return TeeWiggleIterator(readIterator(), file, false, holdFire);
@@ -496,6 +519,10 @@ static WiggleIterator * readTTest() {
 	return TTestReduction(newMultiset(multis, 2));
 }
 
+static WiggleIterator * readFTest() {
+	return FTestReduction(readMultiset());
+}
+
 static WiggleIterator * readMWUTest() {
 	Multiplexer ** multis = calloc(2, sizeof(Multiplexer *));
 	multis[0] = readMultiplexer();
@@ -600,6 +627,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readOverlap();
 	if (strcmp(token, "ttest") == 0)
 		return readTTest();
+	if (strcmp(token, "ftest") == 0)
+		return readFTest();
 	if (strcmp(token, "wilcoxon") == 0)
 		return readMWUTest();
 	if (strcmp(token, "AUC") == 0)
@@ -623,7 +652,7 @@ static WiggleIterator * readIteratorToken(char * token) {
 	if (strcmp(token, "apply") == 0) 
 		return SelectReduction(readApply(), 0);
 
-	return SmartReader(token);
+	return SmartReader(token, holdFire);
 
 }
 
@@ -701,7 +730,7 @@ static Multiplexer * readApplyPaste() {
 	       exit(1);
 	}
 
-	return PasteMultiplexer(ApplyMultiplexer(SmartReader(infilename), statistics, count, readLastIterator(), strict), infile, outfile, false);
+	return PasteMultiplexer(ApplyMultiplexer(SmartReader(infilename, holdFire), statistics, count, readLastIterator(), strict), infile, outfile, false);
 }
 
 void readPrint() {

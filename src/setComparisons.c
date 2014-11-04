@@ -130,6 +130,105 @@ WiggleIterator * TTestReduction(Multiset * multi) {
 	return newWiggleIterator(data, &TTestReductionPop, &SetComparisonSeek, NAN);
 }
 
+
+////////////////////////////////////////////////////////
+// F-test
+////////////////////////////////////////////////////////
+
+typedef struct ftestData_st {
+	Multiset * multi;
+	int * counts;
+	double * means;
+	int total_count;
+} FTestData;
+
+void FTestSeek(WiggleIterator * iter, const char * chrom, int start, int finish) {
+	FTestData * data = (FTestData* ) iter->data;
+	seekMultiset(data->multi, chrom, start, finish);
+	pop(iter);
+}
+
+
+void FTestReductionPop(WiggleIterator * wi) {
+	if (wi->done)
+		return;
+
+	FTestData * data = (FTestData *) wi->data;
+	Multiset * multi = data->multi;
+
+	if (multi->done) {
+		wi->done = true;
+		return;
+	}
+
+	// Go to first position where both of the sets have at least one value
+	while (!multi->inplay[0] || !multi->inplay[1]) {
+		popMultiset(multi);
+		if (multi->done) {
+			wi->done = true;
+			return;
+		}
+	}
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
+
+	// Compute means
+	double mean = 0;
+	int groups = multi->count;
+	int index, index2;
+	for (index = 0; index < groups; index++) {
+		Multiplexer * mplx = multi->multis[index];
+		data->means[index] = 0;
+		for (index2 = 0; index < mplx->count; index++) {
+			if (mplx->inplay[index2])
+				data->means[index] += mplx->values[index2];
+			else
+				data->means[index] += mplx->iters[index2]->default_value;
+		}
+		mean += data->means[index];
+		data->means[index] /= data->counts[index];
+	}
+	mean /= data->total_count;
+
+	double inter = 0;
+	double intra = 0;
+	for (index = 0; index < groups; index++) {
+		Multiplexer * mplx = multi->multis[index];
+		inter += mplx->count * (data->means[index] - mean) * (data->means[index] - mean);
+		for (index2 = 0; index < mplx->count; index++) {
+			if (mplx->inplay[index2])
+				intra += (mplx->values[index2] - data->means[index]) * (mplx->values[index2] - data->means[index]);
+			else
+				intra += (mplx->iters[index2]->default_value - data->means[index]) * (mplx->iters[index2]->default_value - data->means[index]);
+		}
+	}
+
+	// F-statistic
+	inter /= groups - 1;
+	intra /= data->total_count - groups;
+	double f = inter / intra;
+
+	// P-value
+	wi->value = 2 * gsl_cdf_fdist_Q(f, multi->count - 1, data->total_count - multi->count);
+
+	// Update inputs
+	popMultiset(multi);
+}
+
+WiggleIterator * FTestReduction(Multiset * multi) {
+	FTestData * data = (FTestData *) calloc(1, sizeof(FTestData));
+	data->multi = multi;
+	data->means = calloc(multi->count, sizeof(double)); 
+	data->counts = calloc(multi->count, sizeof(int)); 
+	int index;
+	for (index = 0; index < multi->count; index++) {
+		data->counts[index] = multi->multis[index]->count;
+		data->total_count += data->counts[index];
+	}
+	return newWiggleIterator(data, &FTestReductionPop, &FTestSeek, NAN);
+}
+
 ////////////////////////////////////////////////////////
 // Mann-Whitney U (Wilcoxon rank-sum test)
 ////////////////////////////////////////////////////////

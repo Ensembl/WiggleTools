@@ -89,6 +89,7 @@ Multiset * newMultiset(Multiplexer **, int);
 
 // Reduction operators on sets of sets:
 WiggleIterator * TTestReduction(Multiset *);
+WiggleIterator * FTestReduction(Multiset *);
 WiggleIterator * MWUReduction(Multiset *);
 
 // Output
