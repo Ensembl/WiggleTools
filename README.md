@@ -7,6 +7,16 @@ Copyright holder: EMBL-EBI (Apache 2 License)
 
 The WiggleTools package allows genomewide data files to be manipulated as numerical functions, equipped with all the standard functional analysis operators (sum, product, product by a scalar, comparators), and derived statistics (mean, median, variance, stddev, t-test, Wilcoxon's rank sum test, etc).
 
+Easiest installation: binary files
+----------------------------------
+
+Wiggletools requires quite a few dependencies and can take a while to compile.
+
+To save you the trouble, we're trialling binary releases:
+[https://github.com/Ensembl/WiggleTools/releases](https://github.com/Ensembl/WiggleTools/releases)
+
+Depending on feedback we will extend this service.
+
 Easy Installation (Experimental)
 --------------------------------
 
