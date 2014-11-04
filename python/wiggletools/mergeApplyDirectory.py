@@ -9,7 +9,7 @@ import os.path
 file=sys.argv[1]
 if (re.call("sort -k1,1 -k2,2n -k3,3n -m %sx/* > %s" % (file, file), shell=True))
 	print 'Error processing directory %sx' % file
-	exit 1
+	sys.exit(100)
 os.rmdir(file + "x")
 
 try:
@@ -18,3 +18,5 @@ try:
 	else:
 		# Create empty file with .empty suffix
 		open(file + ".empty", "w").close()
+except:
+	sys.exit(100)

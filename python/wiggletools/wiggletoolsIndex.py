@@ -16,7 +16,7 @@ def run(args):
 	sys.stdout.write(stdout)
 	sys.stderr.write(stderr)
 	if err != 0:
-		sys.exit(err)
+		sys.exit(100)
 
 def main():
 	cmd = ['wiggletools'] + wiggletools_args

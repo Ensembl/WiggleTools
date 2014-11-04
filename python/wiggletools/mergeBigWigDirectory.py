@@ -21,7 +21,7 @@ if len(bigwigs) > 0:
 		print out
 		print "Stderr:"
 		print err
-		sys.exit(1)
+		sys.exit(100)
 
 else:
 	# Create empty file with .empty suffix
