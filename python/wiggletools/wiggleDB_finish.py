@@ -43,7 +43,7 @@ def main():
 			print "Failed to construct histogram"
 			sys.exit(1)
 		if os.path.getsize(data) > 0:
-			wigglePlots.make_histogram(data, options.labels, data + ".pdf")
+			wiggletools.wigglePlots.make_histogram(data, options.labels, data + ".png", format='png')
 		else:
 			empty = True
 	elif options.apply_paste is not None:
@@ -51,7 +51,7 @@ def main():
 			print "Failed to construct overlap graph"
 			sys.exit(1)
 		if os.path.getsize(data) > 0:
-			wigglePlots.make_overlaps(data, data + ".pdf")
+			wiggletools.wigglePlots.make_overlaps(data, data + ".png", format='png')
 		else:
 			empty = True
 

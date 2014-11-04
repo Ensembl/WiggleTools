@@ -14,7 +14,7 @@ os.rmdir(file + "x")
 
 try:
 	if os.path.getsize(wiggle_file) > 0:
-		wigglePlots.make_overlaps(file, file + ".pdf")
+		wigglePlots.make_overlaps(file, file + ".png")
 	else:
 		# Create empty file with .empty suffix
 		open(file + ".empty", "w").close()
