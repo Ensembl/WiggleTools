@@ -56,15 +56,14 @@ def make_profile_curve(infile, out, format='pdf'):
 ##############################################
 
 def make_profiles_matrix(infile, out, format='pdf'):
-	M = []
-	file = open(infile)
-	for line in file:
-		items = line.strip().split('\t')
-		row = map(float, items[3:])
-		M.append(row)
-	file.close()
-
-	pyplot.imshow(numpy.array(M),interpolation='nearest', cmap=cm.Greys_r)
+	M = numpy.array([map(float, line.strip().split("\t")[3:]) for line in open(infile)])
+	M = numpy.log(M+1)
+	M = M / numpy.max(M)
+	means = numpy.mean(M, axis=1)
+	sorted_rows = range(len(means))
+	sorted_rows.sort(key=lambda X: means[X])
+	M = M[sorted_rows,:]
+	pyplot.imshow(M,aspect='auto',cmap=cm.Greys)
 	pyplot.savefig(out, format=format)
 
 ##############################################
