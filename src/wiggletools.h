@@ -15,8 +15,8 @@
 #ifndef _WIGGLETOOLS_DEF_
 #define _WIGGLETOOLS_DEF_
 
-#ifndef true
-typedef int bool;
+#ifndef bool
+#define bool char
 #define true 1
 #define false 0
 #endif
