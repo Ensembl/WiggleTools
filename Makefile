@@ -10,7 +10,7 @@ Wiggletools: Samtools-lib bin
 	cd src; make -e
 
 Parallel: Wiggletools
-	cd parallel; make
+	cd python/wiggletools; make
 
 binaries: Parallel
 	chmod 755 bin/*
