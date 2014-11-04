@@ -116,12 +116,13 @@ def get_options():
 	parser.add_argument('--labels',dest='labels',help='Labels to the different histograms', nargs='*')
 	parser.add_argument('--out','-o', dest='out',help='Outfile', required=True)
 	parser.add_argument('--plot','-p', dest='plot',help='Type of plot',choices=['hist','profile','profiles','overlaps'],required=True)
+	parser.add_argument('--format','-f', dest='format',help='File format',choices=['pdf','png','...'],default='png')
 	options = parser.parse_args()
 	return options
 
 def main():
 	options = get_options()
-	make_plot(options.plot, options.infile, options.out, options.labels)
+	make_plot(options.plot, options.infile, options.out, options.labels, format=options.format)
 
 if __name__ == '__main__':
 	main()
