@@ -43,7 +43,7 @@ puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (extraction)");
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (statistic)");
-puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | default (float) | isZero | (statistic)");
+puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | (statistic)");
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
 puts("\tstatistic = AUC | meanI | varI | minI | maxI | stddevI | CVI | pearson (iterator)");
@@ -154,6 +154,11 @@ static WiggleIterator ** readMappedIteratorList(int * count, bool * strict) {
 		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = HighPassFilterWiggleIterator(iters[i], scalar);
+	} else if (strcmp(token, "lt") == 0) {
+		double scalar = atof(needNextToken());
+		iters = readIteratorList(count, strict);
+		for (i = 0; i < *count; i++)
+			iters[i] = HighPassFilterWiggleIterator(ScaleWiggleIterator(iters[i], -1), -scalar);
 	} else if (strcmp(token, "default") == 0) {
 		double scalar = atof(needNextToken());
 		iters = readIteratorList(count, strict);
@@ -373,6 +378,11 @@ static WiggleIterator * readOverlap() {
 static WiggleIterator * readGt() {
 	double cutoff = atof(needNextToken());
 	return HighPassFilterWiggleIterator(readIterator(), cutoff);
+}
+
+static WiggleIterator * readLt() {
+	double cutoff = atof(needNextToken());
+	return HighPassFilterWiggleIterator(ScaleWiggleIterator(readIterator(), -1), -cutoff);
 }
 
 static WiggleIterator * readDefault() {
@@ -621,6 +631,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readPow();
 	if (strcmp(token, "gt") == 0)
 		return readGt();
+	if (strcmp(token, "lt") == 0)
+		return readLt();
 	if (strcmp(token, "default") == 0)
 		return readDefault();
 	if (strcmp(token, "overlaps") == 0)

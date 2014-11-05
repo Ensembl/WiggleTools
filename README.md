@@ -235,10 +235,20 @@ wiggletools offset 10 test/fixedStep.bw
 
 * gt
 
-Returns 1 if the iterator is strictly greater than a given cutoff, 0 otherwise, and merges contiguous positions with the same output value into blocks:
+Returns contiguous regions where the iterator is strictly greater than a given cutoff:
 
 ```
 wiggletools gt 5 test/fixedStep.bw 
+```
+
+This is useful to define regions in the *apply* function, or to compute information content (see below).
+
+* lt
+
+Returns contiguous regions where the iterator is strictly less than a given cutoff:
+
+```
+wiggletools lt 5 test/fixedStep.bw 
 ```
 
 This is useful to define regions in the *apply* function, or to compute information content (see below).
