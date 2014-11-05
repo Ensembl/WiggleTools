@@ -100,6 +100,7 @@ void runWiggleIterator(WiggleIterator * );
 Multiplexer * TeeMultiplexer(Multiplexer *, FILE *, bool, bool);
 void toStdoutMultiplexer (Multiplexer *, bool, bool);
 void runMultiplexer(Multiplexer * );
+WiggleIterator * PrintStatisticsWiggleIterator(WiggleIterator * i, FILE * file);
 
 // Statistics
 // 	Unary

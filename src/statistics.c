@@ -354,6 +354,12 @@ typedef struct pearsonData {
 	double meanB;
 } PearsonData;
 
+static void PearsonSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	PearsonData * data = (PearsonData *) wi->data;
+	seekMultiplexer(data->multi, chrom, start, finish);
+	pop(wi);
+}
+
 static void PearsonPop(WiggleIterator * wi) {
 	PearsonData * data = (PearsonData *) wi->data;
 	Multiplexer * multi = data->multi;
@@ -410,6 +416,47 @@ WiggleIterator * PearsonIntegrator(WiggleIterator * iterA, WiggleIterator * iter
 	data->meanA = iterA->value;
 	data->meanB = iterB->value;
 	data->res = NAN;
-	return newStatisticIterator(data, PearsonPop, StatisticSeek, iterB->default_value, iterB);
+	return newStatisticIterator(data, PearsonPop, PearsonSeek, iterB->default_value, iterB);
 }
 
+//////////////////////////////////////////////////////
+// Print statistics operator
+//////////////////////////////////////////////////////
+
+typedef struct printStatisticsData_st {
+	WiggleIterator * iter;
+	FILE * file;
+} PrintStatisticsData;
+
+static void PrintStatisticsWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	PrintStatisticsData * data = (PrintStatisticsData *) wi->data;
+	seek(data->iter, chrom, start, finish);
+	pop(wi);
+}
+
+static void PrintStatisticsWiggleIteratorPop(WiggleIterator * wi) {
+	PrintStatisticsData * data = (PrintStatisticsData *) wi->data;
+	WiggleIterator * iter = data->iter;
+
+	if (iter->done) {
+		wi->done = true;
+		if (iter->append)
+			fprintf(data->file, "%f", *((double *) iter->data));
+		for (iter = iter->append; iter->append; iter = iter->append)
+			fprintf(data->file, "\t%f", *((double *) iter->data));
+		fprintf(data->file, "\n");
+	} else {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start;
+		wi->finish = iter->finish;
+		wi->value = iter->value;
+		pop(iter);
+	}
+}
+
+WiggleIterator * PrintStatisticsWiggleIterator(WiggleIterator * i, FILE * file) {
+	PrintStatisticsData * data = (PrintStatisticsData *) calloc(1, sizeof(PrintStatisticsData));
+	data->iter = i;
+	data->file = file;
+	return newWiggleIterator(data, &PrintStatisticsWiggleIteratorPop, &PrintStatisticsWiggleIteratorSeek, i->default_value);
+}

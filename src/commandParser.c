@@ -476,6 +476,12 @@ static WiggleIterator * readUnit() {
 	return UnitWiggleIterator(readIterator());
 }
 
+static WiggleIterator * readPrint() {
+	FILE * file = readOutputFilename();
+	WiggleIterator * wi = readIterator();
+	return PrintStatisticsWiggleIterator(wi, file);
+}
+
 static WiggleIterator * readDifference() {
 	WiggleIterator ** iters = calloc(2, sizeof(WiggleIterator *));
 	bool strict = false;
@@ -587,6 +593,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readShift();
 	if (strcmp(token, "unit") == 0)
 		return readUnit();
+	if (strcmp(token, "print") == 0)
+		return readPrint();
 	if (strcmp(token, "sum") == 0)
 		return readSum();
 	if (strcmp(token, "fillIn") == 0)
@@ -745,17 +753,6 @@ static Multiplexer * readApplyPaste() {
 	return PasteMultiplexer(ApplyMultiplexer(SmartReader(infilename, holdFire), statistics, count, readLastIterator(), strict), infile, outfile, false);
 }
 
-void readPrint() {
-	FILE * file = readOutputFilename();
-	WiggleIterator * wi = readLastIterator();
-	runWiggleIterator(wi);
-	if (wi->append)
-		fprintf(file, "%f", *((double *) wi->data));
-	for (wi = wi->append; wi->append; wi = wi->append)
-		fprintf(file, "\t%f", *((double *) wi->data));
-	fprintf(file, "\n");
-}
-
 void rollYourOwn(int argc, char ** argv) {
 	char * token = nextToken(argc, argv);
 	if (strcmp(token, "do") == 0)
@@ -773,7 +770,9 @@ void rollYourOwn(int argc, char ** argv) {
 	else if (strcmp(token, "profiles") == 0)
 		readProfiles();
 	else if (strcmp(token, "print") == 0)
-		readPrint();
+		runWiggleIterator(readLastIteratorToken(token));
+	else if (strcmp(token, "AUC") == 0 || strcmp(token, "meanI") == 0 || strcmp(token, "varI") == 0 || strcmp(token, "stddevI") == 0 || strcmp(token, "CVI") == 0 || strcmp(token, "maxI") == 0 || strcmp(token, "minI") == 0 || strcmp(token, "pearson") == 0)
+		runWiggleIterator(PrintStatisticsWiggleIterator(readLastIteratorToken(token), stdout));
 	else
 		toStdout(readLastIteratorToken(token), false, false);	
 }

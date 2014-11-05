@@ -488,7 +488,7 @@ wiggletools mwrite_bg - test/overlapping.bed test/fixedStep.bw
 Statistics
 ----------
 
-Sometimes, you just want a statistic across the genome. The following functions do not return a sequence of numbers, just a single number. Some of these integrating functions have "I" appended to them to distinguish them from the iterators with related (yet different) functions. Note the print statement at the beginning of the command.
+Sometimes, you just want a statistic across the genome. The following functions do not return a sequence of numbers, just a single number. Some of these integrating functions have "I" appended to them to distinguish them from the iterators with related (yet different) functions. 
 
 
 * AUC
@@ -496,7 +496,7 @@ Sometimes, you just want a statistic across the genome. The following functions 
 Computes the area under the curve (AUC) of the an iterator:
 
 ```
-wiggletools print - AUC test/fixedStep.bw test/variableStep.bw 
+wiggletools AUC test/fixedStep.bw test/variableStep.bw 
 ```
 
 * meanI
@@ -504,7 +504,7 @@ wiggletools print - AUC test/fixedStep.bw test/variableStep.bw
 Computes the mean of an iterator across all of its points:
 
 ```
-wiggletools print - meanI test/fixedStep.bw 
+wiggletools meanI test/fixedStep.bw 
 ```
 
 * varI
@@ -512,7 +512,7 @@ wiggletools print - meanI test/fixedStep.bw
 Computes the variance of an iterator across all of its points:
 
 ```
-wiggletools print - varI test/fixedStep.bw 
+wiggletools varI test/fixedStep.bw 
 ```
 
 * stddevI
@@ -520,7 +520,7 @@ wiggletools print - varI test/fixedStep.bw
 Computes the standard deviation of an iterator across all of its points:
 
 ```
-wiggletools print - stddevI test/fixedStep.bw 
+wiggletools stddevI test/fixedStep.bw 
 ```
 
 * CVI 
@@ -528,7 +528,7 @@ wiggletools print - stddevI test/fixedStep.bw
 Computes the coefficient of variation of an iterator across all of its points:
 
 ```
-wiggletools print - CVI test/fixedStep.bw 
+wiggletools CVI test/fixedStep.bw 
 ```
 
 * maxI
@@ -536,7 +536,7 @@ wiggletools print - CVI test/fixedStep.bw
 Computes the maximum of an iterator across all of its points:
 
 ```
-wiggletools print - maxI test/fixedStep.bw 
+wiggletools maxI test/fixedStep.bw 
 ```
 
 * minI
@@ -544,7 +544,7 @@ wiggletools print - maxI test/fixedStep.bw
 Computes the minimum of an iterator across all of its points:
 
 ```
-wiggletools print - minI test/fixedStep.bw 
+wiggletools minI test/fixedStep.bw 
 ```
 
 * pearson
@@ -552,7 +552,7 @@ wiggletools print - minI test/fixedStep.bw
 Computes the Pearson correlation between two iterators across all their points:
 
 ```
-wiggletools print - pearson test/fixedStep.bw test/fixedStep.bw 
+wiggletools pearson test/fixedStep.bw test/fixedStep.bw 
 ```
 
 Chaining statistics
@@ -562,14 +562,22 @@ All the above functions are actually iterators that transmit the same data as th
 
 ```
 wiggletools test/fixedStep.bw 
-wiggletools AUC test/fixedStep.bw 
+wiggletools scale 1 AUC test/fixedStep.bw 
 ```
 
-This allows you to plug multiple statistics in a dandelion chain off the same iterator. Note how the print statement simply concatenates the results of the operators as they are reads from left to right:
+This allows you to plug multiple statistics in a dandelion chain off the same iterator. Note how results of the operators are concatenated as they are read from left to right:
 
 ```
-wiggletools print - meanI varI minI maxI test/fixedStep.bw 
+wiggletools meanI varI minI maxI test/fixedStep.bw 
 ```
+
+If you want to save the output of a statistic into a file, you can use the print statement:
+
+```
+wiggletools print output.txt AUC test/fixedStep.bw
+```
+
+As with other write functions, if a command starts with a print statement, the standard output is squashed.
 
 Apply
 -----
