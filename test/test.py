@@ -59,6 +59,9 @@ assert test('../bin/wiggletools do isZero diff pow 2 fixedStep.bw mult fixedStep
 # Testing smoothing
 assert test('../bin/wiggletools do isZero diff smooth 1 fixedStep.wig fixedStep.wig') == 0
 
+# Testing filters
+assert test('../bin/wiggletools do isZero diff lt 5 fixedStep.wig gt -5 scale -1 fixedStep.wig') == 0
+
 # Testing apply
 assert test('../bin/wiggletools apply_paste tmp/regional_means.txt meanI overlapping.bed fixedStep.wig') == 0
 
