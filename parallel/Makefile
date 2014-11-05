@@ -4,5 +4,5 @@ default: scripts
 
 scripts: 
 	mkdir -p ${BINDIR}
-	cp -u *.py *.sh ${BINDIR}
+	cp *.py *.sh ${BINDIR}
 	
