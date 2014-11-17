@@ -1,1 +1,1 @@
-../src/wiggleTools.h
+../src/wiggletools.h
