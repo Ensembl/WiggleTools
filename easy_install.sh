@@ -46,6 +46,21 @@ install_mysql () {
 	fi
 }
 
+install_zlib () {
+	if [ -x "$(which apt-get)" ]; then
+		apt-get install libgcrypt11-dev zlib1g-dev
+	elif [ -x "$(which brew)" ]; then
+		brew install zlib
+	else 
+		rm -Rf zlib*
+		confirmed_download 'Zlib' 'http://zlib.net/zlib-1.2.8.tar.gz'
+		cd zlib*
+			./configure
+			sudo make install
+		cd ..
+	fi
+}
+
 install_ssl () {
 	if [ -x "$(which apt-get)" ]; then
 		apt-get install openssl
@@ -153,7 +168,16 @@ install_kent() {
 (uname -a | grep Darwin &> /dev/null) && [ ! -x "$(which brew)" ] && install_brew
 
 #######################
-## png
+## Zlib
+#######################
+
+echo "Checking for Zlib..."
+echo '#include <zlib.h>' > tmp.c
+echo 'int main(int c, char **v) {&deflate;}' >> tmp.c
+(gcc tmp.c -o tmp.a &> tmp.o) || install_zlib
+
+#######################
+## SSL
 #######################
 
 echo "Checking for OpenSSL..."

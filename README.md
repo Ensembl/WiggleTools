@@ -36,9 +36,10 @@ Note that this script is quite experimental, and your system is different from m
 Installation
 ------------
 
-WiggleTools requires three dependencies: the Kent, Tabix and GSL (GNU scientific) libraries, which have their own dependencies. 
+WiggleTools requires three main dependencies: the Kent, Tabix and GSL (GNU scientific) libraries, which have their own dependencies. 
 First ensure that you have the following libraries (if you don't have root privileges on your system, ask your local systems administrator):
 
+* [zlib](http://www.zlib.net/)
 * [libssl](http://www.openssl.org/)
 * [libpng](http://www.libpng.org/pub/png/libpng.html)
 * [GSL](http://www.gnu.org/software/gsl/)
