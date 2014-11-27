@@ -98,17 +98,19 @@ static void reassignColumnRight(Histogram * hist, double ratio, int column, int 
 	hist->values[row][column] -= value;
 }
 
-static void lowerMinNRows(Histogram * hist, double value, int row) {
+static void lowerMinNRows(Histogram * hist, double value) {
 	if (hist->max != hist->min) {
 		double ratio = (hist->max - hist->min) / (hist->max - value);
-		int column;
-		int i;
-		for (i = 0; i <= row; i++)
-			for (column = 0; column < hist->width - 1 ; column++)
+		int row, column;
+		for (row = 0; row < hist->count; row++)
+			// Careful to go from high to low to avoid compound effects as
+			// you push weight to the high bins
+			for (column = hist->width; column >= 0; column--)
 				reassignColumnRight(hist, ratio, column, row);
 	} else {
-		int i;
-		for (i = 0; i < row; i++) {
+		// Copying the content of the first column to the last
+		int row;
+		for (row = 0; row < hist->count; row++) {
 			hist->values[row][hist->width - 1] = hist->values[row][0];
 			hist->values[row][0] = 0;
 		}
@@ -132,11 +134,11 @@ static void reassignColumnLeft(Histogram * hist, double ratio, int column, int r
 	hist->values[row][column] -= value;
 }
 
-static void raiseMaxNRows(Histogram * hist, double value, int row) {
+static void raiseMaxNRows(Histogram * hist, double value) {
 	if (hist->max != hist->min) {
 		double ratio = (hist->max - hist->min) / (value - hist->min);
-		int i, column;
-		for (i = 0; i <= row; i++)
+		int row, column;
+		for (row = 0; row < hist->count; row++)
 			for (column = 1; column < hist->width; column++)
 				reassignColumnLeft(hist, ratio, column, row);
 	}
@@ -152,9 +154,9 @@ static void insertIntoHistogram(Histogram * hist, WiggleIterator * wig, int row)
 
 static void updateHistogram(Histogram * hist, WiggleIterator * wig, int row) {
 	if (wig->value > hist->max)
-		raiseMaxNRows(hist, wig->value, row);
+		raiseMaxNRows(hist, wig->value);
 	else if (wig->value < hist->min)
-		lowerMinNRows(hist, wig->value, row);
+		lowerMinNRows(hist, wig->value);
 
 	if (hist->min != hist->max)
 		insertIntoHistogram(hist, wig, row);
@@ -164,17 +166,17 @@ static void updateHistogram(Histogram * hist, WiggleIterator * wig, int row) {
 
 Histogram * histogram(WiggleIterator ** wigs, int count, int width) {
 	Histogram * hist = calloc(1, sizeof(Histogram));
+	hist->count = count;
 	hist->width = width;
 	hist->values = calloc(count, sizeof(double*));
 	int row;
 	for (row = 0; row < count; row++) {
 		hist->values[row] = calloc(width, sizeof(double));
-		hist->count++;
 		WiggleIterator * wig = wigs[row];
-		while (isnan(wig->value)) {
-			pop(wig);
-		}
 		if (row == 0) {
+			while (isnan(wig->value)) {
+				pop(wig);
+			}
 			hist->min = hist->max = wig->value;
 			hist->values[0][0] = wig->finish - wig->start;
 			pop(wig);
