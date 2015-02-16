@@ -43,7 +43,7 @@ puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic)");
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
-puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | (statistic)");
+puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | (statistic)");
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator)");
@@ -140,6 +140,11 @@ static WiggleIterator ** readMappedIteratorList(int * count, bool * strict) {
 		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = PowerWiggleIterator(iters[i], base);
+	} else if (strcmp(token, "extend") == 0) {
+		int extension = atoi(needNextToken());
+		iters = readIteratorList(count, strict);
+		for (i = 0; i < *count; i++)
+			iters[i] = ExtendWiggleIterator(iters[i], extension);
 	} else if (strcmp(token, "scale") == 0) {
 		double scalar = atof(needNextToken());
 		iters = readIteratorList(count, strict);
@@ -368,6 +373,11 @@ static WiggleIterator * readSmooth() {
 static WiggleIterator * readPow() {
 	double base = atof(needNextToken());
 	return PowerWiggleIterator(readIterator(), base);
+}
+
+static WiggleIterator * readExtend() {
+	int extension = atoi(needNextToken());
+	return ExtendWiggleIterator(readIterator(), extension);
 }
 
 static WiggleIterator * readOverlap() {
@@ -644,6 +654,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readLog();
 	if (strcmp(token, "pow") == 0)
 		return readPow();
+	if (strcmp(token, "extend") == 0)
+		return readExtend();
 	if (strcmp(token, "gt") == 0)
 		return readGt();
 	if (strcmp(token, "lt") == 0)

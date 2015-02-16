@@ -66,6 +66,7 @@ WiggleIterator * ExpWiggleIterator (WiggleIterator *, double);
 WiggleIterator * DefaultValueWiggleIterator(WiggleIterator *, double);
 WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator *, double);
 WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int);
+WiggleIterator * ExtendWiggleIterator(WiggleIterator * i, int);
 
 // Sets of iterators 
 Multiplexer * newMultiplexer(WiggleIterator **, int, bool);

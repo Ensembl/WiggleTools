@@ -616,6 +616,33 @@ WiggleIterator * PowerWiggleIterator(WiggleIterator * i, double s) {
 }
 
 //////////////////////////////////////////////////////
+// Extend operator
+//////////////////////////////////////////////////////
+
+static void ExtendWiggleIteratorPop(WiggleIterator * wi) {
+	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+
+	if (!iter->done) {
+		wi->chrom = iter->chrom;
+		wi->start = iter->start - data->scalar;
+		wi->finish = iter->finish + data->scalar;
+		wi->value = iter->value;
+		pop(iter);
+	} else {
+		wi->done = true;
+	}
+}
+
+WiggleIterator * ExtendWiggleIterator(WiggleIterator * i, int s) {
+	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) calloc(1, sizeof(ScaleWiggleIteratorData));
+	data->iter = i;
+	data->scalar = s;
+	double default_value = i->default_value;
+	return newWiggleIterator(data, &ExtendWiggleIteratorPop, &ScaleWiggleIteratorSeek, default_value);
+}
+
+//////////////////////////////////////////////////////
 // Abs operator
 //////////////////////////////////////////////////////
 
