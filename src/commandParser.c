@@ -48,7 +48,7 @@ puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator)");
 puts("\tstatistic_function = AUC | meanI | varI | minI | maxI | stddevI | CVI | pearson (iterator)");
-puts("\tbinary_operator = diff | ratio | overlaps | apply (statistic) | fillIn");
+puts("\tbinary_operator = diff | ratio | overlaps | noverlaps | apply (statistic) | fillIn");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
 puts("\tsetComparison = ttest | ftest | wilcoxon");
 puts("\tmultiplex_list = (multiplex) | (multiplex) : (multiplex_list)");
@@ -376,6 +376,12 @@ static WiggleIterator * readOverlap() {
 	return OverlapWiggleIterator(source, mask);
 }
 
+static WiggleIterator * readNoverlap() {
+	WiggleIterator * source = readIterator();
+	WiggleIterator * mask = readIterator();
+	return NoverlapWiggleIterator(source, mask);
+}
+
 static WiggleIterator * readGt() {
 	double cutoff = atof(needNextToken());
 	return HighPassFilterWiggleIterator(readIterator(), cutoff);
@@ -646,6 +652,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readDefault();
 	if (strcmp(token, "overlaps") == 0)
 		return readOverlap();
+	if (strcmp(token, "noverlaps") == 0)
+		return readNoverlap();
 	if (strcmp(token, "ttest") == 0)
 		return readTTest();
 	if (strcmp(token, "ftest") == 0)

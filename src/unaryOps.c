@@ -344,6 +344,49 @@ WiggleIterator * OverlapWiggleIterator(WiggleIterator * source, WiggleIterator *
 }
 
 //////////////////////////////////////////////////////
+// No-Overlaps operator
+//////////////////////////////////////////////////////
+
+void NoverlapWiggleIteratorPop(WiggleIterator * wi) {
+	OverlapWiggleIteratorData * data = (OverlapWiggleIteratorData *) wi->data;
+	WiggleIterator * source = data->source;
+	WiggleIterator * mask = data->mask;
+
+	while (!source->done && !mask->done) {
+		int chrom_cmp = strcmp(mask->chrom, source->chrom);
+		if (chrom_cmp < 0)
+			pop(mask);
+		else if (chrom_cmp > 0)
+			break;
+		else if (mask->finish <= source->start)
+			pop(mask);
+		else if (source->finish <= mask->start)
+			break;
+		else
+			pop(source);
+	} 
+	
+	if (source->done)
+		wi->done = true;
+	else {
+		wi->chrom = source->chrom;
+		wi->start = source->start;
+		wi->finish = source->finish;
+		wi->value = source->value;
+		pop(source);
+	}
+}
+
+WiggleIterator * NoverlapWiggleIterator(WiggleIterator * source, WiggleIterator * mask) {
+	OverlapWiggleIteratorData * data = (OverlapWiggleIteratorData *) calloc(1, sizeof(OverlapWiggleIteratorData));
+	data->source = source;
+	data->mask = mask;
+	WiggleIterator * wi = newWiggleIterator(data, &NoverlapWiggleIteratorPop, &OverlapWiggleIteratorSeek, source->default_value);
+	wi->overlaps = source->overlaps;
+	return wi;
+}
+
+//////////////////////////////////////////////////////
 // Scaling operator
 //////////////////////////////////////////////////////
 

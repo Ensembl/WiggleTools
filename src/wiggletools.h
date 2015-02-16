@@ -55,6 +55,7 @@ WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
 WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator * );
 WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator *);
 WiggleIterator * OverlapWiggleIterator(WiggleIterator *, WiggleIterator *);
+WiggleIterator * NoverlapWiggleIterator(WiggleIterator *, WiggleIterator *);
 WiggleIterator * IsZero(WiggleIterator *);
 	// Scalar operations
 WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
