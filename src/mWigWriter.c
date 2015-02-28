@@ -207,7 +207,7 @@ static void TeeMultiplexerPop(Multiplexer * multi) {
 
 				data->lastBlock->next = (BlockData*) calloc(1, sizeof(BlockData));
 				data->lastBlock->next->values = (double*) calloc(BLOCK_LENGTH * multi->count, sizeof(double));
-				data->lastBlock->width = in->count;
+				data->lastBlock->next->width = in->count;
 				data->lastBlock = data->lastBlock->next;
 				data->lastBlock->bedGraph = data->bedGraph;
 			}
