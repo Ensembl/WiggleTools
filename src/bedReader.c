@@ -33,7 +33,10 @@ void BedReaderPop(WiggleIterator * wi) {
 	if (wi->done)
 		return;
 
-	if (fgets(line, 5000, data->file)) {
+	while (fgets(line, 5000, data->file)) {
+		if (line[0] == '#' || line[0] == EOF)
+			continue;
+
 		sscanf(line, "%s\t%i\t%i\t%*s\t%c", chrom, &wi->start, &wi->finish, &sign);
 
 		if (sign == '+')
@@ -63,11 +66,13 @@ void BedReaderPop(WiggleIterator * wi) {
 				wi->finish = data->stop;
 			}
 		}
-	} else {
-		fclose(data->file);
-		data->file = NULL;
-		wi->done = true;
-	}
+
+		return;
+	} 
+
+	fclose(data->file);
+	data->file = NULL;
+	wi->done = true;
 }
 
 void BedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {

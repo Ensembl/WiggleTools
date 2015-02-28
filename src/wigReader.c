@@ -150,7 +150,9 @@ static void WiggleReaderPop(WiggleIterator * wi) {
 		return;
 
 	while (fgets(line, 5000, data->file)) {
-		if ( !strncmp("variableStep", line, 12)) {
+		if (line[0] == '#' || line[0] == EOF)
+			continue;
+		else if ( !strncmp("variableStep", line, 12)) {
 			data->readingMode = VARIABLE_STEP;
 			WiggleReaderReadHeader(wi, data, line);
 			continue;
