@@ -14,6 +14,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 // Local header
 #include "multiplexer.h"
@@ -215,6 +216,10 @@ static WiggleIterator ** readLastIteratorList(int * count) {
 static FILE * readOutputFilename() {
 	char * filename = needNextToken();
 	if (strcmp(filename, "-")) {
+		if( access( filename, F_OK ) == 0 ) {
+			fprintf(stderr, "File %s already exists, please delete it if you want to overwrite it.\n", filename);
+			exit(1);
+		}
 		FILE * file = fopen(filename, "w");
 		if (!file) {
 			fprintf(stderr, "Could not open output file %s.\n", filename);
