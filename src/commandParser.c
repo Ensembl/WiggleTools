@@ -386,14 +386,14 @@ static WiggleIterator * readExtend() {
 }
 
 static WiggleIterator * readOverlap() {
-	WiggleIterator * source = readIterator();
 	WiggleIterator * mask = readIterator();
+	WiggleIterator * source = readIterator();
 	return OverlapWiggleIterator(source, mask);
 }
 
 static WiggleIterator * readNoverlap() {
-	WiggleIterator * source = readIterator();
 	WiggleIterator * mask = readIterator();
+	WiggleIterator * source = readIterator();
 	return NoverlapWiggleIterator(source, mask);
 }
 
