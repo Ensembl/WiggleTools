@@ -209,7 +209,7 @@ WiggleIterator * CompressionWiggleIterator(WiggleIterator * i) {
 		return i;
 	else {
 		UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
-		data->iter = i;
+		data->iter = NonOverlappingWiggleIterator(i);
 		return newWiggleIterator(data, &CompressionWiggleIteratorPop, &UnaryWiggleIteratorSeek, i->default_value);
 	}
 }
