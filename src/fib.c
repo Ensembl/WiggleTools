@@ -184,6 +184,10 @@ int fh_notempty(FibHeap * h)
 	return (int) (h->fh_min != NULL);
 }
 
+int fh_empty(FibHeap * h)
+{
+	return (int) (h->fh_min == NULL);
+}
 
 void fh_extractmin(FibHeap * h)
 {

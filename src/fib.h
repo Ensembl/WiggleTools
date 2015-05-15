@@ -49,6 +49,7 @@ typedef struct fibheap_el FibHeapNode;
 
 FibHeap *fh_makeheap(void);
 FibHeapNode *fh_insert(FibHeap *, int);
+int fh_empty(FibHeap *);
 int fh_notempty(FibHeap *);
 int fh_min(FibHeap *);
 void fh_extractmin(FibHeap *);
