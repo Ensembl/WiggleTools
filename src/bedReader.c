@@ -41,7 +41,7 @@ void BedReaderPop(WiggleIterator * wi) {
 		sscanf(line, "%s\t%i\t%i\t%*s\t%c", chrom, &start, &finish, &sign);
 
 		if (strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
-			fprintf(stderr, "Bed file %s is not sorted!\n", data->filename);
+			fprintf(stderr, "Bed file %s is not sorted!\nPosition %s:%i is before %s:%i\n", data->filename, chrom, start, wi->chrom, wi->start);
 			exit(1);
 		}
 
