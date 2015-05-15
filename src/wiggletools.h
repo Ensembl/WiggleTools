@@ -47,6 +47,7 @@ void seek(WiggleIterator *, const char *, int, int);
 	
 	// Unary
 WiggleIterator * UnitWiggleIterator (WiggleIterator *);
+WiggleIterator * CoverageWiggleIterator (WiggleIterator *);
 WiggleIterator * UnionWiggleIterator (WiggleIterator *);
 WiggleIterator * NonOverlappingWiggleIterator (WiggleIterator *);
 WiggleIterator * AbsWiggleIterator (WiggleIterator * );

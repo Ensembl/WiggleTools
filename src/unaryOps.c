@@ -18,6 +18,7 @@
 
 // Local header
 #include "wiggleIterator.h"
+#include "fib.h"
 
 //////////////////////////////////////////////////////
 // Null operator
@@ -245,6 +246,87 @@ WiggleIterator * UnitWiggleIterator(WiggleIterator * i) {
 		data->iter = i;
 		return UnionWiggleIterator(newWiggleIterator(data, &UnitWiggleIteratorPop, &UnaryWiggleIteratorSeek, 0));
 	}
+}
+
+//////////////////////////////////////////////////////
+// Coverage operator
+//////////////////////////////////////////////////////
+
+typedef struct CoverageWiggleIteratorData_st {
+	WiggleIterator * iter;
+	FibHeap * heap;
+} CoverageWiggleIteratorData;
+
+void CoverageWiggleIteratorPop(WiggleIterator * wi) {
+	CoverageWiggleIteratorData * data = (CoverageWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+	if (!iter->done) {
+		if (wi->chrom[0] == '\0')
+			wi->value = 0;
+
+		while (fh_notempty(data->heap) && fh_min(data->heap) == wi->finish) {
+			wi->value--;
+			fh_extractmin(data->heap);
+		}
+
+		if (wi->value < 0) {
+			fprintf(stderr, "Negative coverage???\n");
+			exit(1);
+		}
+
+		if (wi->value) {
+			wi->start = wi->finish;
+		} else {
+			wi->chrom = iter->chrom;
+			wi->start = iter->start;
+		}
+
+		while (!iter->done && !strcmp(iter->chrom, wi->chrom) && iter->start == wi->start) {
+			fh_insert(data->heap, iter->finish);
+			pop(iter);
+			wi->value++;
+		}
+
+		if (!fh_notempty(data->heap) || (!strcmp(iter->chrom, wi->chrom) && iter->start < fh_min(data->heap)))
+			wi->finish = iter->start;
+		else
+			wi->finish = fh_min(data->heap);
+	} else if (fh_notempty(data->heap)) {
+		wi->start = wi->finish;
+		while (fh_notempty(data->heap) && fh_min(data->heap) == wi->start) {
+			wi->value--;
+			fh_extractmin(data->heap);
+		}
+
+		if (wi->value)
+			wi->finish = fh_min(data->heap);
+		else {
+			wi->done = true;
+			fh_deleteheap(data->heap);
+			data->heap = NULL;
+		}
+	} else {
+		wi->done = true;
+		fh_deleteheap(data->heap);
+		data->heap = NULL;
+	}
+}
+
+void CoverageWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	CoverageWiggleIteratorData * data = (CoverageWiggleIteratorData *) wi->data;
+	seek(data->iter, chrom, start, finish);
+	wi->value = 0;
+	pop(wi);
+}
+
+WiggleIterator * CoverageWiggleIterator(WiggleIterator * i) {
+	if (i->overlaps) {
+		CoverageWiggleIteratorData * data = (CoverageWiggleIteratorData *) calloc(1, sizeof(CoverageWiggleIteratorData));
+		data->iter = i;
+		data->heap = fh_makeheap();
+		return newWiggleIterator(data, &CoverageWiggleIteratorPop, &CoverageWiggleIteratorSeek, 0);
+	} else
+		return i;
 }
 
 //////////////////////////////////////////////////////

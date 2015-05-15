@@ -264,6 +264,14 @@ wiggletools unit test/fixedStep.bw
 
 This is useful to define regions in the *apply* function (see below).
 
+* coverage
+
+Returns a coverage plot of overlapping regions, typically read from a bed file:  
+
+```
+wiggletools coverage test/overlapping.bed
+```
+
 * isZero
 
 Does not print anything, just exits with return value 1 (i.e. error) if it encounters a non-zero value:

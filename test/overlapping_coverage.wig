@@ -1,0 +1,11 @@
+fixedStep chrom=chr1 start=3 step=1
+1.000000
+2.000000
+2.000000
+2.000000
+1.000000
+1.000000
+fixedStep chrom=chr2 start=2 step=1
+1.000000
+1.000000
+1.000000

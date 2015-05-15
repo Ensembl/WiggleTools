@@ -83,6 +83,9 @@ assert float(testOutput('../bin/wiggletools print - minI fixedStep.wig')) == 0
 # Test max
 assert float(testOutput('../bin/wiggletools print - maxI fixedStep.wig')) == 9
 
+# Test coverage 
+assert test('../bin/wiggletools do isZero diff overlapping_coverage.wig coverage overlapping.bed') == 0
+
 assert test('diff tmp expected') == 0
 shutil.rmtree('tmp')
 

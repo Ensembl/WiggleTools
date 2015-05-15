@@ -44,7 +44,7 @@ puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic)");
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
-puts("\tunary_operator = unit | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | (statistic)");
+puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | (statistic)");
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator)");
@@ -118,6 +118,10 @@ static WiggleIterator ** readMappedIteratorList(int * count, bool * strict) {
 		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = UnitWiggleIterator(iters[i]);
+	} else if (strcmp(token, "coverage") == 0) {
+		iters = readIteratorList(count, strict);
+		for (i = 0; i < *count; i++)
+			iters[i] = CoverageWiggleIterator(iters[i]);
 	} else if (strcmp(token, "smooth") == 0) {
 		int width = atoi(needNextToken());
 		iters = readIteratorList(count, strict);
@@ -498,6 +502,10 @@ static WiggleIterator * readUnit() {
 	return UnitWiggleIterator(readIterator());
 }
 
+static WiggleIterator * readCoverage() {
+	return CoverageWiggleIterator(readIterator());
+}
+
 static WiggleIterator * readPrint() {
 	FILE * file = readOutputFilename();
 	WiggleIterator * wi = readIterator();
@@ -615,6 +623,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readShift();
 	if (strcmp(token, "unit") == 0)
 		return readUnit();
+	if (strcmp(token, "coverage") == 0)
+		return readCoverage();
 	if (strcmp(token, "print") == 0)
 		return readPrint();
 	if (strcmp(token, "sum") == 0)
