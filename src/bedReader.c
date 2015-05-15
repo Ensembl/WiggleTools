@@ -39,11 +39,17 @@ void BedReaderPop(WiggleIterator * wi) {
 			continue;
 
 		sscanf(line, "%s\t%i\t%i\t%*s\t%c", chrom, &start, &finish, &sign);
+		// Conversion from 0 to 1-based...
+		start++;
+		finish++;
 
 		if (strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
 			fprintf(stderr, "Bed file %s is not sorted!\nPosition %s:%i is before %s:%i\n", data->filename, chrom, start, wi->chrom, wi->start);
 			exit(1);
 		}
+
+		wi->start = start;
+		wi->finish = finish;
 
 		if (sign == '+')
 			wi->strand = 1;
@@ -52,9 +58,6 @@ void BedReaderPop(WiggleIterator * wi) {
 		else
 			wi->strand = 0;
 
-		// Conversion from 0 to 1-based...
-		wi->start = start + 1;
-		wi->finish = finish + 1;
 
 		// The reason for creating a new string instead of simply 
 		// overwriting is that other functions may still be pointin
