@@ -63,7 +63,7 @@ void BedReaderPop(WiggleIterator * wi) {
 		// overwriting is that other functions may still be pointin
 		// at the old label
 		if (wi->chrom[0] == '\0' || strcmp(wi->chrom, chrom)) {
-			wi->chrom = (char *) calloc(strlen(chrom), sizeof(char));
+			wi->chrom = (char *) calloc(strlen(chrom) + 1, sizeof(char));
 			strcpy(wi->chrom, chrom);
 		}
 
