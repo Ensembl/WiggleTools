@@ -316,6 +316,8 @@ void CoverageWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int sta
 	CoverageWiggleIteratorData * data = (CoverageWiggleIteratorData *) wi->data;
 	seek(data->iter, chrom, start, finish);
 	wi->value = 0;
+	fh_deleteheap(data->heap);
+	data->heap = fh_makeheap();
 	pop(wi);
 }
 
