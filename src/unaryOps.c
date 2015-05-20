@@ -471,6 +471,83 @@ WiggleIterator * NoverlapWiggleIterator(WiggleIterator * source, WiggleIterator 
 }
 
 //////////////////////////////////////////////////////
+// Nearest operator
+//////////////////////////////////////////////////////
+
+typedef struct nearestWiggleIteratorData_st {
+	WiggleIterator * source;
+	WiggleIterator * mask;
+	char * prev_chrom;
+	int prev_start;
+	int prev_finish;
+} NearestWiggleIteratorData;
+
+void NearestWiggleIteratorPop(WiggleIterator * wi) {
+	NearestWiggleIteratorData * data = (NearestWiggleIteratorData *) wi->data;
+	WiggleIterator * source = data->source;
+	WiggleIterator * mask = data->mask;
+
+	if (source->done) {
+		wi->done = true;
+		return;
+	}
+
+	while (!mask->done) {
+		int chrom_cmp = strcmp(mask->chrom, source->chrom);
+		if (chrom_cmp < 0)
+			pop(mask);
+		else if (chrom_cmp > 0)
+			break;
+		else if (mask->start <= source->start) {
+			data->prev_chrom = mask->chrom;
+			data->prev_start = mask->start;
+			data->prev_finish = mask->finish;
+			pop(mask);
+		} else
+			break;
+	} 
+	
+	wi->chrom = source->chrom;
+	wi->start = source->start;
+	wi->finish = source->finish;
+
+	bool set = false;
+	if (data->prev_chrom && strcmp(data->prev_chrom, source->chrom) == 0) {
+		wi->value = wi->start - data->prev_finish + 1;
+		set = true;
+	}	
+
+	if (!mask->done && strcmp(mask->chrom, source->chrom) == 0 && (!set || wi->value > mask->start - wi->finish + 1)) { 
+		wi->value = mask->start - wi->finish + 1;
+		set = true;
+	}
+
+	if (!set)
+		wi->value = NAN;
+	else if (wi->value < 0)
+		wi->value = 0;	
+
+	pop(source);
+}
+
+void NearestWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	NearestWiggleIteratorData * data = (NearestWiggleIteratorData *) wi->data;
+	data->prev_chrom = NULL;
+	seek(data->source, chrom, start, finish);
+	seek(data->mask, chrom, start, finish);
+	pop(wi);
+}
+
+WiggleIterator * NearestWiggleIterator(WiggleIterator * source, WiggleIterator * mask) {
+	NearestWiggleIteratorData * data = (NearestWiggleIteratorData *) calloc(1, sizeof(NearestWiggleIteratorData));
+	data->source = source;
+	data->mask = mask;
+	WiggleIterator * wi = newWiggleIterator(data, &NearestWiggleIteratorPop, &NearestWiggleIteratorSeek, source->default_value);
+	wi->overlaps = source->overlaps;
+	return wi;
+}
+
+//////////////////////////////////////////////////////
 // Scaling operator
 //////////////////////////////////////////////////////
 

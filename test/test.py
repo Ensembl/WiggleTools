@@ -80,6 +80,12 @@ assert test('../bin/wiggletools profile tmp/profile.txt 3 overlapping.bed fixedS
 # Test overlap
 assert test('../bin/wiggletools do isZero diff fixedStep.wig overlaps fixedStep.wig fixedStep.wig') == 0
 
+# Test nearest #1
+assert test('../bin/wiggletools write_bg tmp/nearest_overlapping.bg nearest variableStep.wig overlapping.bed') == 0
+
+# Test nearest #1
+assert test('../bin/wiggletools write_bg tmp/nearest_fixedStep.bg nearest variableStep.wig fixedStep.bw') == 0
+
 # Test min
 assert float(testOutput('../bin/wiggletools print - minI fixedStep.wig')) == 0
 
