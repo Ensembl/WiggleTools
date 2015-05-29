@@ -160,7 +160,7 @@ void killBufferedReader(BufferedReaderData * data) {
 void BufferedReaderPop(WiggleIterator * wi, BufferedReaderData * data) {
 	if (wi->done)
 		return;
-	else if (data->blockData == NULL) {
+	else if (data == NULL || data->blockData == NULL) {
 		wi->done = true;
 		return;
 	} else if (data->readIndex == data->blockData->count) {
