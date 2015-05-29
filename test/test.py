@@ -35,6 +35,9 @@ assert test('../bin/wiggletools do isZero diff bam.bam pileup.bg') == 0
 # Testing BAM & SAM 
 assert test('../bin/wiggletools do isZero diff bam.bam sam.sam') == 0
 
+# Testing BAM & SAM 
+assert test('cat sam.sam | ../bin/wiggletools do isZero diff bam.bam sam -') == 0
+
 # Testing Bed and BigBed
 assert test('../bin/wiggletools do isZero diff overlapping.bed overlapping.bb') == 0
 

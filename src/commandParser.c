@@ -508,6 +508,10 @@ static WiggleIterator * readUnit() {
 	return UnitWiggleIterator(readIterator());
 }
 
+static WiggleIterator * readSam() {
+	return SamReader(needNextToken());
+}
+
 static WiggleIterator * readCoverage() {
 	return CoverageWiggleIterator(readIterator());
 }
@@ -629,6 +633,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readShift();
 	if (strcmp(token, "unit") == 0)
 		return readUnit();
+	if (strcmp(token, "sam") == 0)
+		return readSam();
 	if (strcmp(token, "coverage") == 0)
 		return readCoverage();
 	if (strcmp(token, "print") == 0)

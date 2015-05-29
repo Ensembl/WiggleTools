@@ -182,6 +182,11 @@ void SamReaderPop(WiggleIterator * wi) {
 void SamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	SamReaderData * data = (SamReaderData*) wi->data;
 
+	if (data->file == stdin) {
+		fprintf(stderr, "Cannot do a seek on stdin stream!\n");
+		exit(1);
+	}
+
 	data->stop = finish;
 	data->chrom = chrom;
 
@@ -215,9 +220,12 @@ WiggleIterator * SamReader(char * filename) {
 	data->stop = -1;
 	data->starts = fh_makeheap();
 	data->ends = fh_makeheap();
-	if (!(data->file = fopen(filename, "r"))) {
-		fprintf(stderr, "Could not open sam file %s\n", filename);
-		exit(1);
-	}
+	if (strcmp(filename, "-")) {
+		if (!(data->file = fopen(filename, "r"))) {
+			fprintf(stderr, "Could not open input file %s\n", filename);
+			exit(1);
+		}
+	} else
+		data->file = stdin;
 	return newWiggleIterator(data, &SamReaderPop, &SamReaderSeek, 0);
 }
