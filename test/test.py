@@ -14,8 +14,9 @@ def testOutput(cmd):
 	out, err = p.communicate()
 	return out
 
-if not os.path.exists('tmp'):
-	os.mkdir('tmp')
+if os.path.exists('tmp'):
+	shutil.rmtree('tmp')
+os.mkdir('tmp')
 
 # Negative control
 assert test('../bin/wiggletools do isZero diff fixedStep.bw variableStep.wig') == 1
