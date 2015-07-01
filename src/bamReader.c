@@ -190,7 +190,7 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 	wi->done = false;
 	BamReaderPop(wi);
 
-	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || wi->finish <= start))
+	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(wi->chrom, chrom) == 0 && wi->finish <= start)))
 		BamReaderPop(wi);
 
 	data->chrom = chrom;
