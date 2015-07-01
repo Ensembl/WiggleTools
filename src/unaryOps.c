@@ -891,9 +891,28 @@ typedef struct SmoothWiggleIteratorData_st {
 	int count;
 	int width;
 } SmoothWiggleIteratorData;
+
+static double smoothWiggleIteratorRecomputeSum(SmoothWiggleIteratorData * data) {
+       double sum = 0;
+       int index;
+       if (data->last < data->first)   
+               for (index = data->last + 1; index < data->first; index++)
+                       sum += data->buffer[index];
+       else {
+               for (index = data->last + 1; index < data->width; index++)
+                       sum += data->buffer[index];
+               for (index = 0; index < data->first; index++)
+                       sum += data->buffer[index];
+       }
+
+       return sum;
+}
    
 static void smoothWiggleIteratorEraseOne(SmoothWiggleIteratorData * data) {
-	data->sum -= data->buffer[data->last];
+       if (isnan(data->buffer[data->last]))
+               data->sum = smoothWiggleIteratorRecomputeSum(data);
+       else
+               data->sum -= data->buffer[data->last];
 	data->count--;
 	if (++data->last >= data->width)
 		data->last = 0;
