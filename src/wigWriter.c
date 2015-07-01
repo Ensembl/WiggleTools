@@ -262,7 +262,8 @@ WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedG
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
 	data->iter = CompressionWiggleIterator(i);
 	data->outfile = outfile;
-	data->bedGraph = bedGraph;
+	if (bedGraph || i->overlaps)
+		data->bedGraph = true;
 	// Hold fire means that you wait for the first seek before doing any writing
 	if (!holdFire)
 		launchWriter(data);
