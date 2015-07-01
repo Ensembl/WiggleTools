@@ -28,7 +28,7 @@ void BedReaderPop(WiggleIterator * wi) {
 	BedReaderData * data = (BedReaderData *) wi->data;
 	char line[5000];
 	char chrom[1000];
-	char sign;
+	char sign = '.';
 	int start, finish;
 
 	if (wi->done)
@@ -38,7 +38,7 @@ void BedReaderPop(WiggleIterator * wi) {
 		if (line[0] == '#' || line[0] == EOF)
 			continue;
 
-		sscanf(line, "%s\t%i\t%i\t%*s\t%c", chrom, &start, &finish, &sign);
+		sscanf(line, "%s\t%i\t%i", chrom, &start, &finish);
 		// Conversion from 0 to 1-based...
 		start++;
 		finish++;
