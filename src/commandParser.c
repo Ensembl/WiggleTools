@@ -49,7 +49,7 @@ puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator)");
 puts("\tstatistic_function = AUC | meanI | varI | minI | maxI | stddevI | CVI | pearson (iterator)");
-puts("\tbinary_operator = diff | ratio | overlaps | noverlaps | nearest | apply (statistic) | fillIn");
+puts("\tbinary_operator = diff | ratio | overlaps | trim | noverlaps | nearest | apply (statistic) | fillIn");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
 puts("\tsetComparison = ttest | ftest | wilcoxon");
 puts("\tmultiplex_list = (multiplex) | (multiplex) : (multiplex_list)");
@@ -395,6 +395,12 @@ static WiggleIterator * readOverlap() {
 	return OverlapWiggleIterator(source, mask);
 }
 
+static WiggleIterator * readTrim() {
+	WiggleIterator * mask = readIterator();
+	WiggleIterator * source = readIterator();
+	return TrimWiggleIterator(source, mask);
+}
+
 static WiggleIterator * readNoverlap() {
 	WiggleIterator * mask = readIterator();
 	WiggleIterator * source = readIterator();
@@ -691,6 +697,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readDefault();
 	if (strcmp(token, "overlaps") == 0)
 		return readOverlap();
+	if (strcmp(token, "trim") == 0)
+		return readTrim();
 	if (strcmp(token, "noverlaps") == 0)
 		return readNoverlap();
 	if (strcmp(token, "nearest") == 0)

@@ -316,6 +316,14 @@ Returns the output of the second iterator that overlaps regions of the first.
 wiggletools overlaps test/fixedStep.bw test/variableStep.bw 
 ```
 
+* trim
+
+Same as above but trims the regions to the overlapping portions:
+
+```
+wiggletools trim test/fixedStep.bw test/variableStep.bw 
+```
+
 * nearest
 
 Returns the regions of the second iterator and their distance to the nearest region in the first iterator.

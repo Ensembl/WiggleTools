@@ -98,7 +98,11 @@ assert float(testOutput('../bin/wiggletools print - maxI fixedStep.wig')) == 9
 # Test coverage 
 assert test('../bin/wiggletools do isZero diff overlapping_coverage.wig coverage overlapping.bed') == 0
 
+#Test trim
+assert test('../bin/wiggletools do isZero diff trim overlapping.bed variableStep.wig mult overlapping.bed variableStep.wig') == 0
+
 assert test('diff tmp expected') == 0
+
 shutil.rmtree('tmp')
 
 print 'All tests OK'
