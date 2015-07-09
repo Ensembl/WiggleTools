@@ -175,8 +175,8 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 	BamReaderData * data = (BamReaderData *) wi->data;
 	char region[1000];
 
-	killBufferedReader(wi->data);
 	if (data->bufferedReaderData) {
+		killBufferedReader(data->bufferedReaderData);
 		free(data->bufferedReaderData);
 		data->bufferedReaderData = NULL;
 	}
