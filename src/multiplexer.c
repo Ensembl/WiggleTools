@@ -30,8 +30,8 @@ void runMultiplexer(Multiplexer * multi) {
 }
 
 void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int finish) {
-	if (!multi->done)
-		multi->seek(multi, chrom, start, finish);
+	multi->done = false;
+	multi->seek(multi, chrom, start, finish);
 }
 
 static void chooseCoords(Multiplexer * multi) {
