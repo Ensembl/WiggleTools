@@ -31,7 +31,7 @@ puts("");
 puts("This library parses wiggle files and executes various operations on them streaming through lazy evaluators.");
 puts("");
 puts("Inputs:");
-puts("\tThe program takes in Wig, BigWig, BedGraph, Bed, BigBed, Bam, VCF, and BCF files, which are distinguished thanks to their suffix (.wig, .bw, .bg, .bed, .bb, .bam, .vcf, .bcf respectively).");
+puts("\tThe program takes in Wig, BigWig, BedGraph, Bed, BigBed, Bam, VCF, and BCF files, which are distinguished thanks to their suffix (.wig, (.bw|.bigWig|.bigwig), .bg, .bed, .bb, .bam, .vcf, .bcf respectively).");
 puts("\tNote that wiggletools assumes that every bam file has an index .bai file next to it.");
 puts("");
 puts("Outputs:");
