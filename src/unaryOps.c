@@ -1021,6 +1021,10 @@ WiggleIterator * SmartReader(char * filename, bool holdFire) {
 	size_t length = strlen(filename);
 	if (!strcmp(filename + length - 3, ".bw"))
 		return BigWiggleReader(filename, holdFire);
+	else if (!strcmp(filename + length - 7, ".bigWig"))
+		return BigWiggleReader(filename, holdFire);
+	else if (!strcmp(filename + length - 7, ".bigwig"))
+		return BigWiggleReader(filename, holdFire);
 	else if (!strcmp(filename + length - 3, ".bg"))
 		return WiggleReader(filename);
 	else if (!strcmp(filename + length - 4, ".wig"))
