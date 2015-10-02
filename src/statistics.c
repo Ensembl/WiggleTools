@@ -19,6 +19,7 @@
 // Local header
 #include "wiggleIterator.h"
 #include "multiplexer.h"
+#include "multiSet.h"
 
 //////////////////////////////////////////////////////
 // Generic function for all statistics
@@ -417,6 +418,104 @@ WiggleIterator * PearsonIntegrator(WiggleIterator * iterA, WiggleIterator * iter
 	data->meanB = iterB->value;
 	data->res = NAN;
 	return newStatisticIterator(data, PearsonPop, PearsonSeek, iterB->default_value, iterB);
+}
+
+////////////////////////////////////////////////////////
+// N-dimensional Pearson 
+////////////////////////////////////////////////////////
+
+typedef struct ndpearsonData_st {
+	double res;
+	WiggleIterator * source;
+	Multiset * multi;
+	int rank;
+	int totalLength;
+	double sum_sq_A;
+	double sum_sq_B;
+	double sum_AB;
+	double * meanA;
+	double * meanB;
+} NDPearsonData;
+
+void NDPearsonSeek(WiggleIterator * iter, const char * chrom, int start, int finish) {
+	NDPearsonData * data = (NDPearsonData* ) iter->data;
+	seekMultiset(data->multi, chrom, start, finish);
+	pop(iter);
+}
+
+void NDPearsonPop(WiggleIterator * wi) {
+	if (wi->done)
+		return;
+
+	NDPearsonData * data = (NDPearsonData *) wi->data;
+	Multiset * multi = data->multi;
+
+	if (multi->done) {
+		wi->done = true;
+		data->res = data->sum_AB / (sqrt(data->sum_sq_A) * sqrt(data->sum_sq_B));
+		return;
+	}
+
+	wi->chrom = multi->chrom;
+	wi->start = multi->start;
+	wi->finish = multi->finish;
+
+	int dim, halfway, width;
+	double sweep;
+
+	width = (multi->finish - multi->start);
+	halfway = data->totalLength + width/2;
+	if (halfway == 0)
+		halfway = 1;
+	sweep = (halfway - 1.0) / halfway;
+	data->totalLength += width;
+	for (dim = 0; dim < data->rank; dim++) {
+		double deltaA, deltaB;
+
+		if (multi->inplay[0])
+			deltaA = multi->values[0][dim] - data->meanA[dim];
+		else
+			deltaA = multi->multis[0]->iters[dim]->default_value - data->meanA[dim];
+		if (multi->inplay[1])
+			deltaB = multi->values[1][dim] - data->meanB[dim];
+		else
+			deltaB = multi->multis[1]->iters[dim]->default_value - data->meanB[dim];
+
+		data->meanA[dim] += deltaA / halfway;
+		data->meanB[dim] += deltaB / halfway;
+
+		data->sum_sq_A += deltaA * deltaA * sweep;
+		data->sum_sq_B += deltaB * deltaB * sweep;
+
+		data->sum_AB += deltaA * deltaB * sweep;
+	}
+
+	// Update inputs
+	popMultiset(multi);
+}
+
+WiggleIterator * NDPearsonIntegrator(Multiset * multi) {
+	if (multi->count != 2 || multi->multis[0]->count != multi->multis[1]->count) {
+		printf("Incorrect number of input tracks to N-dimensional Pearson correlation!\n");
+		exit(1);
+	}
+	NDPearsonData * data = (NDPearsonData *) calloc(1, sizeof(NDPearsonData));
+	data->multi = multi;
+	data->rank = multi->count;
+	data->totalLength = 0;
+	data->sum_sq_A = 0;
+	data->sum_sq_B = 0;
+	data->sum_AB = 0;
+	data->meanA = calloc(data->rank, sizeof(double));
+	data->meanB = calloc(data->rank, sizeof(double));
+	int dim;
+	double def;
+	for (dim = 0; dim < data->rank; dim++) {
+		data->meanA[dim] = multi->values[0][dim];
+		data->meanB[dim] = multi->values[1][dim];
+	}
+	data->res = NAN;
+	return newStatisticIterator(data, NDPearsonPop, NDPearsonSeek, 0, multi->multis[0]->iters[0]);
 }
 
 //////////////////////////////////////////////////////

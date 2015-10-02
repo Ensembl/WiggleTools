@@ -47,7 +47,7 @@ puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operato
 puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | (statistic)");
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
-puts("\tstatistic = (statistic_function) (iterator)");
+puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
 puts("\tstatistic_function = AUC | meanI | varI | minI | maxI | stddevI | CVI | pearson (iterator)");
 puts("\tbinary_operator = diff | ratio | overlaps | trim | noverlaps | nearest | apply (statistic) | fillIn");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
@@ -622,6 +622,13 @@ static WiggleIterator * readPearson() {
 	return PearsonIntegrator(iter1, iter2);
 }
 
+static WiggleIterator * readNDPearson() {
+	Multiplexer ** multis = calloc(2, sizeof(Multiplexer *));
+	multis[0] = readMultiplexer();
+	multis[1] = readMultiplexer();
+	return NDPearsonIntegrator(newMultiset(multis, 2));
+}
+
 static WiggleIterator * readAUC() {
 	return AUCIntegrator(readLastIterator());
 }
@@ -725,6 +732,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readCoefficientOfVariationIntegrator();
 	if (strcmp(token, "pearson") == 0) 
 		return readPearson();
+	if (strcmp(token, "ndpearson") == 0) 
+		return readNDPearson();
 	if (strcmp(token, "isZero") == 0) 
 		return readIsZero();
 	if (strcmp(token, "apply") == 0) 
@@ -829,7 +838,7 @@ void rollYourOwn(int argc, char ** argv) {
 		readProfiles();
 	else if (strcmp(token, "print") == 0)
 		runWiggleIterator(readLastIteratorToken(token));
-	else if (strcmp(token, "AUC") == 0 || strcmp(token, "meanI") == 0 || strcmp(token, "varI") == 0 || strcmp(token, "stddevI") == 0 || strcmp(token, "CVI") == 0 || strcmp(token, "maxI") == 0 || strcmp(token, "minI") == 0 || strcmp(token, "pearson") == 0)
+	else if (strcmp(token, "AUC") == 0 || strcmp(token, "meanI") == 0 || strcmp(token, "varI") == 0 || strcmp(token, "stddevI") == 0 || strcmp(token, "CVI") == 0 || strcmp(token, "maxI") == 0 || strcmp(token, "minI") == 0 || strcmp(token, "pearson") == 0 || strcmp(token, "ndpearson") == 0)
 		runWiggleIterator(PrintStatisticsWiggleIterator(readLastIteratorToken(token), stdout));
 	else if (strcmp(token, "seek") == 0)
 		toStdout(readSeek(), false, false);
