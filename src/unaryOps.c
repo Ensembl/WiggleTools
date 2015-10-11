@@ -886,8 +886,9 @@ typedef struct SmoothWiggleIteratorData_st {
 	WiggleIterator * iter;
 	double * buffer;
 	double sum;
-	int first;
-	int last;
+	int latest;
+	int oldest;
+	int last_position;
 	int count;
 	int width;
 } SmoothWiggleIteratorData;
@@ -895,13 +896,13 @@ typedef struct SmoothWiggleIteratorData_st {
 static double smoothWiggleIteratorRecomputeSum(SmoothWiggleIteratorData * data) {
        double sum = 0;
        int index;
-       if (data->last < data->first)   
-               for (index = data->last + 1; index < data->first; index++)
+       if (data->oldest < data->latest)   
+               for (index = data->oldest + 1; index < data->latest; index++)
                        sum += data->buffer[index];
        else {
-               for (index = data->last + 1; index < data->width; index++)
+               for (index = data->oldest + 1; index < data->width; index++)
                        sum += data->buffer[index];
-               for (index = 0; index < data->first; index++)
+               for (index = 0; index < data->latest; index++)
                        sum += data->buffer[index];
        }
 
@@ -909,13 +910,13 @@ static double smoothWiggleIteratorRecomputeSum(SmoothWiggleIteratorData * data) 
 }
    
 static void smoothWiggleIteratorEraseOne(SmoothWiggleIteratorData * data) {
-       if (isnan(data->buffer[data->last]))
+	if (isnan(data->buffer[data->oldest]))
                data->sum = smoothWiggleIteratorRecomputeSum(data);
-       else
-               data->sum -= data->buffer[data->last];
+	else
+               data->sum -= data->buffer[data->oldest];
 	data->count--;
-	if (++data->last >= data->width)
-		data->last = 0;
+	if (++data->oldest >= data->width)
+		data->oldest = 0;
 }
 
 static void smoothWiggleIteratorReadOne(char * chrom, int position, SmoothWiggleIteratorData * data) {
@@ -925,70 +926,56 @@ static void smoothWiggleIteratorReadOne(char * chrom, int position, SmoothWiggle
 	while (!iter->done && iter->chrom == chrom && iter->finish <= position)
 		pop(iter);
 	
+	// Record iter's value as appropriate
 	if (!iter->done && iter->chrom == chrom) {
-		// Clear space if necessary
-		if (data->count == data->width) 
-			smoothWiggleIteratorEraseOne(data);
-
-		// Record iter's value as appropriate
-		if (!iter->done && iter->chrom == chrom && iter->start <= position) {
-			data->buffer[data->first] = iter->value;
+		if (iter->start <= position) {
+			data->buffer[data->latest] = iter->value;
 			data->sum += iter->value;
 		} else 
-			data->buffer[data->first] = 0;
+			data->buffer[data->latest] = 0;
 		data->count++;
+		data->last_position = position;
 
 		// Increment ptr
-		if (++data->first >= data->width)
-			data->first = 0;
-
-		if (iter->finish == position + 1)
-			pop(iter);
-	} else 
-		smoothWiggleIteratorEraseOne(data);
+		if (++data->latest >= data->width)
+			data->latest = 0;
+	}
 }
 
 static void SmoothWiggleIteratorPop(WiggleIterator * wi) {
 	SmoothWiggleIteratorData * data = (SmoothWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
-	int i;
+
+	if (iter->done && data->count == 0) {
+		// Source is empty, buffer ran out, going home
+		wi->done = true;
+		return;
+	}
 
 	if (data->count == 0) {
+		// Smoothing window came to an end
+		// Jump to new location
 		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = wi->start + 1;
-		for (i = 0; i < data->width / 2 + 1; i++)
-			smoothWiggleIteratorReadOne(wi->chrom, wi->start + i, data);
-		wi->value = data->sum / data->count;
-	} else if (data->count == data->width/2 + 1) {
-		if (iter->done) {
-			wi->done = true;
-			return;
-		} else if (iter->chrom != wi->chrom) {
-			wi->chrom = iter->chrom;
-			wi->start = iter->start;
-			wi->finish = wi->start + 1;
-			for (i = 0; i < data->width / 2 + 1; i++)
+		wi->start = iter->start - data->width/2;
+
+		if (wi->start < 1) {
+			// If start is too close to the start, then we start at zero and prefill the buffer
+			wi->start = 1;
+			int i;
+			for (i = 0; i < data->width/2; i++)
 				smoothWiggleIteratorReadOne(wi->chrom, wi->start + i, data);
-			wi->value = data->sum / data->count;
-		} else {
-			wi->start++;
-			wi->finish = wi->start + 1;
-			if (!iter->done && iter->chrom == wi->chrom)
-				smoothWiggleIteratorReadOne(wi->chrom, wi->start + data->width/2, data);
-			else
-				smoothWiggleIteratorEraseOne(data);
-			wi->value = data->sum / data->count;
 		}
-	} else {
+	} else
 		wi->start++;
-		wi->finish = wi->start + 1;
-		if (!iter->done && iter->chrom == wi->chrom)
-			smoothWiggleIteratorReadOne(wi->chrom, wi->start + data->width/2, data);
-		else
-			smoothWiggleIteratorEraseOne(data);
-		wi->value = data->sum / data->count;
-	}
+
+	// Step by one
+	wi->finish = wi->start + 1;
+	smoothWiggleIteratorReadOne(wi->chrom, wi->start + data->width/2, data);
+	wi->value = data->sum / data->width;
+
+	// Discard unecessary value from buffer
+	if (data->count == data->width || data->last_position < wi->start + data->width/2)
+		smoothWiggleIteratorEraseOne(data);
 }
 
 void SmoothWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
@@ -997,8 +984,8 @@ void SmoothWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start
 	int i;
 	for (i = 0; i < data->width; i++)
 		data->buffer[i] = 0;
-	data->first = 0;
-	data->last = 0;
+	data->latest = 0;
+	data->oldest = 0;
 	data->sum = 0;
 	data->count = 0;
 	wi->done = false;
@@ -1007,6 +994,10 @@ void SmoothWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start
 
 WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int width) {
 	SmoothWiggleIteratorData * data = (SmoothWiggleIteratorData *) calloc(1, sizeof(SmoothWiggleIteratorData));
+	if (width < 2) {
+		fprintf(stderr, "Cannot smooth over a window of width %i, must be 2 or more\n", width);
+		exit(1);
+	}
 	data->iter = NonOverlappingWiggleIterator(i);
 	data->buffer = (double*) calloc(sizeof(double), width);
 	data->width = width;
