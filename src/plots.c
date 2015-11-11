@@ -181,7 +181,10 @@ Histogram * histogram(WiggleIterator ** wigs, int count, int width) {
 			hist->values[0][0] = wig->finish - wig->start;
 			pop(wig);
 		}
+	}
 
+	for (row = 0; row < count; row++) {
+		WiggleIterator * wig = wigs[row];
 		for (; !wig->done; pop(wig))
 			if (!isnan(wig->value))
 				updateHistogram(hist, wig, row);
