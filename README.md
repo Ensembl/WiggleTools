@@ -518,10 +518,10 @@ Sometimes, you just want a statistic across the genome. The following functions 
 
 * AUC
 
-Computes the area under the curve (AUC) of the an iterator:
+Computes the area under the curve (AUC) of an iterator:
 
 ```
-wiggletools AUC test/fixedStep.bw test/variableStep.bw 
+wiggletools AUC test/fixedStep.bw
 ```
 
 * meanI
