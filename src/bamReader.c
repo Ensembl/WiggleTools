@@ -182,8 +182,6 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 	}
 
 	sprintf(region, "%s:%i-%i", chrom, start, finish);
-	if (data->conf->reg)
-		free(data->conf->reg);
 	data->conf->reg = region;
 	seekRegion(data);
 	launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));
