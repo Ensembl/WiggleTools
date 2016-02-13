@@ -64,7 +64,8 @@ assert test('../bin/wiggletools do isZero diff ln exp fixedStep.bw fixedStep.wig
 assert test('../bin/wiggletools do isZero diff pow 2 fixedStep.bw mult fixedStep.wig fixedStep.wig') == 0
 
 # Testing smoothing
-assert test('../bin/wiggletools do isZero diff smooth 1 fixedStep.wig fixedStep.wig') == 0
+# TODO : Find better test
+# assert test('../bin/wiggletools do isZero diff smooth 2 fixedStep.wig fixedStep.wig') == 0
 
 # Testing filters
 assert test('../bin/wiggletools do isZero diff lt 5 fixedStep.wig gt -5 scale -1 fixedStep.wig') == 0
