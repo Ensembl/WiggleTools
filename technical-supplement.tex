@@ -1,0 +1,75 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+
+\begin{document}
+
+\title{WiggleTools - technical supplement}
+\author{Daniel Zerbino}
+\maketitle
+
+\section{Online covariance calculation}
+
+The following is a minor adaptation of a formula presented by David Will\'e, who came up with the idea. 
+
+The covariance between two series $X = \{x_n\}_{n=1..N}$ and $Y = \{y_n\}_{n=1..N}$ is defined as: 
+\begin{align}
+cov(X,Y) &= E[(X-E[X])(Y-E[y])] \\
+               &= E[XY] - E[X]E[Y]
+\end{align}
+
+When handling very large datasets, WiggleTools processes the data as soon as it is read then discards it, thus obviating the need for large memory machines. Equation (1) is a problem, because you can only know $E[X]$ and $E[Y]$ after going through the entire dataset, so all the data would have to be stored in memory to compute the overall expectation.
+
+Equation (2) can be computed online. However, computing the sum of $(x_ny_n)_{n=1..N}$, then dividing by $N$ at the end of the run produces a very large number, which is prone to overflow the precision of the CPU given enough datapoints. 
+
+However, if we define $R_n = \sum_{i=1}^n x_iy_i$, $S_n^x =  \sum_{i=1}^n x_i$ and $S_n^y =  \sum_{i=1}^n y_i$, then we re-write equation (2):
+
+$$cov(X,Y) = \frac{R_N-S_N^xS_N^y / N}{N}$$
+
+We can therefore compute the covariance online, using the series $\{T^{xy}_n\}_{n=1..N} = \{R_n-S_n^xS_n^y / n\}_{i=1..N}$ 
+
+$$cov(X,Y) = \frac{T^{xy}_N}{N}$$
+
+Because it is a difference, $T^{xy}_n$ is less likely to overflow CPU precision than an online calculation of $R_n$.
+
+We assume that we computed $T^{xy}_n$. Because of the nature of the data processed by WiggleTools, it is common to encounter series of points with identical values. We therefore assume that there exists $k \ge 1$ such that $(x_{n+1}=...=x_{n+k})$ and $(y_{n+1}=...=y_{n+k})$. This gives us:
+
+\begin{align*}
+T^{xy}_{n+k} &= R_{n+k} - \frac{S_{n+k}^xS_{n+k}^y}{n+k} \\
+&= (R_n + kx_{n+1}y_{n+1}) - \frac{(S_n^x + kx_{n+1})(S_n^y+ky_{n+1})}{n+k} \\
+&= R_n + kx_{n+1}y_{n+1} - \frac{S_n^xS_n^y + S_n^ykx_{n+1} + S_n^xky_{n+1} + k^2x_{n+1}y_{n+1}}{n+k} \\
+&= R_n - \frac{S_n^xS_n^y}{n+k} + \left(1 - \frac{k}{n+k}\right)kx_{n+1}y_{n+1} - \frac{S_n^ykx_{n+1} + S_n^xky_{n+1}}{n+k}\\
+&= R_n - S_n^xS_n^y\left(\frac{1}{n}-\frac{k}{n(n+k)}\right) +\frac{n}{n+k}kx_{n+1}y_{n+1} - \frac{S_n^ykx_{n+1} + S_n^xky_{n+1}}{n+k}\\
+&= \left(R_n - S_n^xS_n^y/n\right) + \frac{k}{n(n+k)}S_n^xS_n^y +\frac{nk}{n+k}x_{n+1}y_{n+1} - \frac{k}{n+k}S_n^yx_{n+1} + S_n^xy_{n+1}\\
+&= T^{xy}_n + \frac{k}{n+k}\left(\frac{S_n^xS_n^y}{n} +nx_{n+1}y_{n+1} - S_n^yx_{n+1} - S_n^xy_{n+1}\right)\\
+\end{align*}
+
+It is thus possible to compute $cov(X,Y)$ online, keeping only $S_n^x$, $S_n^y$, $T^{xy}_n$ and $n$ in memory. Note that if $n \gg k$, $S_n^x \gg x$ and $S_n^y \gg y$ we obtain:
+
+$$T^{xy}_{n+k} - T^{xy}_n \approx \bar{x}\bar{y} +x_{n+1}y_{n+1} - \bar{y}x_{n+1} - \bar{x}y_{n+1} $$
+$$T^{xy}_{n+k} - T^{xy}_n \approx (x_{n+1} - \bar{x})(y_{n+1} - \bar{y}) $$
+This implies that although $T^{xy}_{n}$ grows in $\mathcal{O}(n)$, the increments are commensurate to the product of the standard deviations of $X$ and $Y$.
+
+\section{Online variance computation}
+
+The above formulas can easily be adjusted to computing variance of a series $X = \{x_n\}_{n=1..N}$, since: 
+$$\sigma^2(X)=cov(X,X)=\frac{T^{xx}_N}{N}$$
+
+Where: 
+$$T^{xx}_0 = 0$$
+and:
+$$T^{xx}_{n+k} = T^{xx}_n + \frac{k}{n+k}\left(\frac{\left(S_n^x\right)^2}{n} +nx_{n+1}^2 - 2S_n^xx_{n+1}\right)$$
+
+It is thus possible to compute $\sigma^2(X)$ online, keeping only $S_n^x$, $T^{xx}_n$ and $n$ in memory.
+
+\section{Online Pearson correlation computation}
+
+We apply the same idea to the Pearson correlation: 
+
+\begin{align*}
+\rho &= \frac{cov(X,Y)}{\sqrt{\sigma^2(X)\sigma^2(Y)}} \\
+\rho &= \frac{\frac{T^{xy}_N}{N}}{\sqrt{\frac{T^{xx}_N}{N}\frac{T^{yy}_N}{N}}} \\
+\rho &= \frac{T^{xy}_N}{\sqrt{T^{xx}_NT^{yy}_N}}
+\end{align*}
+
+
+\end{document}
