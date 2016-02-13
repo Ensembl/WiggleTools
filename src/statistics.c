@@ -216,17 +216,15 @@ WiggleIterator * MinIntegrator(WiggleIterator * wi) {
 
 //////////////////////////////////////////////////////
 // Variance
-// Online algorithm copied from 
-// http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Two-pass_algorithm
+// See Technical supplement for explanations
 //////////////////////////////////////////////////////
 
 typedef struct varianceData {
 	double res;
 	WiggleIterator * source;
-	double sumWeight;
-	double mean;
-	double M2;
-	double count;
+	double T;
+	double sum;
+	long count;
 } VarianceData;
 
 static void VarianceCorePop(WiggleIterator * wi, VarianceData * data) {
@@ -237,15 +235,16 @@ static void VarianceCorePop(WiggleIterator * wi, VarianceData * data) {
 
 	if (isnan(wi->value))
 		return;
-	
-	double weight = wi->finish - wi->start;
-	double temp = data->sumWeight + weight;
-	double delta = wi->value - data->mean;
-	double R = delta * weight / temp;
-	data->mean += R;
-	data->M2 += data->sumWeight * delta * R;
-	data->sumWeight = temp;
-	data->count++;
+
+	int length = wi->finish - wi->start;
+	if (data->count) {
+		double old_mean = data->sum / data->count;
+		double new_mean = data->sum / (data->count * length);
+		double delta_T = old_mean * new_mean - new_mean * 2 * wi->value + ((double) data->count / (data->count + length)) * wi->value * wi->value;
+		data->T += delta_T * length;
+	}
+	data->count += length;
+	data->sum += length * wi->value;
 	
 	pop(data->source);
 }
@@ -255,7 +254,7 @@ static void VariancePop(WiggleIterator * wi) {
 
 	if (data->source->done) {
 		wi->done = true;
-		data->res = (data->M2 * data->count) / (data->sumWeight * (data->count - 1));
+		data->res = data->T / (data->count - 1);
 		return;
 	}
 
@@ -272,10 +271,6 @@ WiggleIterator * VarianceIntegrator(WiggleIterator * wi) {
 	VarianceData * data = (VarianceData *) calloc(1, sizeof(VarianceData));
 	data->source = NonOverlappingWiggleIterator(wi);
 	data->res = NAN;
-	data->sumWeight = 0;
-	data->mean = 0;
-	data->M2 = 0;
-	data->count = 0;
 	return newStatisticIterator(data, VariancePop, VarianceSeek, wi->default_value, wi);
 }
 
@@ -288,7 +283,7 @@ static void StandardDeviationPop(WiggleIterator * wi) {
 
 	if (data->source->done) {
 		wi->done = true;
-		data->res = (data->M2 * data->count) / (data->sumWeight * (data->count - 1));
+		data->res = data->T / (data->count - 1);
 		data->res = sqrt(data->res);
 		return;
 	}
@@ -300,10 +295,6 @@ WiggleIterator * StandardDeviationIntegrator(WiggleIterator * wi) {
 	VarianceData * data = (VarianceData *) calloc(1, sizeof(VarianceData));
 	data->source = NonOverlappingWiggleIterator(wi);
 	data->res = NAN;
-	data->sumWeight = 0;
-	data->mean = 0;
-	data->M2 = 0;
-	data->count = 0;
 	return newStatisticIterator(data, StandardDeviationPop, VarianceSeek, wi->default_value, wi);
 }
 
@@ -316,9 +307,9 @@ static void CoefficientOfVariationPop(WiggleIterator * wi) {
 
 	if (data->source->done) {
 		wi->done = true;
-		data->res = (data->M2 * data->count) / (data->sumWeight * (data->count - 1));
+		data->res = data->T / (data->count - 1);
 		data->res = sqrt(data->res);
-		data->res /= data->mean;
+		data->res /= (data->sum / data->count);
 		return;
 	}
 
@@ -329,30 +320,22 @@ WiggleIterator * CoefficientOfVariationIntegrator(WiggleIterator * wi) {
 	VarianceData * data = (VarianceData *) calloc(1, sizeof(VarianceData));
 	data->source = NonOverlappingWiggleIterator(wi);
 	data->res = NAN;
-	data->sumWeight = 0;
-	data->mean = 0;
-	data->M2 = 0;
-	data->count = 0;
 	return newStatisticIterator(data, CoefficientOfVariationPop, VarianceSeek, wi->default_value, wi);
 }
 
 //////////////////////////////////////////////////////
 // Pearson Correlation
 //////////////////////////////////////////////////////
-// Note: this is an approximate calculation of the Pearson calculation
-// which has the benefit of running in a single pass through the data
-// The origin of the code can be found at:
-// http://en.wikipedia.org/wiki?title=Talk:Correlation
 
 typedef struct pearsonData {
 	double res;
 	Multiplexer * multi;
-	int totalLength;
-	double sum_sq_A;
-	double sum_sq_B;
-	double sum_AB;
-	double meanA;
-	double meanB;
+	int count;
+	double sum_X;
+	double sum_Y;
+	double T_XX;
+	double T_XY;
+	double T_YY;
 } PearsonData;
 
 static void PearsonSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
@@ -367,7 +350,8 @@ static void PearsonPop(WiggleIterator * wi) {
 
 	if (multi->done) {
 		wi->done = true;
-		data->res = data->sum_AB / (sqrt(data->sum_sq_A) * sqrt(data->sum_sq_B));
+		if (data->T_XX * data->T_YY)
+			data->res = data->T_XY / sqrt(data->T_XX * data->T_YY);
 		return;
 	}
 
@@ -376,48 +360,44 @@ static void PearsonPop(WiggleIterator * wi) {
 	wi->finish = multi->finish;
 	wi->value = multi->values[1];
 
-	if (isnan(multi->values[0]) || isnan(multi->values[1]))
-		return;
+	double X, Y;
 
-	int halfway, width;
-	double sweep, deltaA, deltaB;
-
-	width = (multi->finish - multi->start);
-	halfway = data->totalLength + width/2;
-	if (halfway == 0)
-		halfway = 1;
-	sweep = (halfway - 1.0) / halfway;
-	data->totalLength += width;
 	if (multi->inplay[0])
-		deltaA = multi->values[0] - data->meanA;
+		X = multi->values[0];
 	else
-		deltaA = multi->iters[0]->default_value - data->meanA;
+		X = multi->iters[0]->default_value;
+
 	if (multi->inplay[1])
-		deltaB = multi->values[1] - data->meanB;
+		Y = multi->values[1];
 	else
-		deltaB = multi->iters[1]->default_value - data->meanB;
-	data->sum_sq_A += deltaA * deltaA * sweep;
-	data->sum_sq_B += deltaB * deltaB * sweep;
-	data->sum_AB += deltaA * deltaB * sweep;
-	data->meanA += deltaA / halfway;
-	data->meanB += deltaB / halfway;
+		Y = multi->iters[1]->default_value;
+
+	int length = (multi->finish - multi->start);
+	if (data->count) {
+		double old_mean_X = data->sum_X / data->count;
+		double new_mean_X = data->sum_X / (data->count + length);
+		double old_mean_Y = data->sum_Y / data->count;
+		double new_mean_Y = data->sum_Y / (data->count + length);
+		double scaling_ratio = (double) data->count / (data->count + length);
+
+		data->T_XY += (new_mean_X * old_mean_Y + scaling_ratio * X * Y - new_mean_X * Y - new_mean_Y * X) * length;
+		data->T_XX += (new_mean_X * (old_mean_X - 2 * X) + scaling_ratio * X * X) * length;
+		data->T_YY += (new_mean_Y * (old_mean_Y - 2 * Y) + scaling_ratio * Y * Y) * length;
+	}
+	data->count += length;
+	data->sum_X += X * length;
+	data->sum_Y += Y * length;
 	popMultiplexer(multi);
 }
 
-WiggleIterator * PearsonIntegrator(WiggleIterator * iterA, WiggleIterator * iterB) {
+WiggleIterator * PearsonIntegrator(WiggleIterator * iterX, WiggleIterator * iterY) {
 	PearsonData * data = (PearsonData *) calloc(1, sizeof(PearsonData));
 	WiggleIterator * iters[2];
-	iters[0] = NonOverlappingWiggleIterator(iterA);
-	iters[1] = NonOverlappingWiggleIterator(iterB);
+	iters[0] = NonOverlappingWiggleIterator(iterX);
+	iters[1] = NonOverlappingWiggleIterator(iterY);
 	data->multi = newMultiplexer(iters, 2, false);
-	data->totalLength = 0;
-	data->sum_sq_A = 0;
-	data->sum_sq_B = 0;
-	data->sum_AB = 0;
-	data->meanA = iterA->value;
-	data->meanB = iterB->value;
 	data->res = NAN;
-	return newStatisticIterator(data, PearsonPop, PearsonSeek, iterB->default_value, iterB);
+	return newStatisticIterator(data, PearsonPop, PearsonSeek, iterY->default_value, iterY);
 }
 
 ////////////////////////////////////////////////////////
@@ -429,12 +409,12 @@ typedef struct ndpearsonData_st {
 	WiggleIterator * source;
 	Multiset * multi;
 	int rank;
-	int totalLength;
-	double sum_sq_A;
-	double sum_sq_B;
-	double sum_AB;
-	double * meanA;
-	double * meanB;
+	int count;
+	double * sum_X;
+	double * sum_Y;
+	double T_XX;
+	double T_XY;
+	double T_YY;
 } NDPearsonData;
 
 void NDPearsonSeek(WiggleIterator * iter, const char * chrom, int start, int finish) {
@@ -452,7 +432,8 @@ void NDPearsonPop(WiggleIterator * wi) {
 
 	if (multi->done) {
 		wi->done = true;
-		data->res = data->sum_AB / (sqrt(data->sum_sq_A) * sqrt(data->sum_sq_B));
+		if (data->T_XX * data->T_YY)
+			data->res = data->T_XY / sqrt(data->T_XX * data->T_YY);
 		return;
 	}
 
@@ -460,35 +441,37 @@ void NDPearsonPop(WiggleIterator * wi) {
 	wi->start = multi->start;
 	wi->finish = multi->finish;
 
-	int dim, halfway, width;
-	double sweep;
-
-	width = (multi->finish - multi->start);
-	halfway = data->totalLength + width/2;
-	if (halfway == 0)
-		halfway = 1;
-	sweep = (halfway - 1.0) / halfway;
-	data->totalLength += width;
+	int length = (multi->finish - multi->start);
+	double scaling_ratio = (double) data->count / (data->count + length);
+	int dim;
 	for (dim = 0; dim < data->rank; dim++) {
-		double deltaA, deltaB;
+		double Xi, Yi;
 
 		if (multi->inplay[0])
-			deltaA = multi->values[0][dim] - data->meanA[dim];
+			Xi = multi->values[0][dim];
 		else
-			deltaA = multi->multis[0]->iters[dim]->default_value - data->meanA[dim];
+			Xi = multi->multis[0]->iters[dim]->default_value;
+
 		if (multi->inplay[1])
-			deltaB = multi->values[1][dim] - data->meanB[dim];
+			Yi = multi->values[1][dim];
 		else
-			deltaB = multi->multis[1]->iters[dim]->default_value - data->meanB[dim];
+			Yi = multi->multis[1]->iters[dim]->default_value;
 
-		data->meanA[dim] += deltaA / halfway;
-		data->meanB[dim] += deltaB / halfway;
+		if (data->count) {
+			double old_mean_Xi = data->sum_X[dim] / data->count;
+			double new_mean_Xi = data->sum_X[dim] / (data->count + length);
+			double old_mean_Yi = data->sum_Y[dim] / data->count;
+			double new_mean_Yi = data->sum_Y[dim] / (data->count + length);
 
-		data->sum_sq_A += deltaA * deltaA * sweep;
-		data->sum_sq_B += deltaB * deltaB * sweep;
-
-		data->sum_AB += deltaA * deltaB * sweep;
+			data->T_XY += (new_mean_Xi * old_mean_Yi + scaling_ratio * Xi * Yi - new_mean_Xi * Yi - new_mean_Yi * Xi) * length;
+			data->T_XX += (new_mean_Xi * (old_mean_Xi - 2 * Xi) + scaling_ratio * Xi * Xi) * length;
+			data->T_YY += (new_mean_Yi * (old_mean_Yi - 2 * Yi) + scaling_ratio * Yi * Yi) * length;
+		}
+		data->sum_X[dim] += Xi * length;
+		data->sum_Y[dim] += Yi * length;
 	}
+
+	data->count += length;
 
 	// Update inputs
 	popMultiset(multi);
@@ -496,24 +479,14 @@ void NDPearsonPop(WiggleIterator * wi) {
 
 WiggleIterator * NDPearsonIntegrator(Multiset * multi) {
 	if (multi->count != 2 || multi->multis[0]->count != multi->multis[1]->count) {
-		printf("Incorrect number of input tracks to N-dimensional Pearson correlation!\n");
+		fprintf(stderr, "Incorrect number of input tracks to N-dimensional Pearson correlation!\n");
 		exit(1);
 	}
 	NDPearsonData * data = (NDPearsonData *) calloc(1, sizeof(NDPearsonData));
 	data->multi = multi;
 	data->rank = multi->count;
-	data->totalLength = 0;
-	data->sum_sq_A = 0;
-	data->sum_sq_B = 0;
-	data->sum_AB = 0;
-	data->meanA = calloc(data->rank, sizeof(double));
-	data->meanB = calloc(data->rank, sizeof(double));
-	int dim;
-	double def;
-	for (dim = 0; dim < data->rank; dim++) {
-		data->meanA[dim] = multi->values[0][dim];
-		data->meanB[dim] = multi->values[1][dim];
-	}
+	data->sum_X = calloc(data->rank, sizeof(double));
+	data->sum_Y = calloc(data->rank, sizeof(double));
 	data->res = NAN;
 	return newStatisticIterator(data, NDPearsonPop, NDPearsonSeek, 0, multi->multis[0]->iters[0]);
 }
