@@ -180,6 +180,8 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 		free(data->bufferedReaderData);
 		data->bufferedReaderData = NULL;
 	}
+	data->chrom = chrom;
+	data->stop = finish;
 
 	sprintf(region, "%s:%i-%i", chrom, start, finish);
 	data->conf->reg = region;
@@ -191,8 +193,6 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(wi->chrom, chrom) == 0 && wi->finish <= start)))
 		BamReaderPop(wi);
 
-	data->chrom = chrom;
-	data->stop = finish;
 }
 
 WiggleIterator * BamReader(char * filename, bool holdFire) {
