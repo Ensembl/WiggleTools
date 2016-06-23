@@ -95,7 +95,7 @@ install_png () {
 
 install_gsl() {
 	if [ -x "$(which apt-get)" ]; then
-		apt-get install libgsl0 libgsl0-dev
+		apt-get install libgsl0ldbl
 	elif [ -x "$(which brew)" ]; then
 		brew install gsl
 	else
