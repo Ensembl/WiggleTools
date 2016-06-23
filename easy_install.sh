@@ -68,7 +68,7 @@ install_ssl () {
 		brew install openssl
 	else 
 		rm -Rf openssl*
-		confirmed_download 'OpenSSl' 'ftp://ftp.openssl.org/source/openssl-1.0.1h.tar.gz'
+		confirmed_download 'OpenSSl' 'ftp://ftp.openssl.org/source/openssl-1.0.1t.tar.gz'
 		cd openssl*
 			./config
 			make
