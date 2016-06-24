@@ -103,7 +103,11 @@ assert test('../bin/wiggletools do isZero diff overlapping_coverage.wig coverage
 #Test trim
 assert test('../bin/wiggletools do isZero diff trim overlapping.bed variableStep.wig mult overlapping.bed variableStep.wig') == 0
 
+# Test program file
+assert test('../bin/wiggletools run program.txt') == 0
+
 assert test('diff tmp expected') == 0
+
 
 shutil.rmtree('tmp')
 

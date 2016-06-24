@@ -42,7 +42,7 @@ puts("\twiggletools --help");
 puts("\twiggletools program");
 puts("");
 puts("Program grammar:");
-puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic)");
+puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic) | run (file)");
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
 puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | (statistic)");
 puts("\toutput = (out_filename) | -");
@@ -63,10 +63,11 @@ puts("\t\t| apply_paste (out_filename) (statistic) (bed_file) (iterator)");
 static char * nextToken(int argc, char ** argv) {
 	static int count;
 	static char ** ptr;
-	static int index = 0;
+	static int index;
 	if (argv) {
 		ptr = argv;
 		count = argc;
+		index = 0;
 	}
 	if (index == count)
 		return NULL;
@@ -820,6 +821,46 @@ static Multiplexer * readApplyPaste() {
 	return PasteMultiplexer(ApplyMultiplexer(SmartReader(infilename, holdFire), statistics, count, readLastIterator(), strict), infile, outfile, false);
 }
 
+void parseFile(char * filename) {
+	FILE * file = fopen(filename, "r");
+	if (!file) {
+		fprintf(stderr, "Could not open file %s.\n", filename);
+		exit(1);
+	}
+
+	// Read content
+	fseek(file, 0, SEEK_END);
+	long length = ftell(file);
+	fseek(file, 0, SEEK_SET);
+	char * buffer = calloc(length, sizeof(char));
+	if (!buffer) {
+		fprintf(stderr, "Calloc error.\n");
+		exit(1);
+	}
+	fread(buffer, 1, length, file);
+	fclose(file);
+
+	// Break up into strings
+	int wordCount = 0;
+	int arrayLength = 8;
+	char ** words = calloc(arrayLength, sizeof(char *));
+	char * token;
+	for (token = strtok(buffer, " \t\n\r"); token; token = strtok(NULL, " \t\r\n")) {
+		if (strlen(token)) {
+			if (wordCount >= arrayLength) {
+				arrayLength *= 2;
+				words = realloc(words, arrayLength * sizeof(char));
+			}
+			words[wordCount++] = token;
+		}
+	}
+
+	// Run program
+	rollYourOwn(wordCount, words);
+	free(words);
+	free(buffer);
+}
+
 void rollYourOwn(int argc, char ** argv) {
 	char * token = nextToken(argc, argv);
 	if (strcmp(token, "do") == 0)
@@ -842,6 +883,8 @@ void rollYourOwn(int argc, char ** argv) {
 		runWiggleIterator(PrintStatisticsWiggleIterator(readLastIteratorToken(token), stdout));
 	else if (strcmp(token, "seek") == 0)
 		toStdout(readSeek(), false, false);
+	else if (strcmp(token, "run") == 0)
+		parseFile(needNextToken());
 	else
 		toStdout(readLastIteratorToken(token), false, false);	
 }
