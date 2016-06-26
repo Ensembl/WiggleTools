@@ -22,12 +22,11 @@ struct multiset_st {
 	int start;
 	int finish;
 	double ** values;
-	int count;
+	int count, inplay_count;
 	bool *inplay;
 	Multiplexer ** multis;
 	bool done;
-
-	FILE * file;
+	FibHeap * starts, * finishes;
 };
 
 void popMultiset(Multiset* multi);

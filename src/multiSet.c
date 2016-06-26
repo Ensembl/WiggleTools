@@ -18,89 +18,86 @@
 
 #include "multiSet.h"
 
-static void chooseCoords(Multiset * multi) {
-	int i; 
-	char * lastChrom = multi->chrom;
-	int lastFinish = multi->finish;
-	int clipping = -1;
-	int comparison;
-	int first = -1;
-	bool * inplayPtr = multi->inplay;
+static void popClosingMultiplexers(Multiset * multi) {
+	while (fh_notempty(multi->finishes) && fh_min(multi->finishes) == multi->finish) {
+		int index = fh_extractmin(multi->finishes);
+		Multiplexer * multiplexer = multi->multis[index];
+		popMultiplexer(multiplexer);
+		multi->inplay[index] = false;
+		multi->inplay_count--;
+		if (!multiplexer->done && !strcmp(multiplexer->chrom, multi->chrom))
+			fh_insert(multi->starts, multiplexer->start, index);
+	}
+}
+
+static void queueUpMultiplexers(Multiset * multi) {
+	// Find lowest value chromosome
+	multi->chrom = NULL;
 	Multiplexer ** muPtr = multi->multis;
-
+	int i; 
 	for (i = 0; i < multi->count; i++) {
-		if ((*muPtr)->done) {
-			*inplayPtr = false;
-		} else if (first < 0 || (comparison = strcmp((*muPtr)->chrom, multi->chrom)) < 0) {
+		if ((!(*muPtr)->done) && (!multi->chrom || strcmp((*muPtr)->chrom, multi->chrom) < 0))
 			multi->chrom = (*muPtr)->chrom;
-
-			if (lastChrom && strcmp(multi->chrom, lastChrom) == 0)
-				clipping = lastFinish;
-
-			if ((*muPtr)->start < clipping)
-				multi->start = clipping;
-			else
-				multi->start = (*muPtr)->start;
-
-			multi->finish = (*muPtr)->finish;
-			*inplayPtr = true;
-			first = i;
-		} else if (comparison > 0){
-			*inplayPtr = false;
-		} else {
-			int start = (*muPtr)->start;
-			*inplayPtr = true;
-			if (multi->start > clipping && start < multi->start) {
-				multi->finish = multi->start;
-				if (start < clipping)
-					multi->start = clipping;
-				else
-					multi->start = start;
-				first = i;
-			} else if (start > multi->start) {
-				*inplayPtr = false;
-			} 
-			
-			if ((*muPtr)->finish < multi->finish) {
-				multi->finish = (*muPtr)->finish;
-			} 
-		}
-
-		inplayPtr++;
 		muPtr++;
 	}
 
-	if (first < 0) {
+	// No chromosome found => All multisets done
+	if (!multi->chrom) {
 		multi->done = true;
 		return;
 	}
 
-	for (i = 0; i < first; i++) 
-		multi->inplay[i] = false;
+	// Put those multiplexers in heap
+	muPtr = multi->multis;
+	for (i = 0; i < multi->count; i++) {
+		if ((!(*muPtr)->done) && strcmp((*muPtr)->chrom, multi->chrom) == 0)
+			fh_insert(multi->starts, (*muPtr)->start, i);
+		muPtr++;
+	}
 
 }
 
-void popMultiplexers(Multiset * multi) {
-	int i; 
-	bool * inplayPtr = multi->inplay;
-	Multiplexer ** mpPtr = multi->multis;
+static void admitNewMultiplexersIntoPlay(Multiset * multi) {
+	while (fh_notempty(multi->starts) && fh_min(multi->starts) == multi->start) {
+		int index = fh_extractmin(multi->starts);
+		Multiplexer * multiplexer = multi->multis[index];
+		fh_insert(multi->finishes, multiplexer->finish, index);
+		multi->inplay[index] = true;
+		multi->inplay_count++;
+	}
+}
 
-	for (i=0; i < multi->count; i++) {
-		if (*inplayPtr) {
-			if ((*mpPtr)->finish == multi->finish) {
-				popMultiplexer(*mpPtr);
-			}
-		}
-		inplayPtr++;
-		mpPtr++;
+static void defineNewFinish(Multiset * multi) {
+	multi->finish = fh_min(multi->finishes);
+
+	if (fh_notempty(multi->starts)) {
+		int min_start = fh_min(multi->starts);
+		if (multi->finish > min_start)
+			multi->finish = min_start;
 	}
 }
 
 void popMultiset(Multiset * multi) {
-	if (!multi->done)
-		chooseCoords(multi);
-	if (!multi->done)
-		popMultiplexers(multi);
+	popClosingMultiplexers(multi);
+
+	// Check that there are multiplexers queued up
+	// If no multiplexers are waiting, either waiting on other chromosomes
+	// or finished.
+	if (fh_empty(multi->starts) && fh_empty(multi->finishes))
+		queueUpMultiplexers(multi);
+
+	// If queues still empty
+	if (multi->done)
+		return;
+
+	// If no multiplexer in play jump to next start
+	if (multi->inplay_count)
+		multi->start = multi->finish;
+	else
+		multi->start = fh_min(multi->starts);
+
+	admitNewMultiplexersIntoPlay(multi);
+	defineNewFinish(multi);
 }
 
 void seekMultiset(Multiset * multi, const char * chrom, int start, int finish) {
@@ -108,8 +105,10 @@ void seekMultiset(Multiset * multi, const char * chrom, int start, int finish) {
 	multi->done = false;
 	for (i=0; i<multi->count; i++)
 		seekMultiplexer(multi->multis[i], chrom, start, finish);
-	multi->chrom = NULL;
-	multi->start = 0;
+	fh_deleteheap(multi->starts);
+	fh_deleteheap(multi->finishes);
+	multi->starts = fh_makeheap();
+	multi->finishes = fh_makeheap();
 	popMultiset(multi);
 }
 
@@ -119,6 +118,8 @@ Multiset * newMultiset(Multiplexer ** multis, int count) {
 	new->multis = multis;
 	new->inplay = (bool *) calloc(count, sizeof(bool));
 	new->values = (double **) calloc(count, sizeof(double));
+	new->starts = fh_makeheap();
+	new->finishes = fh_makeheap();
 	int i;
 	for (i = 0; i < count; i++)
 		new->values[i] = multis[i]->values;

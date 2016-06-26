@@ -282,7 +282,7 @@ void CoverageWiggleIteratorPop(WiggleIterator * wi) {
 		}
 
 		while (!iter->done && !strcmp(iter->chrom, wi->chrom) && iter->start == wi->start) {
-			fh_insert(data->heap, iter->finish);
+			fh_insert(data->heap, iter->finish, 0);
 			pop(iter);
 			wi->value++;
 		}

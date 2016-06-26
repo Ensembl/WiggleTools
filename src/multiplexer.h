@@ -16,6 +16,7 @@
 #define WIGGLE_MULTIPLEXER_H_
 
 #include "wiggleIterator.h"
+#include "fib.h"
 
 struct multiplexer_st {
 	char * chrom;
@@ -23,14 +24,14 @@ struct multiplexer_st {
 	int finish;
 	double * values;
 	double * default_values;
-	int count;
+	int count, inplay_count;
 	bool *inplay;
 	WiggleIterator ** iters;
 	bool done;
 	bool strict;
 	void (*pop)(Multiplexer *);
 	void (*seek)(Multiplexer *, const char *, int, int);
-	FILE * file;
+	FibHeap * starts, *finishes;
 	void * data;
 };
 

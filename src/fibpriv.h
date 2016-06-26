@@ -59,6 +59,7 @@ struct fibheap_el {
 	FibHeapNode *fhe_left;
 	FibHeapNode *fhe_right;
 	int fhe_key;
+	int fhe_value;
 	int fhe_degree;
 	bool fhe_mark;
 };

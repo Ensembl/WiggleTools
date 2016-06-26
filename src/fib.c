@@ -121,7 +121,7 @@ void fh_deleteheap(FibHeap * h)
 /*
  * Public Key Heap Functions
  */
-FibHeapNode *fh_insert(FibHeap * h, int key)
+FibHeapNode *fh_insert(FibHeap * h, int key, int value)
 {
 	FibHeapNode *x;
 
@@ -130,6 +130,7 @@ FibHeapNode *fh_insert(FibHeap * h, int key)
 
 	/* just insert on root list, and make sure it's not the new min */
 	x->fhe_key = key;
+	x->fhe_value = value;
 
 	fh_insertel(h, x);
 
@@ -189,10 +190,16 @@ int fh_empty(FibHeap * h)
 	return (int) (h->fh_min == NULL);
 }
 
-void fh_extractmin(FibHeap * h)
+int fh_extractmin(FibHeap * h)
 {
-	if (h->fh_min != NULL)
-		deallocateFibHeapEl(fh_extractminel(h), h);
+	if (h->fh_min != NULL) {
+		FibHeapNode * min = fh_extractminel(h);
+		int res = min->fhe_value;
+		deallocateFibHeapEl(min, h);
+		return res;
+	}
+
+	return -1;
 }
 
 static FibHeapNode *fh_extractminel(FibHeap * h)

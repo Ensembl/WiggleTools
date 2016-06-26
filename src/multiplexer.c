@@ -34,107 +34,95 @@ void seekMultiplexer(Multiplexer * multi, const char * chrom, int start, int fin
 	multi->seek(multi, chrom, start, finish);
 }
 
-static void chooseCoords(Multiplexer * multi) {
-	int i;
-	char * lastChrom = multi->chrom;
-	int lastFinish = multi->finish;
-	int clipping = -1;
-	int comparison;
-	int first = -1;
-	bool * inplayPtr = multi->inplay;
-	WiggleIterator ** wiPtr = multi->iters;
+static void popClosingWiggleIterators(Multiplexer * multi) {
+	while (fh_notempty(multi->finishes) && fh_min(multi->finishes) == multi->finish) {
+		int index = fh_extractmin(multi->finishes);
+		WiggleIterator * wi = multi->iters[index];
+		pop(wi);
+		multi->inplay[index] = false;
+		multi->inplay_count--;
+		multi->values[index] = wi->default_value;
+		if (!wi->done && !strcmp(wi->chrom, multi->chrom))
+			fh_insert(multi->starts, wi->start, index);
+	}
+}
 
+static void queueUpWiggleIterators(Multiplexer * multi) {
+	// Find lowest value chromosome
+	multi->chrom = NULL;
+	WiggleIterator ** muPtr = multi->iters;
+	int i; 
 	for (i = 0; i < multi->count; i++) {
-		if ((*wiPtr)->done) {
-			*inplayPtr = false;
-		} else if (first < 0 || (comparison = strcmp((*wiPtr)->chrom, multi->chrom)) < 0) {
-			multi->chrom = (*wiPtr)->chrom;
-
-			if (lastChrom && strcmp(multi->chrom, lastChrom) == 0)
-				clipping = lastFinish;
-
-			if ((*wiPtr)->start < clipping)
-				multi->start = clipping;
-			else
-				multi->start = (*wiPtr)->start;
-
-			multi->finish = (*wiPtr)->finish;
-			*inplayPtr = true;
-			first = i;
-		} else if (comparison > 0){
-			*inplayPtr = false;
-		} else {
-			int start = (*wiPtr)->start;
-			if (start > multi->start) {
-				*inplayPtr = false;
-				if (start < multi->finish)
-					multi->finish = start;
-			} else {
-
-				*inplayPtr = true;
-
-				if (multi->start > clipping && start < multi->start) {
-					multi->finish = multi->start;
-					if (start < clipping)
-						multi->start = clipping;
-					else
-						multi->start = start;
-					first = i;
-				}
-
-				if ((*wiPtr)->finish < multi->finish)
-					multi->finish = (*wiPtr)->finish;
-			}
-		}
-
-		inplayPtr++;
-		wiPtr++;
+		if ((!(*muPtr)->done) && (!multi->chrom || strcmp((*muPtr)->chrom, multi->chrom) < 0))
+			multi->chrom = (*muPtr)->chrom;
+		muPtr++;
 	}
 
-	if (first < 0) {
+	// No chromosome found => All itersets done
+	if (!multi->chrom) {
 		multi->done = true;
 		return;
 	}
 
-	for (i = 0; i < first; i++)
-		multi->inplay[i] = false;
+	// Put those wis in heap
+	muPtr = multi->iters;
+	for (i = 0; i < multi->count; i++) {
+		if ((!(*muPtr)->done) && strcmp((*muPtr)->chrom, multi->chrom) == 0)
+			fh_insert(multi->starts, (*muPtr)->start, i);
+		muPtr++;
+	}
 }
 
-static bool readValues(Multiplexer * multi) {
-	int i;
-	bool * inplayPtr = multi->inplay;
-	WiggleIterator ** wiPtr = multi->iters;
-	double * valuePtr = multi->values;
-	bool allActive = true;
-
-	for (i=0; i < multi->count; i++) {
-		if (multi->strict && (*wiPtr)->done) {
-			multi->done = true;
-			break;
-		}
-
-		if (*inplayPtr) {
-			*valuePtr = (*wiPtr)->value;
-			if ((*wiPtr)->finish == multi->finish) {
-				pop(*wiPtr);
-			}
-		} else 
-			allActive = false;
-
-		valuePtr++;
-		inplayPtr++;
-		wiPtr++;
+static void admitNewWiggleIteratorsIntoPlay(Multiplexer * multi) {
+	while (fh_notempty(multi->starts) && fh_min(multi->starts) == multi->start) {
+		int index = fh_extractmin(multi->starts);
+		WiggleIterator * wi = multi->iters[index];
+		fh_insert(multi->finishes, wi->finish, index);
+		multi->inplay[index] = true;
+		multi->values[index] = wi->value;
+		multi->inplay_count++;
 	}
+}
 
-	return allActive;
+static void defineNewFinish(Multiplexer * multi) {
+	multi->finish = fh_min(multi->finishes);
+
+	if (fh_notempty(multi->starts)) {
+		int min_start = fh_min(multi->starts);
+		if (multi->finish > min_start) {
+			multi->finish = min_start;
+		}
+	}
+}
+
+static bool popCoreMultiplexer2(Multiplexer * multi) {
+	popClosingWiggleIterators(multi);
+
+	// Check that there are wis queued up
+	// If no wis are waiting, either waiting on other chromosomes
+	// or finished.
+	if (fh_empty(multi->starts) && fh_empty(multi->finishes))
+		queueUpWiggleIterators(multi);
+
+	// If queues still empty
+	if (multi->done)
+		return false;
+
+	// If no wi in play jump to next start
+	if (multi->inplay_count)
+		multi->start = multi->finish;
+	else
+		multi->start = fh_min(multi->starts);
+
+	admitNewWiggleIteratorsIntoPlay(multi);
+	defineNewFinish(multi);
+
+	return multi->inplay_count == multi->count;
 }
 
 static void popCoreMultiplexer(Multiplexer * multi) {
 	while (!multi->done) {
-		chooseCoords(multi);
-		if (multi->done)
-			break;
-		if (readValues(multi) || !multi->strict)
+		if (popCoreMultiplexer2(multi) || !multi->strict)
 			break;
 	}
 }
@@ -144,8 +132,10 @@ static void seekCoreMultiplexer(Multiplexer * multi, const char * chrom, int sta
 	multi->done = false;
 	for (i=0; i<multi->count; i++)
 		seek(multi->iters[i], chrom, start, finish);
-	multi->chrom = NULL;
-	multi->start = 0;
+	fh_deleteheap(multi->starts);
+	fh_deleteheap(multi->finishes);
+	multi->starts = fh_makeheap();
+	multi->finishes = fh_makeheap();
 	popMultiplexer(multi);
 }
 
@@ -158,9 +148,8 @@ Multiplexer * newCoreMultiplexer(void * data, int count, void (*pop)(Multiplexer
 	new->pop = pop;
 	new->seek = seek;
 	new->data = data;
-	int i;
-	for (i = 0; i < count; i++)
-		new->inplay[i] = true;
+	new->starts = fh_makeheap();
+	new->finishes = fh_makeheap();
 	return new;
 }
 
@@ -172,6 +161,7 @@ Multiplexer * newMultiplexer(WiggleIterator ** iters, int count, bool strict) {
 	for (i = 0; i < count; i++) {
 		new->iters[i] = NonOverlappingWiggleIterator(iters[i]);
 		new->default_values[i] = new->iters[i]->default_value;
+		new->values[i] = new->iters[i]->default_value;
 	}
 	popMultiplexer(new);
 	return new;

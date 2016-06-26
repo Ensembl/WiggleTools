@@ -65,8 +65,8 @@ static int storeReadComponent(FibHeap * starts, FibHeap * ends, int start, char 
 		case 'X':
 		case '=':
 		case 'D':
-			fh_insert(starts, start);
-			fh_insert(ends, start + count);
+			fh_insert(starts, start, 0);
+			fh_insert(ends, start + count, 0);
 		case 'N':
 			return start + count;
 		default:
