@@ -1,4 +1,4 @@
-// Copyright 2013-2014 EMBL-EBI
+// Copyright [1999-2016] EMBL-European Bioinformatics Institute
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ void printHelp() {
 
 puts("WiggleTools");
 puts("");
-puts("Copyright EMBL-EBI, 2013-2014.");
+puts("Copyright [1999-2016] EMBL-European Bioinformatics Institute");
 puts("Development contact: Daniel Zerbino zerbino@ebi.ac.uk");
 puts("");
 puts("This library parses wiggle files and executes various operations on them streaming through lazy evaluators.");
