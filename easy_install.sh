@@ -133,13 +133,13 @@ install_git() {
 	export PATH=$PATH
 }
 
-install_tabix() {
-	prompt_download 'Tabix' 'https://github.com/samtools/tabix.git'
+install_htslib() {
+	prompt_download 'Tabix' 'https://github.com/samtools/htslib.git'
 	echo "Installing Tabix..."
-	rm -Rf tabix
-	git clone https://github.com/samtools/tabix.git
-	export TABIX_SRC=$PWD/tabix
-	cd tabix
+	rm -Rf htslib
+	git clone https://github.com/samtools/htslib.git
+	export HTSLIB_SRC=$PWD/htslib
+	cd htslib
 		make
 	cd ..
 }
@@ -223,10 +223,10 @@ fi
 #######################
 ## Tabix
 #######################
-echo "Checking for tabix..."
+echo "Checking for htslib"
 if [ -z "$TABIX_SRC" ];
 then
-	install_tabix
+	install_htslib
 fi
 
 #######################

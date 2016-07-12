@@ -1,12 +1,9 @@
 default: binaries
 
-Samtools-lib:
-	cd samtools; make
-
 bin:
 	mkdir -p bin
 
-Wiggletools: Samtools-lib bin
+Wiggletools: bin
 	cd src; make -e
 
 Parallel: Wiggletools
@@ -21,7 +18,6 @@ tests:
 	cd test; python test.py
 
 clean:
-	cd samtools; make clean
 	cd src; make clean
 	rm bin/*
 	rm lib/*

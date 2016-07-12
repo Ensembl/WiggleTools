@@ -14,156 +14,156 @@
 
 #include <string.h>
 #include "sam.h"
-#include "faidx.h"
+#include "hts.h"
 #include "wiggleIterator.h"
 #include "bufferedReader.h"
-
-#define MPLP_NO_ORPHAN 0x40
-#define MPLP_REALN   0x80
-
-extern int mplp_func(void *data, bam1_t *b);
-
-typedef struct {
-	int max_mq, min_mq, flag, min_baseQ, capQ_thres, max_depth, max_indel_depth, fmt_flag;
-	int rflag_require, rflag_filter;
-	int openQ, extQ, tandemQ, min_support; // for indels
-	double min_frac; // for indels
-	char *reg, *pl_list, *fai_fname;
-	faidx_t *fai;
-	void *bed, *rghash;
-} mplp_conf_t;
-
-typedef struct {
-	bamFile fp;
-	bam_iter_t iter;
-	bam_header_t *h;
-	int ref_id;
-	char *ref;
-	const mplp_conf_t *conf;
-} mplp_aux_t;
-
-typedef struct {
-	int n;
-	int *n_plp, *m_plp;
-	bam_pileup1_t **plp;
-} mplp_pileup_t;
-
+#include "fib.h"
 
 typedef struct bamFileReaderData_st {
 	// Arguments to downloader
 	char * filename;
 	char * chrom;
+	int chrom_tid;
 	int start, stop;
 	BufferedReaderData * bufferedReaderData;
 
 	// BAM stuff
-	mplp_conf_t * conf;
-	bam_index_t * idx;
-	mplp_aux_t * data;
-	int ref_tid;
-	bam_mplp_t iter;
+	samFile * fp;
+	hts_idx_t * idx;
+	bam_hdr_t * header;
 } BamReaderData;
 
-void setSamtoolsDefaultConf(BamReaderData * data) {
-	data->conf = (mplp_conf_t *) calloc(1, sizeof(mplp_conf_t));
-	memset(data->conf, 0, sizeof(mplp_conf_t));
-	data->conf->max_mq = 60;
-	data->conf->min_baseQ = 0;
-	data->conf->capQ_thres = 0;
-	data->conf->max_depth = 250; 
-	data->conf->max_indel_depth = 250;
-	data->conf->openQ = 40; 
-	data->conf->extQ = 20; 
-	data->conf->tandemQ = 100;
-	data->conf->min_frac = 0.002; 
-	data->conf->min_support = 1;
-	data->conf->flag = MPLP_NO_ORPHAN | MPLP_REALN;
+static void storeReadComponents(FibHeap * starts, FibHeap * ends, bam1_t * aln) {
+	// Note that BAM coords are 0-based, hence +1
+	int start = aln->core.pos + 1;
+	uint32_t *cigar = bam_get_cigar(aln);
+	int k;
+	for (k = 0; k < aln->core.n_cigar; ++k) {
+		int operator = cigar[k]&BAM_CIGAR_MASK;
+		int length = cigar[k]>>BAM_CIGAR_SHIFT;
+		switch (operator) {
+			case BAM_CMATCH:
+			case BAM_CEQUAL:
+			case BAM_CDIFF:
+			case BAM_CDEL:
+				fh_insert(starts, start, 0);
+				fh_insert(ends, start + length, 0);
+			case BAM_CREF_SKIP:
+				start += length;
+		}
+	}
+}
+
+static bam1_t * nextRead(BamReaderData * data, hts_itr_t * iter, bam1_t * aln) {
+	if ((iter && sam_itr_next(data->fp, iter, aln) < 0) 
+	     || (!iter && sam_read1(data->fp, data->header, aln) < 0)
+	   ) {
+		bam_destroy1(aln);
+		return NULL;
+	} else  {
+		return aln;
+	}
 }
 
 static void * downloadBamFile(void * args) {
 	BamReaderData * data = (BamReaderData *) args;
-	int j, tid, cnt, pos, n_plp;
-	const bam_pileup1_t *plp;
 
-	while (bam_mplp_auto(data->iter, &tid, &pos, &n_plp, &plp) > 0) {
-		// Count reads in pileup
-		cnt = 0;
-		const bam_pileup1_t *p = plp;
-		for (j = 0; j < n_plp; ++j) {
-			//if (bam1_qual(p->b)[p->qpos] >= data->conf->min_baseQ) 
-				cnt++;
-			p++;
-		}
-
-		// Its a wrap:
-		char * chrom = data->data->h->target_name[tid];
-
-		if (data->stop > 0 && (strcmp(chrom, data->chrom) == 0 && pos >= data->stop))
-			break;
-
-		// +1 to account for 0-based indexing in BAMs:
-		if (pushValuesToBuffer(data->bufferedReaderData, chrom, pos+1, pos+2, cnt))
-			break;
-	}
-
-	bam_iter_destroy(data->data->iter);
-	endBufferedSignal(data->bufferedReaderData);
-	return NULL;
-}
-
-void seekRegion(BamReaderData * data) {
-	int tid, beg, end;
-
-	if (data->conf->reg) {
-		// Create BAM iterator at region
-		if (bam_parse_region(data->data->h, data->conf->reg, &tid, &beg, &end) < 0) {
-			fprintf(stderr, "[%s] malformatted region or wrong seqname for input.\n", __func__);
+	//Initialize iterator
+        hts_itr_t *iter = NULL;
+	if (data->chrom) {
+		data->chrom_tid = bam_name2id(data->header, data->chrom);
+		iter = sam_itr_queryi(data->idx, data->chrom_tid, data->start, data->stop);
+		if(data->header == NULL || iter == NULL) {
+			fprintf(stderr, "Unable to iterate to region within BAM.");
 			exit(1);
 		}
-		data->data->iter = bam_iter_query(data->idx, tid, beg, end);
-		data->ref_tid = tid;
-	} else {
-		// Create general BAM iterator
-		data->data->iter = NULL;
 	}
 
-	// Create pileup iterator	
-	data->iter = bam_mplp_init(1, mplp_func, (void**) &data->data);
+	// Iterate through data
+	bam1_t *aln = bam_init1();
+	FibHeap * starts = fh_makeheap();
+	FibHeap * ends = fh_makeheap();
+	int start, finish = -1, chrom_tid = -1;
+	int value = 0;
+
+	aln = nextRead(data, iter, aln);
+
+	while(1) {
+		// Remove dead weight
+		while (fh_notempty(ends) && fh_min(ends) == finish) {
+			value--;
+			fh_extractmin(ends);
+		}
+
+		// Stream more data into heaps
+		while (aln
+		       && (aln->core.tid == chrom_tid || fh_empty(ends)) 
+		       && (fh_empty(ends) || aln->core.pos <= fh_min(ends) || fh_empty(starts) || aln->core.pos <= fh_min(starts))
+		) {
+			storeReadComponents(starts, ends, aln);
+			chrom_tid = aln->core.tid;
+			aln = nextRead(data, iter, aln);
+		}
+
+		if (fh_notempty(ends)) {
+			// Choose new start
+			if (value)
+				start = finish;
+			else
+				start = fh_min(starts);
+
+			// Load new weight
+			while (fh_notempty(starts) && fh_min(starts) == start) {
+				value++;
+				fh_extractmin(starts);
+			}
+
+			// Choose finish
+			if (fh_notempty(starts))
+				finish = fh_min(starts);
+			if (fh_notempty(ends) && (fh_empty(starts) || fh_min(ends) < finish))
+				finish = fh_min(ends);
+
+			// Possible cutoff of data
+			if (data->stop > 0) {
+				if ((start >= data->stop && chrom_tid == data->chrom_tid) || chrom_tid > data->chrom_tid) {
+					fh_deleteheap(starts);
+					fh_deleteheap(ends);
+					if (iter)
+						bam_itr_destroy(iter);
+					endBufferedSignal(data->bufferedReaderData);
+					return NULL;
+				} else if (finish > data->stop)
+					finish = data->stop;
+			}
+
+			if (pushValuesToBuffer(data->bufferedReaderData, data->header->target_name[chrom_tid], start, finish, value))
+				return NULL;
+		} else {
+			// No ends => end of file iterator
+			fh_deleteheap(starts);
+			fh_deleteheap(ends);
+			if (iter)
+				bam_itr_destroy(iter);
+			endBufferedSignal(data->bufferedReaderData);
+			return NULL;
+		}
+	}
 }
 
 void OpenBamFile(BamReaderData * data, char * filename) {
-	// Allocate space
-	data->data = (mplp_aux_t *) calloc(1, sizeof(mplp_aux_t));
-
 	// read the header and initialize data
-	if (strcmp(filename, "-"))
-		data->data->fp = bam_open(filename, "r");
-	else
-		data->data->fp = bam_dopen(fileno(stdin), "r");
-	data->data->conf = data->conf;
-	data->data->h = bam_header_read(data->data->fp);
+	data->fp = hts_open(filename, "r");
 
-	// Load index
-	data->idx = bam_index_load(filename);
-	if (data->idx == 0) {
-		fprintf(stderr, "[%s] fail to load index for input.\n", __func__);
-		exit(1);
-	}
-
-	// Start reading
-	data->ref_tid = -1;
-	seekRegion(data);
+        //Get the header
+        data->header = sam_hdr_read(data->fp);
 }
 
 void closeBamFile(BamReaderData * data) {
-	// Seriously, does samtools not provide any convience destructors!??
-	bam_mplp_destroy(data->iter);
-	//bam_header_destroy(data->data->h);
-	bam_close(data->data->fp);
-	if (data->data->iter) 
-		bam_iter_destroy(data->data->iter);
-	free(data->data); 
-	bam_index_destroy(data->idx);
+	if (data->idx)
+		hts_idx_destroy(data->idx);
+        bam_hdr_destroy(data->header);
+        sam_close(data->fp);
 }
 
 void BamReaderPop(WiggleIterator * wi) {
@@ -173,19 +173,28 @@ void BamReaderPop(WiggleIterator * wi) {
 
 void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	BamReaderData * data = (BamReaderData *) wi->data;
-	char region[1000];
 
+	//Load the index
+	if (!data->idx) {
+		data->idx = sam_index_load(data->fp, data->filename);
+		if(data->idx == NULL) {
+			fprintf(stderr, "Unable to open BAM/SAM index. Make sure alignments are indexed\n");
+			exit(1);
+		}
+	}
+
+	// Kill ongoing jobs
 	if (data->bufferedReaderData) {
 		killBufferedReader(data->bufferedReaderData);
 		free(data->bufferedReaderData);
 		data->bufferedReaderData = NULL;
 	}
+
+	// Set boundaries
 	data->chrom = chrom;
 	data->stop = finish;
 
-	sprintf(region, "%s:%i-%i", chrom, start, finish);
-	data->conf->reg = region;
-	seekRegion(data);
+	// Weeeee
 	launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));
 	wi->done = false;
 	BamReaderPop(wi);
@@ -197,7 +206,6 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 
 WiggleIterator * BamReader(char * filename, bool holdFire) {
 	BamReaderData * data = (BamReaderData *) calloc(1, sizeof(BamReaderData));
-	setSamtoolsDefaultConf(data);
 	OpenBamFile(data, filename);
 	if (!holdFire)
 		launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));

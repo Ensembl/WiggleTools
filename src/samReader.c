@@ -166,11 +166,6 @@ void SamReaderPop(WiggleIterator * wi) {
 			else if (wi->finish > data->stop)
 				wi->finish = data->stop;
 		}
-
-		if (wi->start < 0)
-			abort();
-		if (wi->start == 0)
-			abort();
 	}
 	else {
 		fclose(data->file);

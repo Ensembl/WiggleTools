@@ -63,14 +63,14 @@ export KENT_SRC=$PWD/kent/src
 ```
 Ensure that your path points to the userApps/bin directory.
 
-**Installing the Tabix library**
+**Installing the htslib library**
 
 ```
-git clone https://github.com/samtools/tabix.git
-setenv TABIX_SRC $PWD/tabix
+git clone https://github.com/samtools/htslib.git
+setenv HTSLIB_SRC $PWD/htslib
 # or, if you use bash...
-export TABIX_SRC=$PWD/tabix
-cd tabix
+export HTSLIB_SRC=$PWD/htslib
+cd htslib 
 make
 ```
 
