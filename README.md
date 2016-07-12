@@ -128,6 +128,12 @@ If you need a refresher:
 wiggletools --help
 ```
 
+If you are an intensive user, you may find that processing many files may break limits on commandline commands, especially if shelling out from a scripting language. You may copy the program into a text file, then execute it:
+
+```
+wiggletools run program.txt
+```
+
 Input files
 -----------
 
