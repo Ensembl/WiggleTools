@@ -137,8 +137,13 @@ static void * downloadBamFile(void * args) {
 					finish = data->stop;
 			}
 
-			if (pushValuesToBuffer(data->bufferedReaderData, data->header->target_name[chrom_tid], start, finish, value))
+			if (pushValuesToBuffer(data->bufferedReaderData, data->header->target_name[chrom_tid], start, finish, value)) {
+				fh_deleteheap(starts);
+				fh_deleteheap(ends);
+				if (iter)
+					bam_itr_destroy(iter);
 				return NULL;
+			}
 		} else {
 			// No ends => end of file iterator
 			fh_deleteheap(starts);
@@ -152,6 +157,8 @@ static void * downloadBamFile(void * args) {
 }
 
 void OpenBamFile(BamReaderData * data, char * filename) {
+	data->filename = filename;
+
 	// read the header and initialize data
 	data->fp = hts_open(filename, "r");
 
