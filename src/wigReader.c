@@ -160,7 +160,9 @@ static void WiggleReaderPop(WiggleIterator * wi) {
 			data->readingMode = FIXED_STEP;
 			WiggleReaderReadHeader(wi, data, line);
 			continue;
-		} 
+		} else if (!strncmp("track", line, 5)) {
+			continue;
+		}
 		
 		switch (countWords(line)) {
 		case 4:
