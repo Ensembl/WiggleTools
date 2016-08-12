@@ -3,7 +3,7 @@ LIBDIR=../lib
 BINDIR=../bin
 INC=-I${HTSLIB_SRC}/htslib -I${KENT_SRC}/inc
 LIB_PATHS=-L${KENT_SRC}/lib/${MACHTYPE} -L${LIBDIR} -L${HTSLIB_SRC}
-LIBS= -lwiggletools ${KENT_SRC}/lib/local/jkweb.a -lhts -lz -lpthread -lssl -lcrypto -ldl -lgsl -lgslcblas -lm
+LIBS= -lwiggletools ${KENT_SRC}/lib/local/jkweb.a ${HTSLIB_SRC}/libhts.a -lz -lpthread -lssl -lcrypto -ldl -lgsl -lgslcblas -lm
 OPTS=-D_PBGZF_USE
 
 default: lib bin
