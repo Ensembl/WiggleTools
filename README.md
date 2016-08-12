@@ -177,6 +177,14 @@ Requires a .bai index file in the same directory
 wiggletools test/bam.bam
 ```
 
+* Cram files
+
+Requires a .bai index file in the same directory
+
+```
+wiggletools test/cram.cram
+```
+
 * VCF files
 
 ```

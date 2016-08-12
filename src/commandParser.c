@@ -31,7 +31,7 @@ puts("");
 puts("This library parses wiggle files and executes various operations on them streaming through lazy evaluators.");
 puts("");
 puts("Inputs:");
-puts("\tThe program takes in Wig, BigWig, BedGraph, Bed, BigBed, Bam, VCF, and BCF files, which are distinguished thanks to their suffix (.wig, (.bw|.bigWig|.bigwig), .bg, .bed, .bb, .bam, .vcf, .bcf respectively).");
+puts("\tThe program takes in Wig, BigWig, BedGraph, Bed, BigBed, Bam, VCF, and BCF files, which are distinguished thanks to their suffix (.wig, (.bw|.bigWig|.bigwig), .bg, .bed, .bb, .bam, .cram, .vcf, .bcf respectively).");
 puts("\tNote that wiggletools assumes that every bam file has an index .bai file next to it.");
 puts("");
 puts("Outputs:");
@@ -46,7 +46,7 @@ puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic) | run 
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
 puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | (statistic)");
 puts("\toutput = (out_filename) | -");
-puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.vcf | *.bcf");
+puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.cram | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
 puts("\tstatistic_function = AUC | meanI | varI | minI | maxI | stddevI | CVI | pearson (iterator)");
 puts("\tbinary_operator = diff | ratio | overlaps | trim | noverlaps | nearest | apply (statistic) | fillIn");

@@ -33,6 +33,9 @@ assert test('../bin/wiggletools do isZero offset -1 ratio variableStep.bw variab
 # Testing BAM & BedGraph 
 assert test('../bin/wiggletools do isZero diff bam.bam pileup.bg') == 0
 
+# Testing BAM & CRAM 
+assert test('../bin/wiggletools do isZero diff bam.bam cram.cram') == 0
+
 # Testing BAM & SAM 
 assert test('../bin/wiggletools do isZero diff bam.bam sam.sam') == 0
 
