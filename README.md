@@ -199,6 +199,22 @@ Requires a .tbi index file in the same directory
 wiggletools test/bcf.bcf
 ```
 
+Streaming data
+--------------
+
+You can stream data into WiggleTools, e.g.:
+
+```
+cat test/fixedStep.wig | wiggletools -
+```
+
+The input data is assumed to be in Wig or BedGraph format, but can also be in Sam format:
+
+```
+samtools view test/bam.bam | wiggletools sam -
+```
+
+
 Operators
 ---------
 
