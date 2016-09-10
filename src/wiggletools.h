@@ -118,6 +118,7 @@ WiggleIterator * VarianceIntegrator (WiggleIterator *);
 WiggleIterator * StandardDeviationIntegrator (WiggleIterator *);
 WiggleIterator * CoefficientOfVariationIntegrator (WiggleIterator *);
 WiggleIterator * NDPearsonIntegrator(Multiset *);
+WiggleIterator * EnergyIntegrator(WiggleIterator *, int);
 void regionProfile(WiggleIterator *, double *, int, int, bool);
 void addProfile(double *, double *, int);
 //	Binary 

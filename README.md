@@ -610,6 +610,14 @@ Computes the Pearson correlation between two iterators across all their points:
 wiggletools pearson test/fixedStep.bw test/fixedStep.bw 
 ```
 
+* energy
+
+Computes the energy density at a given wavelength:
+
+```
+wiggletools energy 10 test/fixedStep.bw
+```
+
 Chaining statistics
 -------------------
 

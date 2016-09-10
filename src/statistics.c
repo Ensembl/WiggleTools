@@ -21,6 +21,8 @@
 #include "multiplexer.h"
 #include "multiSet.h"
 
+#define PI (3.141592653589793)
+
 //////////////////////////////////////////////////////
 // Generic function for all statistics
 //
@@ -321,6 +323,67 @@ WiggleIterator * CoefficientOfVariationIntegrator(WiggleIterator * wi) {
 	data->source = NonOverlappingWiggleIterator(wi);
 	data->res = NAN;
 	return newStatisticIterator(data, CoefficientOfVariationPop, VarianceSeek, wi->default_value, wi);
+}
+
+//////////////////////////////////////////////////////
+// Energy
+//////////////////////////////////////////////////////
+// Computes the square norm of the Fourier transform at
+// a given wavelength
+//
+// Note: this simply computes the value of the Fourier
+// transform at a single wavelength. Computing the entire
+// Fourier transform of an input signal would require 
+//
+// a) FFT implementation (e.g. KissFFT:
+// https://sourceforge.net/projects/kissfft/)
+// 
+// b) Some very clever memomry management to store a massive
+// DFT matrix
+//
+
+typedef struct energyData_st {
+	double res;
+	double real;
+	double im;
+	int wavelength;
+	WiggleIterator * source;
+} EnergyData;
+
+static void EnergySeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	EnergyData * data = (EnergyData *) wi->data;
+	seek(data->source, chrom, start, finish);
+	pop(wi);
+}
+
+static void EnergyPop(WiggleIterator * wi) {
+	EnergyData * data = (EnergyData *) wi->data;
+
+	if (data->source->done) {
+		wi->done = true;
+		data->res = data->real * data->real + data->im * data->im;
+		return;
+	}
+
+	wi->chrom = data->source->chrom;
+	wi->start = data->source->start;
+	wi->finish = data->source->finish;
+	wi->value = data->source->value;
+
+	int position;
+	for(position = data->source->start; position < data->source->finish; position++) {
+		data->real += cos(- position * 2 * PI / data->wavelength) * data->source->value;
+		data->im += sin(- position * 2 * PI / data->wavelength) * data->source->value;
+	}
+	pop(data->source);
+}
+
+WiggleIterator * EnergyIntegrator(WiggleIterator * wi, int wavelength) {
+	EnergyData * data = (EnergyData *) calloc(1, sizeof(EnergyData));
+	data->source = NonOverlappingWiggleIterator(wi);
+	data->wavelength = wavelength;
+	data->res = NAN;
+	return newStatisticIterator(data, EnergyPop, EnergySeek, wi->default_value, wi);
 }
 
 //////////////////////////////////////////////////////

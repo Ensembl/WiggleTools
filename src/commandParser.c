@@ -48,7 +48,7 @@ puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | s
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.cram | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
-puts("\tstatistic_function = AUC | meanI | varI | minI | maxI | stddevI | CVI | pearson (iterator)");
+puts("\tstatistic_function = AUC | meanI | varI | minI | maxI | stddevI | CVI | energy (wavelength) | pearson (iterator)");
 puts("\tbinary_operator = diff | ratio | overlaps | trim | noverlaps | nearest | apply (statistic) | fillIn");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
 puts("\tsetComparison = ttest | ftest | wilcoxon");
@@ -617,6 +617,12 @@ static WiggleIterator * readCoefficientOfVariationIntegrator() {
 	return CoefficientOfVariationIntegrator(readIterator());	
 }
 
+static WiggleIterator * readEnergy() {
+	int wavelength = atoi(needNextToken());
+	WiggleIterator * iter = readLastIterator();
+	return EnergyIntegrator(iter, wavelength);
+}
+
 static WiggleIterator * readPearson() {
 	WiggleIterator * iter1 = readIterator();
 	WiggleIterator * iter2 = readLastIterator();
@@ -731,6 +737,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readStandardDeviationIntegrator();
 	if (strcmp(token, "CVI") == 0)
 		return readCoefficientOfVariationIntegrator();
+	if (strcmp(token, "energy") == 0) 
+		return readEnergy();
 	if (strcmp(token, "pearson") == 0) 
 		return readPearson();
 	if (strcmp(token, "ndpearson") == 0) 
@@ -879,7 +887,7 @@ void rollYourOwn(int argc, char ** argv) {
 		readProfiles();
 	else if (strcmp(token, "print") == 0)
 		runWiggleIterator(readLastIteratorToken(token));
-	else if (strcmp(token, "AUC") == 0 || strcmp(token, "meanI") == 0 || strcmp(token, "varI") == 0 || strcmp(token, "stddevI") == 0 || strcmp(token, "CVI") == 0 || strcmp(token, "maxI") == 0 || strcmp(token, "minI") == 0 || strcmp(token, "pearson") == 0 || strcmp(token, "ndpearson") == 0)
+	else if (strcmp(token, "AUC") == 0 || strcmp(token, "meanI") == 0 || strcmp(token, "varI") == 0 || strcmp(token, "stddevI") == 0 || strcmp(token, "CVI") == 0 || strcmp(token, "maxI") == 0 || strcmp(token, "minI") == 0 || strcmp(token, "pearson") == 0 || strcmp(token, "ndpearson") == 0 || strcmp(token, "energy") == 0)
 		runWiggleIterator(PrintStatisticsWiggleIterator(readLastIteratorToken(token), stdout));
 	else if (strcmp(token, "seek") == 0)
 		toStdout(readSeek(), false, false);
