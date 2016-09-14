@@ -318,6 +318,14 @@ Outputs only the points of an iterator within a given genomic region:
 wiggletools seek chr1 2 8 test/fixedStep.bw 
 ```
 
+* bin
+
+Sums results into fixed-size bins
+
+```
+wiggletools bin 2 test/fixedStep.bw 
+```
+
 **2 Binary operators**
 
 The following operators read data from exactly two iterators, allowing comparisons:
