@@ -879,6 +879,80 @@ WiggleIterator * AbsWiggleIterator(WiggleIterator * i) {
 }
 
 //////////////////////////////////////////////////////
+// Binning operator
+//////////////////////////////////////////////////////
+
+typedef struct BinningWiggleIteratorData_st {
+	WiggleIterator * iter;
+	int width;
+} BinningWiggleIteratorData;
+
+void BinningWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	BinningWiggleIteratorData * data = (BinningWiggleIteratorData *) wi->data;
+	seek(data->iter, chrom, start, finish);
+	wi->chrom = NULL;
+	pop(wi);
+}
+
+static void BinningWiggleIteratorPop(WiggleIterator * wi) {
+	BinningWiggleIteratorData * data = (BinningWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+	int width = data->width;
+
+	if (iter->done) {
+		wi->done = true;
+		return;
+	}
+
+	// Set new boundaries
+	if (wi->chrom == iter->chrom && iter->start < wi->finish + width)
+		wi->start = wi->finish;
+	else
+		wi->start = (iter->start / width) * width + 1;
+	wi->chrom = iter->chrom;
+	wi->finish = wi->start + width;
+
+	// Compute sum
+	wi->value = 0;
+	int total_covered_length = 0;
+	while (!iter->done && iter->chrom == wi->chrom && iter->start < wi->finish) {
+		int start, finish;
+		if (iter->start < wi->start)
+			start = wi->start;
+		else
+			start = iter->start;
+
+		if (iter->finish > wi->finish)
+			finish = wi->finish;
+		else
+			finish = iter->finish;
+	
+		int covered_length = finish - start;
+		wi->value += covered_length * iter->value;
+		total_covered_length += covered_length;
+		if (iter->finish > wi->finish)
+			break;
+		else
+			pop(iter);
+	}
+
+	// Adding default values if required
+	if (iter->default_value && total_covered_length < width)
+		wi->value += (width - total_covered_length) * iter->default_value;
+}
+
+WiggleIterator * BinningWiggleIterator(WiggleIterator * i, int width) {
+	BinningWiggleIteratorData * data = (BinningWiggleIteratorData *) calloc(1, sizeof(BinningWiggleIteratorData));
+	if (width < 2) {
+		fprintf(stderr, "Cannot bin over a window of width %i, must be 2 or more\n", width);
+		exit(1);
+	}
+	data->iter = NonOverlappingWiggleIterator(i);
+	data->width = width;
+	return newWiggleIterator(data, &BinningWiggleIteratorPop, &BinningWiggleIteratorSeek, i->default_value * width);
+}
+
+//////////////////////////////////////////////////////
 // Smooth' operator !
 //////////////////////////////////////////////////////
 

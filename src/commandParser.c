@@ -44,7 +44,7 @@ puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic) | run (file)");
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
-puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | (statistic)");
+puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | bin (int) | (statistic)");
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.cram | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
@@ -151,6 +151,11 @@ static WiggleIterator ** readMappedIteratorList(int * count, bool * strict) {
 		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = ExtendWiggleIterator(iters[i], extension);
+	} else if (strcmp(token, "bin") == 0) {
+		int width = atoi(needNextToken());
+		iters = readIteratorList(count, strict);
+		for (i = 0; i < *count; i++)
+			iters[i] = BinningWiggleIterator(iters[i], width);
 	} else if (strcmp(token, "scale") == 0) {
 		double scalar = atof(needNextToken());
 		iters = readIteratorList(count, strict);
@@ -388,6 +393,11 @@ static WiggleIterator * readPow() {
 static WiggleIterator * readExtend() {
 	int extension = atoi(needNextToken());
 	return ExtendWiggleIterator(readIterator(), extension);
+}
+
+static WiggleIterator * readBin() {
+	int extension = atoi(needNextToken());
+	return BinningWiggleIterator(readIterator(), extension);
 }
 
 static WiggleIterator * readOverlap() {
@@ -703,6 +713,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readPow();
 	if (strcmp(token, "extend") == 0)
 		return readExtend();
+	if (strcmp(token, "bin") == 0)
+		return readBin();
 	if (strcmp(token, "gt") == 0)
 		return readGt();
 	if (strcmp(token, "lt") == 0)
