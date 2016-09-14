@@ -908,7 +908,7 @@ static void BinningWiggleIteratorPop(WiggleIterator * wi) {
 	if (wi->chrom == iter->chrom && iter->start < wi->finish + width)
 		wi->start = wi->finish;
 	else
-		wi->start = (iter->start / width) * width + 1;
+		wi->start = ((iter->start - 1) / width) * width + 1;
 	wi->chrom = iter->chrom;
 	wi->finish = wi->start + width;
 
