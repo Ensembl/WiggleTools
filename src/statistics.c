@@ -347,6 +347,7 @@ typedef struct energyData_st {
 	double real;
 	double im;
 	int wavelength;
+	int chrom_offset;
 	WiggleIterator * source;
 } EnergyData;
 
@@ -365,13 +366,16 @@ static void EnergyPop(WiggleIterator * wi) {
 		return;
 	}
 
+	if (wi->chrom != data->source->chrom)
+		data->chrom_offset += wi->finish;
+
 	wi->chrom = data->source->chrom;
 	wi->start = data->source->start;
 	wi->finish = data->source->finish;
 	wi->value = data->source->value;
 
 	int position;
-	for(position = data->source->start; position < data->source->finish; position++) {
+	for(position = data->chrom_offset + data->source->start; position < data->chrom_offset + data->source->finish; position++) {
 		data->real += cos(- position * 2 * PI / data->wavelength) * data->source->value;
 		data->im += sin(- position * 2 * PI / data->wavelength) * data->source->value;
 	}
