@@ -1,9 +1,9 @@
 CFLAGS=-g -Wall -O3 -std=gnu99
 LIBDIR=../lib
 BINDIR=../bin
-INC=-I${HTSLIB_SRC}/htslib -I${KENT_SRC}/inc
-LIB_PATHS=-L${KENT_SRC}/lib/${MACHTYPE} -L${LIBDIR} -L${HTSLIB_SRC}
-LIBS= -lwiggletools ${KENT_SRC}/lib/local/jkweb.a ${HTSLIB_SRC}/libhts.a -lz -lpthread -lssl -lcrypto -ldl -lgsl -lgslcblas -lm
+INC=-I${HTSLIB_SRC}/htslib -I${LIBBIGWIG_SRC}
+LIB_PATHS=-L${LIBBIGWIG_SRC} -L${HTSLIB_SRC} -L${LIBDIR}
+LIBS= -lwiggletools ${LIBBIGWIG_SRC}/libBigWig.a -lcurl -lhts -lgsl  -lgslcblas -lz -lpthread -lm
 OPTS=-D_PBGZF_USE
 
 default: lib bin
@@ -16,7 +16,7 @@ ${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggletools.o
 
 lib: ${LIBDIR}/libwiggletools.a 
 
-${LIBDIR}/libwiggletools.a: wiggleIterator.o wigReader.o bigWiggleReader.o multiplexer.o reducers.o bedReader.o bigBedReader.o bamReader.o apply.o bigFileReader.o commandParser.o wigWriter.o statistics.o unaryOps.o multiSet.o setComparisons.o bufferedReader.o vcfReader.o bcfReader.o plots.o mWigWriter.o recycleBin.o fib.o samReader.o
+${LIBDIR}/libwiggletools.a: wiggleIterator.o wigReader.o bigWiggleReader.o multiplexer.o reducers.o bedReader.o bigBedReader.o bamReader.o apply.o commandParser.o wigWriter.o statistics.o unaryOps.o multiSet.o setComparisons.o bufferedReader.o vcfReader.o bcfReader.o plots.o mWigWriter.o recycleBin.o fib.o samReader.o
 	mkdir -p ${LIBDIR}
 	ar rcs ${LIBDIR}/libwiggletools.a *.o
 

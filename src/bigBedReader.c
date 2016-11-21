@@ -12,51 +12,104 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "bigFileReader.h"
+#include <string.h>
+#include "bigWig.h"
+#include "bufferedReader.h"
 
-bool readBigBedBuffer(BigFileReaderData * data) {
-	char *blockPt;
+static int MAX_BLOCKS = 100;
 
-	/* Read next record into local variables. */
-	for (blockPt = data->uncompressBuf; blockPt != data->blockEnd; ) {
-		memReadBits32(&blockPt, data->isSwapped);	// Read and discard chromId
-		int start = memReadBits32(&blockPt, data->isSwapped) + 1;
-		int finish = memReadBits32(&blockPt, data->isSwapped) + 1; 
+typedef struct bigBedReaderData_st {
+	bigWigFile_t * fp;
+	char * chrom;
+	int start;
+	int stop;
+	BufferedReaderData * bufferedReaderData;
+} BigBedReaderData;
 
-		// Skip boring stuff...
-		for (;;)
-			if (*(blockPt++) <= 0)
-				break;
-
+static int readIteratorEntries(bwOverlapIterator_t *iter, char * chrom, BigBedReaderData * data) {
+	int index;
+	for(index = 0; index < iter->entries->l; index++) {
+		int start = iter->entries->start[index] + 1;
+		int finish = iter->entries->end[index] + 1;
 		if (data->stop > 0) {
 			if (start >= data->stop)
-				return true;
+				return 1;
 			else if (finish > data->stop)
 				finish = data->stop;
 		}
-		if (pushValuesToBuffer(data->bufferedReaderData, data->chrom, start, finish, 1))
-			return true;
+		if (pushValuesToBuffer(data->bufferedReaderData, chrom, start, finish, 1))
+			return 1;
 	}
-
-	return false;
+	return 0;
 }
 
-void openBigBedFile(BigFileReaderData * data, char * filename, bool holdFire) {
-	data->filename = filename;
-	data->bwf = bigBedFileOpen(data->filename);
-	data->isSwapped = data->bwf->isSwapped;
-	bbiAttachUnzoomedCir(data->bwf);
-	data->udc = data->bwf->udc;
-	data->readBuffer = &readBigBedBuffer;
-	data->uncompressBuf = (char *) needLargeMem(data->bwf->uncompressBufSize);
+static int readBigBedRegion(BigBedReaderData * data, char * chrom, int start, int stop) {
+	bwOverlapIterator_t *iter = bbOverlappingEntriesIterator(data->fp, chrom, start, stop, 0, MAX_BLOCKS);
+	while(iter->data) {
+		if (readIteratorEntries(iter, chrom, data))
+			return 1;
+		iter = bwIteratorNext(iter);
+	}
+	bwIteratorDestroy(iter);
+	return 0;
+}
+
+void * readBigBed(void * ptr) {
+	BigBedReaderData * data = (BigBedReaderData *) ptr;
+	if (data->chrom)
+		readBigBedRegion(data, data->chrom, data->start, data->stop);
+	else {
+		int chrom_index;
+		for (chrom_index = 0; chrom_index < data->fp->cl->nKeys; chrom_index++)
+			if (readBigBedRegion(data, data->fp->cl->chrom[chrom_index], 0, data->fp->cl->len[chrom_index]))
+				break;
+	}
+
+	endBufferedSignal(data->bufferedReaderData);
+	return NULL;
+}
+
+void BigBedReaderPop(WiggleIterator * wi) {
+	BigBedReaderData * data = (BigBedReaderData *) wi->data;
+	BufferedReaderPop(wi, data->bufferedReaderData);
+}
+
+void openBigBed(BigBedReaderData * data, char * filename, bool holdFire) {
+	if(!bbIsBigBed(filename, NULL)) {
+		printf("File %s is not in BigBed format", filename);
+		exit(1);
+	}
+	data->fp = bbOpen(filename, NULL);
 	if (!holdFire)
-		launchBufferedReader(&downloadBigFile, data, &(data->bufferedReaderData));
+		launchBufferedReader(&readBigBed, data, &(data->bufferedReaderData));
+}
+
+void BigBedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
+	BigBedReaderData * data = (BigBedReaderData *) wi->data; 
+
+	if (data->bufferedReaderData) {
+		killBufferedReader(data->bufferedReaderData);
+		free(data->bufferedReaderData);
+		data->bufferedReaderData = NULL;
+	}
+	data->chrom = chrom;
+	data->start = start;
+	data->stop = finish;
+	launchBufferedReader(&readBigBed, data, &(data->bufferedReaderData));
+	wi->done = false;
+	BigBedReaderPop(wi);
+
+	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) 
+		BigBedReaderPop(wi);
+
+	if (!wi->done && strcmp(chrom, wi->chrom) == 0 && wi->start < start)
+		wi->start = start;
 }
 
 WiggleIterator * BigBedReader(char * f, bool holdFire) {
-	BigFileReaderData * data = (BigFileReaderData *) calloc(1, sizeof(BigFileReaderData));
-	openBigBedFile(data, f, holdFire);
-	WiggleIterator * res = newWiggleIterator(data, &BigFileReaderPop, &BigFileReaderSeek, 0);
+	BigBedReaderData * data = (BigBedReaderData *) calloc(1, sizeof(BigBedReaderData));
+	openBigBed(data, f, holdFire);
+	WiggleIterator * res = newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek, 0);
 	res->overlaps = true;
 	return res;
 }	

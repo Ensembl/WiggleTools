@@ -17,35 +17,6 @@ confirmed_download() {
 	rm -f tmp.tgz
 }
 
-install_mysql () {
-	echo "Installing mysql...."
-	if [ -x "$(which apt-get)" ]; then
-		apt-get install mysql-server mysql-client
-	elif [ -x "$(which brew)" ]; then 
-		brew install mysql
-	else
-		if [ ! -x "$(which cmake)" ];
-		then
-			echo "Installing cmake..."
-			rm -Rf cmake*
-			confirmed_download 'cmake' 'http://www.cmake.org/files/v3.0/cmake-3.0.0.tar.gz'
-			cd cmake-3.0.0
-				./configure
-				make
-				sudo make install
-			cd ..
-			export PATH=$PATH
-		fi 
-		rm -Rf mysql*
-		confirmed_download 'mysql' 'http://sourceforge.net/projects/mysql.mirror/files/MySQL%205.6.19/mysql-5.6.19.tar.gz/download'
-		cd mysql*
-			cmake .
-			make 
-			sudo make install
-		cd ..
-	fi
-}
-
 install_zlib () {
 	if [ -x "$(which apt-get)" ]; then
 		apt-get install libgcrypt11-dev zlib1g-dev
@@ -56,38 +27,6 @@ install_zlib () {
 		confirmed_download 'Zlib' 'http://zlib.net/zlib-1.2.8.tar.gz'
 		cd zlib*
 			./configure
-			sudo make install
-		cd ..
-	fi
-}
-
-install_ssl () {
-	if [ -x "$(which apt-get)" ]; then
-		apt-get install openssl
-	elif [ -x "$(which brew)" ]; then
-		brew install openssl
-	else 
-		rm -Rf openssl*
-		confirmed_download 'OpenSSl' 'ftp://ftp.openssl.org/source/openssl-1.0.1t.tar.gz'
-		cd openssl*
-			./config
-			make
-			sudo make install
-		cd ..
-	fi
-}
-
-install_png () {
-	if [ -x "$(which apt-get)" ]; then
-		apt-get install libpng-dev
-	elif [ -x "$(which brew)" ]; then
-		brew install libpng
-	else 
-		rm -Rf libpng*
-		confirmed_download 'libpng' 'http://prdownloads.sourceforge.net/libpng/libpng-1.6.12.tar.gz?download'
-		cd libpng
-			./configure
-			make
 			sudo make install
 		cd ..
 	fi
@@ -144,21 +83,11 @@ install_htslib() {
 	cd ..
 }
 
-install_kent() {
-	prompt_download 'Kent userApps' 'genome-source.cse.ucsc.edu/kent.git'
-	echo "Installing Kent source..."
-	rm -Rf userApps
-	git archive --format=zip -9 --remote=git://genome-source.cse.ucsc.edu/kent.git beta src/userApps > userApps.zip
-	unzip -d userApps -j userApps.zip
-	rm userApps.zip
-	cd userApps
-		make fetchSource
-		make libs
-		export KENT_SRC=$PWD/kent/src
-		mkdir bin
-		cd kent/src/utils/bigWigCat
-			make
-		cd ../../../..
+install_libBigWig() {
+	echo "Installing LibBigWig..."
+	git clone https://github.com/dpryan79/libBigWig.git
+	cd libBigWig
+		make
 	cd ..
 }
 
@@ -175,33 +104,6 @@ echo "Checking for Zlib..."
 echo '#include <zlib.h>' > tmp.c
 echo 'int main(int c, char **v) {&deflate;}' >> tmp.c
 (gcc tmp.c -o tmp.a &> tmp.o) || install_zlib
-
-#######################
-## SSL
-#######################
-
-echo "Checking for OpenSSL..."
-echo '#include <openssl/ssl.h>' > tmp.c
-echo 'int main(int c, char **v) {&SSL_CIPHER_description;}' >> tmp.c
-(gcc tmp.c -o tmp.a &> tmp.o) || install_ssl
-
-#######################
-## png
-#######################
-
-echo "Checking for libpng..."
-echo '#include <png.h>' > tmp.c
-echo 'int main(int c, char **v) {&png_sig_cmp;}' >> tmp.c
-(gcc tmp.c -o tmp.a &> tmp.o) || install_png
-
-#######################
-## MySQL
-#######################
-
-echo "Checking for mysql..."
-echo "#include <mysql/mysql.h>" > tmp.c
-echo 'int main(int c, char **v) {&mysql_server_init;}' >> tmp.c
-(gcc tmp.c -o tmp.a &> tmp.o) || install_mysql
 
 #######################
 ## GSL
@@ -221,21 +123,21 @@ if [ ! -x "$(which git)" ]; then
 fi
 
 #######################
-## Tabix
+## HTSlib
 #######################
 echo "Checking for htslib"
-if [ -z "$TABIX_SRC" ];
+if [ -z "$HTS_SRC" ];
 then
 	install_htslib
 fi
 
 #######################
-## Kent
+## LibBigWig 
 #######################
-echo "Checking for Kent src..."
-if [ -z "$KENT_SRC" ];
+echo "Checking for LibBigWig src..."
+if [ -z "$LIBBIGWIG_SRC" ];
 then
-	install_kent
+	install_libBigWig
 fi
 
 #######################

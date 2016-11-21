@@ -10,9 +10,7 @@ The WiggleTools package allows genomewide data files to be manipulated as numeri
 Easiest installation: binary files
 ----------------------------------
 
-Wiggletools requires quite a few dependencies and can take a while to compile.
-
-To save you the trouble, we're trialling binary releases:
+Wiggletools requires a few dependencies. To save you the trouble, we're trialling binary releases:
 [https://github.com/Ensembl/WiggleTools/releases](https://github.com/Ensembl/WiggleTools/releases)
 
 Depending on feedback we will extend this service.
@@ -20,14 +18,12 @@ Depending on feedback we will extend this service.
 Easy Installation (Experimental)
 --------------------------------
 
-WiggleTools requires quite a few dependencies, and this can be a hassle to install.
-
 To speed up the process you can use the easy installation script:
 
 ```
 easy_install.sh
 ```
-It will test for the presence of pre-existing installations, prompt you before each download then install as appropriate. If you already installed Tabix or the Kent source code, be sure to set the $TABIX_SRC and $KENT_SRC environment variables to avoid a redundant installation. Because C libraries are being installed (see below), root permissions are required. If those libraries are already installed, the script runs happily without root privileges. 
+It will test for the presence of pre-existing installations, prompt you before each download then install as appropriate. If you already installed HTSLib or LibBigWig, be sure to set the $HTSLIB_SRC and $LIBBIGWIG_SRC environment variables to avoid a redundant installation. If libraries are already installed, the script runs happily without root privileges. 
 
 If you are on Mac or Ubuntu, the script will use HomeBrew or apt-get. If you have a different package installer, it should be pretty easy to install hooks for it in the script. 
 
@@ -36,42 +32,28 @@ Note that this script is quite experimental, and your system is different from m
 Installation
 ------------
 
-WiggleTools requires three main dependencies: the Kent, Tabix and GSL (GNU scientific) libraries, which have their own dependencies. 
-First ensure that you have the following libraries (if you don't have root privileges on your system, ask your local systems administrator):
+WiggleTools requires three main dependencies: LibBigWig, HTSLib and GSL (GNU scientific) libraries. 
 
-* [zlib](http://www.zlib.net/)
-* [libssl](http://www.openssl.org/)
-* [libpng](http://www.libpng.org/pub/png/libpng.html)
-* [GSL](http://www.gnu.org/software/gsl/)
-* [MySQL](http://dev.mysql.com/)
-* Compiling MySQL requires [cmake](http://www.cmake.org/)
-
-**Installing the Kent library**
-
-First download the code:
+**Installing LibBigWig**
 
 ```
-git archive --format=zip -9 --remote=git://genome-source.cse.ucsc.edu/kent.git beta src/userApps > userApps.zip
-unzip -d userApps -j userApps.zip
-rm userApps.zip
-cd userApps
-make fetchSource
+git clone https://github.com/dpryan79/libBigWig.git
+cd libBigWig
 make
-setenv KENT_SRC $PWD/kent/src
+setenv LIBBIGWIG_SRC $PWD
 # or, if you use bash...
-export KENT_SRC=$PWD/kent/src
+export LIBIGWIG_SRC=$PWD
 ```
-Ensure that your path points to the userApps/bin directory.
 
 **Installing the htslib library**
 
 ```
 git clone https://github.com/samtools/htslib.git
-setenv HTSLIB_SRC $PWD/htslib
-# or, if you use bash...
-export HTSLIB_SRC=$PWD/htslib
 cd htslib 
 make
+setenv HTSLIB_SRC $PWD
+# or, if you use bash...
+export HTSLIB_SRC=$PWD
 ```
 
 Obtaining WiggleTools
