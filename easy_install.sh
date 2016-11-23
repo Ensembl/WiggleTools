@@ -32,6 +32,23 @@ install_zlib () {
 	fi
 }
 
+install_curl() {
+	if [ -x "$(which apt-get)" ]; then
+		apt-get install curl
+	elif [ -x "$(which brew)" ]; then
+		brew install curl
+	else
+		rm -Rf curl*
+		confirmed_download 'curl' 'https://curl.haxx.se/download/curl-7.51.0.tar.gz'
+		echo "Installing curl..."
+		cd curl*
+			./configure
+			make
+			sudo make install
+		cd ..
+	fi
+}
+
 install_gsl() {
 	if [ -x "$(which apt-get)" ]; then
 		apt-get install libgsl0ldbl
@@ -73,8 +90,8 @@ install_git() {
 }
 
 install_htslib() {
-	prompt_download 'Tabix' 'https://github.com/samtools/htslib.git'
-	echo "Installing Tabix..."
+	prompt_download 'HTSLib' 'https://github.com/samtools/htslib.git'
+	echo "Installing HTSLib..."
 	rm -Rf htslib
 	git clone https://github.com/samtools/htslib.git
 	export HTSLIB_SRC=$PWD/htslib
@@ -103,6 +120,15 @@ install_libBigWig() {
 echo "Checking for Zlib..."
 echo '#include <zlib.h>' > tmp.c
 echo 'int main(int c, char **v) {&deflate;}' >> tmp.c
+(gcc tmp.c -o tmp.a &> tmp.o) || install_zlib
+
+#######################
+## Curl
+#######################
+
+echo "Checking for Curl..."
+echo '#include <curl/multi.h>' > tmp.c
+echo 'int main(int c, char **v) {&curl_multi_setopt;}' >> tmp.c
 (gcc tmp.c -o tmp.a &> tmp.o) || install_zlib
 
 #######################

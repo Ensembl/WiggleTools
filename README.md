@@ -34,6 +34,10 @@ Installation
 
 WiggleTools requires three main dependencies: LibBigWig, HTSLib and GSL (GNU scientific) libraries. 
 
+They themselves require:
+* [zlib](http://www.zlib.net/)
+* [libcurl](https://curl.haxx.se/download.html)
+
 **Installing LibBigWig**
 
 ```
