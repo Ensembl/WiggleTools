@@ -15,7 +15,7 @@ binaries: Parallel
 test: tests
 
 tests:
-	cd test; python test.py
+	cd test; python2.7 test.py
 
 clean:
 	cd src; make clean
