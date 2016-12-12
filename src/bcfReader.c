@@ -14,7 +14,7 @@
 
 #include <string.h>
 #include <zlib.h>
-#include "vcf.h"
+#include "htslib/vcf.h"
 #include "wiggleIterator.h"
 #include "bufferedReader.h"
 

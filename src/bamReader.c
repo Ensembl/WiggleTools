@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <string.h>
-#include "sam.h"
-#include "hts.h"
+#include "htslib/sam.h"
+#include "htslib/hts.h"
 #include "wiggleIterator.h"
 #include "bufferedReader.h"
 #include "fib.h"

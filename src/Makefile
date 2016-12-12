@@ -1,9 +1,9 @@
 CFLAGS=-g -Wall -O3 -std=gnu99
 LIBDIR=../lib
 BINDIR=../bin
-INC=-I${HTSLIB_SRC}/htslib -I${LIBBIGWIG_SRC}
-LIB_PATHS=-L${LIBBIGWIG_SRC} -L${HTSLIB_SRC} -L${LIBDIR}
-LIBS= -lwiggletools ${LIBBIGWIG_SRC}/libBigWig.a -lcurl -lhts -lgsl  -lgslcblas -lz -lpthread -lm
+INC=
+LIB_PATHS=-L${LIBDIR}
+LIBS= -lwiggletools -lBigWig -lcurl -lhts -lgsl  -lgslcblas -lz -lpthread -lm
 OPTS=-D_PBGZF_USE
 
 default: lib bin

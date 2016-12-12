@@ -32,21 +32,14 @@ Note that this script is quite experimental, and your system is different from m
 Installation
 ------------
 
-WiggleTools requires three main dependencies: LibBigWig, HTSLib and GSL (GNU scientific) libraries. 
-
-They themselves require:
-* [zlib](http://www.zlib.net/)
-* [libcurl](https://curl.haxx.se/download.html)
+WiggleTools requires three main dependencies: [LibBigWig](https://github.com/dpryan79/libBigWig), [HTSLib](https://github.com/samtools/htslib) and [GSL (GNU scientific)](https://www.gnu.org/software/gsl/) libraries. They themselves require [zlib](http://www.zlib.net/) and [libcurl](https://curl.haxx.se/download.html).
 
 **Installing LibBigWig**
 
 ```
 git clone https://github.com/dpryan79/libBigWig.git
 cd libBigWig
-make
-setenv LIBBIGWIG_SRC $PWD
-# or, if you use bash...
-export LIBIGWIG_SRC=$PWD
+make install
 ```
 
 **Installing the htslib library**
@@ -54,10 +47,17 @@ export LIBIGWIG_SRC=$PWD
 ```
 git clone https://github.com/samtools/htslib.git
 cd htslib 
+make install
+```
+
+**Installing the GSL library**
+```
+wget ftp://www.mirrorservice.org/sites/ftp.gnu.org/gnu/gsl/gsl-latest.tar.gz 
+tar -xvzpf gsl-latest.tar.gz
+cd gsl*
+./configure
 make
-setenv HTSLIB_SRC $PWD
-# or, if you use bash...
-export HTSLIB_SRC=$PWD
+make install
 ```
 
 Obtaining WiggleTools
