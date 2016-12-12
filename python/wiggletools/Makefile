@@ -4,4 +4,4 @@ default: scripts
 
 scripts: 
 	mkdir -p ${BINDIR}
-	cp *.py *.sh ${BINDIR}
+	cp [^_]*.py *.sh ${BINDIR}
