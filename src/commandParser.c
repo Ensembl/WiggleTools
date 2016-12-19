@@ -44,7 +44,7 @@ puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic) | run (file)");
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
-puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | bin (int) | (statistic)");
+puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | abs | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | extend (int) | bin (int) | (statistic)");
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.cram | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
@@ -132,6 +132,10 @@ static WiggleIterator ** readMappedIteratorList(int * count, bool * strict) {
 		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
 			iters[i] = NaturalExpWiggleIterator(iters[i]);
+	} else if (strcmp(token, "abs") == 0) {
+		iters = readIteratorList(count, strict);
+		for (i = 0; i < *count; i++)
+			iters[i] = AbsWiggleIterator(iters[i]);
 	} else if (strcmp(token, "ln") == 0) {
 		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
@@ -453,6 +457,10 @@ static WiggleIterator * readExp() {
 	return NaturalExpWiggleIterator(readIterator());
 }
 
+static WiggleIterator * readAbs() {
+	return AbsWiggleIterator(readIterator());
+}
+
 static WiggleIterator * readSum() {
 	return SumReduction(readMultiplexer());
 }
@@ -705,6 +713,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readSmooth();
 	if (strcmp(token, "exp") == 0)
 		return readExp();
+	if (strcmp(token, "abs") == 0)
+		return readAbs();
 	if (strcmp(token, "ln") == 0)
 		return readNaturalLog();
 	if (strcmp(token, "log") == 0)
