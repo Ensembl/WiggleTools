@@ -57,7 +57,7 @@ git clone https://github.com/Ensembl/WiggleTools.git
 Installing WiggleTools
 ----------------------
 
-Once you installed the two previous libraries and set the KENT\_SRC environment variable, and downloaded the WiggleTools, you can compile the WiggleTools library:
+Once you installed the previous libraries and downloaded WiggleTools, you can compile the WiggleTools library:
 
 ```
 cd wiggletools
@@ -70,9 +70,7 @@ The make process produces a number of outputs:
 * A header for that library in inc/
 * Various executables in bin/
 
-There is not installation routine, meaning that you should copy the relevant files onto your path, library path, etc. Note that the executable does not require the libraries to be available.
-
-If the system complains that it cannot find -lssl or -lcrypto then you need to install the [libssl runtime and development packages](http://www.openssl.org/)
+There is no installation routine, meaning that you should copy the relevant files onto your path, library path, etc. Note that the executable does not require the libraries to be available.
 
 If the system cannot find 'gsl/gsl_cdf.h' then you need to install the [GNU scientific library](http://www.gnu.org/software/gsl/)
 
