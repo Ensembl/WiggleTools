@@ -1,4 +1,4 @@
-WiggleTools 1.0
+WiggleTools 1.2
 ===============
 
 Author: [Daniel Zerbino](mailto:zerbino@ebi.ac.uk)
@@ -7,30 +7,15 @@ Copyright holder: EMBL-European Bioinformatics Institute (Apache 2 License)
 
 The WiggleTools package allows genomewide data files to be manipulated as numerical functions, equipped with all the standard functional analysis operators (sum, product, product by a scalar, comparators), and derived statistics (mean, median, variance, stddev, t-test, Wilcoxon's rank sum test, etc).
 
-Easiest installation: binary files
-----------------------------------
-
-Wiggletools requires a few dependencies. To save you the trouble, we're trialling binary releases:
-[https://github.com/Ensembl/WiggleTools/releases](https://github.com/Ensembl/WiggleTools/releases)
-
-Depending on feedback we will extend this service.
-
-Easy Installation (Experimental)
---------------------------------
-
-To speed up the process you can use the easy installation script:
+Brew Installation
+-----------------
 
 ```
-easy_install.sh
+brew install wiggletools
 ```
-It will test for the presence of pre-existing installations, prompt you before each download then install as appropriate. If you already installed HTSLib or LibBigWig, be sure to set the $HTSLIB_SRC and $LIBBIGWIG_SRC environment variables to avoid a redundant installation. If libraries are already installed, the script runs happily without root privileges. 
 
-If you are on Mac or Ubuntu, the script will use HomeBrew or apt-get. If you have a different package installer, it should be pretty easy to install hooks for it in the script. 
-
-Note that this script is quite experimental, and your system is different from mine, so please be nice to it and let me know if it can be corrected in any way.
-
-Installation
-------------
+Pre-requisites
+--------------
 
 WiggleTools requires three main dependencies: [LibBigWig](https://github.com/dpryan79/libBigWig), [HTSLib](https://github.com/samtools/htslib) and [GSL (GNU scientific)](https://www.gnu.org/software/gsl/) libraries. They themselves require [zlib](http://www.zlib.net/) and [libcurl](https://curl.haxx.se/download.html).
 
