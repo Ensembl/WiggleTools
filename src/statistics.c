@@ -581,7 +581,7 @@ static void PrintStatisticsWiggleIteratorPop(WiggleIterator * wi) {
 		wi->done = true;
 		if (iter->append)
 			fprintf(data->file, "%f", *((double *) iter->data));
-		for (iter = iter->append; iter->append; iter = iter->append)
+		for (iter = iter->append; iter && iter->append; iter = iter->append)
 			fprintf(data->file, "\t%f", *((double *) iter->data));
 		fprintf(data->file, "\n");
 	} else {
