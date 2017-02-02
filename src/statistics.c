@@ -241,7 +241,7 @@ static void VarianceCorePop(WiggleIterator * wi, VarianceData * data) {
 	int length = wi->finish - wi->start;
 	if (data->count) {
 		double old_mean = data->sum / data->count;
-		double new_mean = data->sum / (data->count * length);
+		double new_mean = data->sum / (data->count + length);
 		double delta_T = old_mean * new_mean - new_mean * 2 * wi->value + ((double) data->count / (data->count + length)) * wi->value * wi->value;
 		data->T += delta_T * length;
 	}
