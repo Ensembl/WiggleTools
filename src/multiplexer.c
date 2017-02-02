@@ -136,6 +136,7 @@ static void seekCoreMultiplexer(Multiplexer * multi, const char * chrom, int sta
 	fh_deleteheap(multi->finishes);
 	multi->starts = fh_makeheap();
 	multi->finishes = fh_makeheap();
+	multi->inplay_count = 0;
 	popMultiplexer(multi);
 }
 
