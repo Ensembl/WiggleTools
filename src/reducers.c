@@ -48,7 +48,7 @@ void SelectReductionPop(WiggleIterator * wi) {
 		return;
 	}
 
-	while (!multi->inplay[data->index]) {
+	while (multi->inplay[data->index]) {
 		popMultiplexer(multi);
 		if (multi->done) {
 			wi->done = true;
