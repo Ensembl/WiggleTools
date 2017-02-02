@@ -45,6 +45,9 @@ static int readIteratorEntries(bwOverlapIterator_t *iter, char * chrom, BigBedRe
 
 static int readBigBedRegion(BigBedReaderData * data, char * chrom, int start, int stop) {
 	bwOverlapIterator_t *iter = bbOverlappingEntriesIterator(data->fp, chrom, start, stop, 0, MAX_BLOCKS);
+	if (!iter)
+		return 0;
+	
 	while(iter->data) {
 		if (readIteratorEntries(iter, chrom, data))
 			return 1;
