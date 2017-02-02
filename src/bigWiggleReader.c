@@ -45,6 +45,9 @@ static int readIteratorIntervals(bwOverlapIterator_t *iter, char * chrom, BigWig
 
 static int readBigWiggleRegion(BigWiggleReaderData * data, char * chrom, int start, int stop) {
 	bwOverlapIterator_t *iter = bwOverlappingIntervalsIterator(data->fp, chrom, start, stop, MAX_BLOCKS);
+	if (!iter)
+		return 0;
+
 	while(iter->data) {
 		if (readIteratorIntervals(iter, chrom, data))
 			return 1;
