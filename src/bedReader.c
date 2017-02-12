@@ -68,11 +68,15 @@ void BedReaderPop(WiggleIterator * wi) {
 		}
 
 		if (data->stop > 0) {
-			if ((wi->start >= data->stop && strcmp(wi->chrom, data->chrom) == 0) || strcmp(wi->chrom, data->chrom) > 0) {
+			int comparison = strcmp(wi->chrom, data->chrom);
+			if (comparison == 0) {
+				if (wi->start >= data->stop) {
+					wi->done = true;
+				} else if (wi->finish > data->stop) {
+					wi->finish = data->stop;
+				}
+			} else if (comparison > 0) {
 				wi->done = true;
-				return;
-			} else if (wi->finish > data->stop) {
-				wi->finish = data->stop;
 			}
 		}
 
