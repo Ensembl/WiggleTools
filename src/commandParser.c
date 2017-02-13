@@ -25,8 +25,10 @@ void printHelp() {
 
 puts("WiggleTools");
 puts("");
-puts("Copyright [1999-2016] EMBL-European Bioinformatics Institute");
+puts("Copyright [1999-2017] EMBL-European Bioinformatics Institute");
 puts("Development contact: Daniel Zerbino zerbino@ebi.ac.uk");
+puts("");
+puts("Citation: Zerbino DR, Johnson N, Juettemann T, Wilder SP and Flicek PR: WiggleTools: parallel processing of large collections of genome-wide datasets for visualization and statistical analysis. Bioinformatics 2014 30:1008-1009.");
 puts("");
 puts("This library parses wiggle files and executes various operations on them streaming through lazy evaluators.");
 puts("");
