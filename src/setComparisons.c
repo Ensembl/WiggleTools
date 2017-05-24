@@ -122,7 +122,7 @@ void TTestReductionPop(WiggleIterator * wi) {
 
 WiggleIterator * TTestReduction(Multiset * multi) {
 	SetComparisonData * data = (SetComparisonData *) calloc(1, sizeof(SetComparisonData));
-	if (multi->count != 2 || multi->multis[0]->count + multi->multis[1]->count < 3) {
+	if (multi->count != 2 || multi->multis[0]->count < 3 || multi->multis[1]->count < 3) {
 		puts("The t-test function only works for two sets with enough elements to compute variance");
 		exit(1);
 	}	
