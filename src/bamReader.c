@@ -55,9 +55,7 @@ static void storeReadComponents(FibHeap * starts, FibHeap * ends, bam1_t * aln) 
 }
 
 static bam1_t * nextRead(BamReaderData * data, hts_itr_t * iter, bam1_t * aln) {
-	if ((iter && sam_itr_next(data->fp, iter, aln) < 0) 
-	     || (!iter && sam_read1(data->fp, data->header, aln) < 0)
-	   ) {
+	if (sam_itr_next(data->fp, iter, aln) < 0) {
 		bam_destroy1(aln);
 		return NULL;
 	} else  {
@@ -65,18 +63,13 @@ static bam1_t * nextRead(BamReaderData * data, hts_itr_t * iter, bam1_t * aln) {
 	}
 }
 
-static void * downloadBamFile(void * args) {
-	BamReaderData * data = (BamReaderData *) args;
-
-	//Initialize iterator
-        hts_itr_t *iter = NULL;
-	if (data->chrom) {
-		data->chrom_tid = bam_name2id(data->header, data->chrom);
-		iter = sam_itr_queryi(data->idx, data->chrom_tid, data->start, data->stop);
-		if(data->header == NULL || iter == NULL) {
-			fprintf(stderr, "Unable to iterate to region within BAM.");
-			exit(1);
-		}
+static void downloadBamFileChromosome(BamReaderData * data, char * query_chrom, uint32_t query_start, uint32_t query_stop) {
+	// Create iterator
+	int query_chrom_tid = bam_name2id(data->header, query_chrom);
+	hts_itr_t * iter = sam_itr_queryi(data->idx, query_chrom_tid, query_start, query_stop);
+	if(data->header == NULL || iter == NULL) {
+		fprintf(stderr, "Unable to iterate to region within BAM.");
+		exit(1);
 	}
 
 	// Iterate through data
@@ -124,25 +117,23 @@ static void * downloadBamFile(void * args) {
 			if (fh_notempty(ends) && (fh_empty(starts) || fh_min(ends) < finish))
 				finish = fh_min(ends);
 
+
 			// Possible cutoff of data
-			if (data->stop > 0) {
-				if ((start >= data->stop && chrom_tid == data->chrom_tid) || chrom_tid > data->chrom_tid) {
-					fh_deleteheap(starts);
-					fh_deleteheap(ends);
-					if (iter)
-						bam_itr_destroy(iter);
-					endBufferedSignal(data->bufferedReaderData);
-					return NULL;
-				} else if (finish > data->stop)
-					finish = data->stop;
-			}
+			if ((start >= query_stop && chrom_tid == query_chrom_tid) || chrom_tid > query_chrom_tid) {
+				fh_deleteheap(starts);
+				fh_deleteheap(ends);
+				if (iter)
+					bam_itr_destroy(iter);
+				return;
+			} else if (finish > query_stop)
+				finish = query_stop;
 
 			if (pushValuesToBuffer(data->bufferedReaderData, data->header->target_name[chrom_tid], start, finish, value)) {
 				fh_deleteheap(starts);
 				fh_deleteheap(ends);
 				if (iter)
 					bam_itr_destroy(iter);
-				return NULL;
+				return;
 			}
 		} else {
 			// No ends => end of file iterator
@@ -150,10 +141,47 @@ static void * downloadBamFile(void * args) {
 			fh_deleteheap(ends);
 			if (iter)
 				bam_itr_destroy(iter);
-			endBufferedSignal(data->bufferedReaderData);
-			return NULL;
+			return;
 		}
 	}
+}
+
+typedef struct {
+	char * name;
+	int tid;
+} name_id_st;
+
+static int comp_name_id_st(const void * A, const void * B) {
+	char * A_name = ((name_id_st *) A)->name;
+	char * B_name = ((name_id_st *) B)->name;
+	return strcmp(A_name, B_name);
+}
+
+static void * downloadBamFile(void * args) {
+	BamReaderData * data = (BamReaderData *) args;
+
+	if (data->chrom) {
+		downloadBamFileChromosome(data, data->chrom, data->start, data->stop);
+	} else {
+		// Copy chromosome name into array of name_id_st:
+		name_id_st * name_ids = calloc(data->header->n_targets, sizeof(name_id_st));
+		int index;
+		for (index = 0; index < data->header->n_targets; index++) {
+			name_ids[index].name = data->header->target_name[index];
+			name_ids[index].tid = index;
+		}
+
+		// Sort list of chromosomes alphabetically:
+		qsort(name_ids, data->header->n_targets, sizeof(name_id_st), comp_name_id_st); 
+		
+		// Iterate through chromsomes in alphabetic order
+		for (index = 0; index < data->header->n_targets; index++) {
+			downloadBamFileChromosome(data, name_ids[index].name, 0, data->header->target_len[name_ids[index].tid]);
+		}
+	}
+
+	endBufferedSignal(data->bufferedReaderData);
+	return NULL;
 }
 
 void OpenBamFile(BamReaderData * data, char * filename) {
@@ -164,6 +192,13 @@ void OpenBamFile(BamReaderData * data, char * filename) {
 
         //Get the header
         data->header = sam_hdr_read(data->fp);
+
+	// Get the index
+	data->idx = sam_index_load(data->fp, data->filename);
+	if(data->idx == NULL) {
+		fprintf(stderr, "Unable to open BAM/SAM index. Make sure alignments are indexed\n");
+		exit(1);
+	}
 }
 
 void closeBamFile(BamReaderData * data) {
@@ -180,15 +215,6 @@ void BamReaderPop(WiggleIterator * wi) {
 
 void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	BamReaderData * data = (BamReaderData *) wi->data;
-
-	//Load the index
-	if (!data->idx) {
-		data->idx = sam_index_load(data->fp, data->filename);
-		if(data->idx == NULL) {
-			fprintf(stderr, "Unable to open BAM/SAM index. Make sure alignments are indexed\n");
-			exit(1);
-		}
-	}
 
 	// Kill ongoing jobs
 	if (data->bufferedReaderData) {
