@@ -683,6 +683,7 @@ void CVReductionPop(WiggleIterator * wi) {
 			value = multi->values[i];
 		else
 			value = multi->default_values[i];
+		mean += value;
 
 		if (isnan(value)) {
 			wi->value = NAN;
