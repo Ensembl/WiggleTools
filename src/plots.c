@@ -49,7 +49,7 @@ static void updateProfile(WiggleIterator * wig, double compression, double * pro
 		finish = profile_width;
 
 	for (pos = start; pos < finish; pos++)
-		profile[pos] += wig->value / compression;
+		profile[pos] += wig->value / (finish - start);
 }
 
 void regionProfile(WiggleIterator * wig, double * profile, int profile_width, int region_width, bool stranded) {
