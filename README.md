@@ -60,7 +60,7 @@ Installing WiggleTools
 Once you installed the previous libraries and downloaded WiggleTools, you can compile the WiggleTools library:
 
 ```
-cd wiggletools
+cd WiggleTools
 make
 ```
 
