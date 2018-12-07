@@ -1,8 +1,9 @@
+CC=/bin/cc
 CFLAGS=-g -Wall -O3 -std=gnu99
 LIBDIR=../lib
 BINDIR=../bin
-INC=
-LIB_PATHS=-L${LIBDIR}
+INC=-I../../libBigWig -I../../htslib
+LIB_PATHS=-L${LIBDIR} -L../../libBigWig -L../../htslib
 LIBS= -lwiggletools -lBigWig -lcurl -lhts -lgsl  -lgslcblas -lz -lpthread -lm
 OPTS=-D_PBGZF_USE
 
