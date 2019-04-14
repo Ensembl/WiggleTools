@@ -11,7 +11,7 @@ Brew Installation
 -----------------
 
 ```
-brew install wiggletools
+brew install brewsci/bio/wiggletools
 ```
 
 Pre-requisites
