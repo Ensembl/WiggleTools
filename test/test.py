@@ -27,19 +27,19 @@ assert test('../bin/wiggletools diff fixedStep.bw variableStep.wig fixedStep.wig
 # Positive control
 assert test('../bin/wiggletools do isZero diff fixedStep.bw fixedStep.wig') == 0
 
-# Testing ratios and offset 
+# Testing ratios and offset
 assert test('../bin/wiggletools do isZero offset -1 ratio variableStep.bw variableStep.wig') == 0
 
-# Testing BAM & BedGraph 
+# Testing BAM & BedGraph
 assert test('../bin/wiggletools do isZero diff bam.bam pileup.bg') == 0
 
-# Testing BAM & CRAM 
+# Testing BAM & CRAM
 assert test('../bin/wiggletools do isZero diff bam.bam cram.cram') == 0
 
-# Testing BAM & SAM 
+# Testing BAM & SAM
 assert test('../bin/wiggletools do isZero diff bam.bam sam.sam') == 0
 
-# Testing BAM & SAM 
+# Testing BAM & SAM
 assert test('cat sam.sam | ../bin/wiggletools do isZero diff bam.bam sam -') == 0
 
 # Testing Bed and BigBed
@@ -100,14 +100,17 @@ assert float(testOutput('../bin/wiggletools print - minI fixedStep.wig')) == 0
 # Test max
 assert float(testOutput('../bin/wiggletools print - maxI fixedStep.wig')) == 9
 
-# Test coverage 
+# Test coverage
 assert test('../bin/wiggletools do isZero diff overlapping_coverage.wig coverage overlapping.bed') == 0
 
 #Test trim
 assert test('../bin/wiggletools do isZero diff trim overlapping.bed variableStep.wig mult overlapping.bed variableStep.wig') == 0
 
 #Test floor
-assert test('../bin/wiggletools do floor fixedStep.wig') == 0
+assert test('../bin/wiggletools do isZero diff floor fixedStep.wig floor fixedStep.wig') == 0
+
+#Test toInt
+assert test('../bin/wiggletools do isZero diff toInt fixedStep.wig toInt variableStep.wig') == 1
 
 # Test program file
 assert test('../bin/wiggletools run program.txt') == 0
