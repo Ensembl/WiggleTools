@@ -167,6 +167,7 @@ void toIntPop(WiggleIterator * wi) {
 	wi->finish = data->iter->finish;
 	wi->value = (int)(data->iter->value);
 	pop(data->iter);
+}
 
 WiggleIterator * ToInt(WiggleIterator * wi) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
