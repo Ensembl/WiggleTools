@@ -1,11 +1,11 @@
 // Copyright [1999-2017] EMBL-European Bioinformatics Institute
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 // http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,11 +41,11 @@ WiggleIterator * SamReader (char *);
 WiggleIterator * VcfReader (char *);
 WiggleIterator * BcfReader (char *, bool);
 
-// Generic class functions 
+// Generic class functions
 void seek(WiggleIterator *, const char *, int, int);
 
 // Algebraic operations on iterators
-	
+
 	// Unary
 WiggleIterator * UnitWiggleIterator (WiggleIterator *);
 WiggleIterator * CoverageWiggleIterator (WiggleIterator *);
@@ -62,6 +62,7 @@ WiggleIterator * NoverlapWiggleIterator(WiggleIterator *, WiggleIterator *);
 WiggleIterator * NearestWiggleIterator(WiggleIterator *, WiggleIterator *);
 WiggleIterator * IsZero(WiggleIterator *);
 WiggleIterator * Floor(WiggleIterator *);
+WiggleIterator * ToInt(WiggleIterator *);
 	// Scalar operations
 WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
 WiggleIterator * ShiftWiggleIterator(WiggleIterator *, double);
@@ -74,7 +75,7 @@ WiggleIterator * SmoothWiggleIterator(WiggleIterator * i, int);
 WiggleIterator * BinningWiggleIterator(WiggleIterator * i, int);
 WiggleIterator * ExtendWiggleIterator(WiggleIterator * i, int);
 
-// Sets of iterators 
+// Sets of iterators
 Multiplexer * newMultiplexer(WiggleIterator **, int, bool);
 
 // Reduction operators on sets
@@ -92,7 +93,7 @@ WiggleIterator * CVReduction ( Multiplexer * );
 WiggleIterator * MedianReduction ( Multiplexer * );
 WiggleIterator * FillInReduction( Multiplexer * );
 
-// Sets of sets iterators 
+// Sets of sets iterators
 Multiset * newMultiset(Multiplexer **, int);
 
 // Reduction operators on sets of sets:
@@ -123,7 +124,7 @@ WiggleIterator * NDPearsonIntegrator(Multiset *);
 WiggleIterator * EnergyIntegrator(WiggleIterator *, int);
 void regionProfile(WiggleIterator *, double *, int, int, bool);
 void addProfile(double *, double *, int);
-//	Binary 
+//	Binary
 WiggleIterator * PearsonIntegrator (WiggleIterator * , WiggleIterator * );
 //	Histograms
 Histogram * histogram(WiggleIterator **, int, int);
