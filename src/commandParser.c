@@ -1,11 +1,11 @@
 // Copyright [1999-2017] EMBL-European Bioinformatics Institute
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 // http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,7 +46,7 @@ puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic) | run (file)");
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
-puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | abs | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | floor | extend (int) | bin (int) | (statistic)");
+puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | abs | exp | ln | log (float) | pow (float) | offset (float) | scale (float) | gt (float) | lt (float) | default (float) | isZero | toInt | floor | extend (int) | bin (int) | (statistic)");
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.cram | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
@@ -242,7 +242,7 @@ static FILE * readOutputFilename() {
 			exit(1);
 		}
 		return file;
-	} else 
+	} else
 		return stdout;
 }
 
@@ -317,7 +317,7 @@ static Multiplexer * readMultiplexerToken(char * token) {
 	} else if (strcmp(token, "apply") == 0) {
 		return readApply();
 	} else {
-		int count = 0; 
+		int count = 0;
 		bool strict = false;
 		WiggleIterator ** iters = readIteratorListToken(&count, &strict, token);
 		return newMultiplexer(iters, count, strict);
@@ -618,7 +618,7 @@ static WiggleIterator * readMeanIntegrator() {
 }
 
 static WiggleIterator * readMaxIntegrator() {
-	return MaxIntegrator(readIterator());	
+	return MaxIntegrator(readIterator());
 }
 
 static WiggleIterator * readMinIntegrator() {
@@ -626,15 +626,15 @@ static WiggleIterator * readMinIntegrator() {
 }
 
 static WiggleIterator * readVarianceIntegrator() {
-	return VarianceIntegrator(readIterator());	
+	return VarianceIntegrator(readIterator());
 }
 
 static WiggleIterator * readStandardDeviationIntegrator() {
-	return StandardDeviationIntegrator(readIterator());	
+	return StandardDeviationIntegrator(readIterator());
 }
 
 static WiggleIterator * readCoefficientOfVariationIntegrator() {
-	return CoefficientOfVariationIntegrator(readIterator());	
+	return CoefficientOfVariationIntegrator(readIterator());
 }
 
 static WiggleIterator * readEnergy() {
@@ -666,6 +666,10 @@ static WiggleIterator * readIsZero() {
 
 static WiggleIterator * readFloor() {
 	return Floor(readIterator());
+}
+
+static WiggleIterator * readToInt() {
+	return ToInt(readIterator());
 }
 
 static WiggleIterator * readIteratorToken(char * token) {
@@ -773,8 +777,10 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readNDPearson();
 	if (strcmp(token, "isZero") == 0)
 		return readIsZero();
-    if (strcmp(token, "floor") == 0)
-        return readFloor();
+	if (strcmp(token, "floor") == 0)
+		return readFloor();
+	if (strcmp(token, "toInt") == 0)
+		return readToInt();
 	if (strcmp(token, "apply") == 0)
 		return SelectReduction(readApply(), 0);
 
@@ -830,9 +836,9 @@ static void readProfiles() {
 static void readHistogram() {
 	FILE * file = readOutputFilename();
 	int width = atoi(needNextToken());
-	int count = 0; 
+	int count = 0;
 	WiggleIterator ** iters = readLastIteratorList(&count);
-	Histogram * hist = histogram(iters, count, width);	
+	Histogram * hist = histogram(iters, count, width);
 	print_histogram(hist, file);
 	fclose(file);
 }
@@ -924,5 +930,5 @@ void rollYourOwn(int argc, char ** argv) {
 	else if (strcmp(token, "run") == 0)
 		parseFile(needNextToken());
 	else
-		toStdout(readLastIteratorToken(token), false, false);	
+		toStdout(readLastIteratorToken(token), false, false);
 }

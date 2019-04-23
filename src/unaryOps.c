@@ -1,11 +1,11 @@
 // Copyright [1999-2017] EMBL-European Bioinformatics Institute
-// 
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// 
+//
 // http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -75,11 +75,11 @@ void UnionWiggleIteratorPop(WiggleIterator * wi) {
 		} else if (wi->chrom == iter->chrom && wi->finish >= iter->start) {
 			if (iter->finish > wi->finish)
 				wi->finish = iter->finish;
-		} else 
+		} else
 			break;
 		count++;
 		pop(iter);
-	} 
+	}
 
 	wi->done = (count == 0);
 }
@@ -146,10 +146,32 @@ void floorPop(WiggleIterator * wi) {
     wi->value = floor(data->iter->value);
 	pop(data->iter);
 }
+
 WiggleIterator * Floor(WiggleIterator * wi) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
 	data->iter = wi;
 	return newWiggleIterator(data, &floorPop, &UnaryWiggleIteratorSeek, floor(wi->default_value));
+}
+//////////////////////////////////////////////////////
+// toInt
+//////////////////////////////////////////////////////
+
+void toIntPop(WiggleIterator * wi) {
+	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) wi->data;
+	if (data->iter->done) {
+		wi->done = true;
+		return;
+	}
+	wi->chrom = data->iter->chrom;
+	wi->start = data->iter->start;
+	wi->finish = data->iter->finish;
+	wi->value = (int)(data->iter->value);
+	pop(data->iter);
+
+WiggleIterator * ToInt(WiggleIterator * wi) {
+	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
+	data->iter = wi;
+	return newWiggleIterator(data, &toIntPop, &UnaryWiggleIteratorSeek, (int)(wi->default_value));
 }
 
 //////////////////////////////////////////////////////
@@ -420,8 +442,8 @@ void OverlapWiggleIteratorPop(WiggleIterator * wi) {
 			pop(source);
 		else
 			break;
-	} 
-	
+	}
+
 	if (source->done || mask->done)
 		wi->done = true;
 	else {
@@ -470,8 +492,8 @@ void TrimWiggleIteratorPop(WiggleIterator * wi) {
 			pop(source);
 		else
 			break;
-	} 
-	
+	}
+
 	if (source->done || mask->done)
 		wi->done = true;
 	else {
@@ -513,8 +535,8 @@ void NoverlapWiggleIteratorPop(WiggleIterator * wi) {
 			break;
 		else
 			pop(source);
-	} 
-	
+	}
+
 	if (source->done)
 		wi->done = true;
 	else {
@@ -570,8 +592,8 @@ void NearestWiggleIteratorPop(WiggleIterator * wi) {
 			pop(mask);
 		} else
 			break;
-	} 
-	
+	}
+
 	wi->chrom = source->chrom;
 	wi->start = source->start;
 	wi->finish = source->finish;
@@ -580,9 +602,9 @@ void NearestWiggleIteratorPop(WiggleIterator * wi) {
 	if (data->prev_chrom && strcmp(data->prev_chrom, source->chrom) == 0) {
 		wi->value = wi->start - data->prev_finish + 1;
 		set = true;
-	}	
+	}
 
-	if (!mask->done && strcmp(mask->chrom, source->chrom) == 0 && (!set || wi->value > mask->start - wi->finish + 1)) { 
+	if (!mask->done && strcmp(mask->chrom, source->chrom) == 0 && (!set || wi->value > mask->start - wi->finish + 1)) {
 		wi->value = mask->start - wi->finish + 1;
 		set = true;
 	}
@@ -590,7 +612,7 @@ void NearestWiggleIteratorPop(WiggleIterator * wi) {
 	if (!set)
 		wi->value = NAN;
 	else if (wi->value < 0)
-		wi->value = 0;	
+		wi->value = 0;
 
 	pop(source);
 }
@@ -948,7 +970,7 @@ static void BinningWiggleIteratorPop(WiggleIterator * wi) {
 			finish = wi->finish;
 		else
 			finish = iter->finish;
-	
+
 		int covered_length = finish - start;
 		wi->value += covered_length * iter->value;
 		total_covered_length += covered_length;
@@ -992,7 +1014,7 @@ typedef struct SmoothWiggleIteratorData_st {
 static double smoothWiggleIteratorRecomputeSum(SmoothWiggleIteratorData * data) {
        double sum = 0;
        int index;
-       if (data->oldest < data->latest)   
+       if (data->oldest < data->latest)
                for (index = data->oldest + 1; index < data->latest; index++)
                        sum += data->buffer[index];
        else {
@@ -1004,7 +1026,7 @@ static double smoothWiggleIteratorRecomputeSum(SmoothWiggleIteratorData * data) 
 
        return sum;
 }
-   
+
 static void smoothWiggleIteratorEraseOne(SmoothWiggleIteratorData * data) {
 	if (isnan(data->buffer[data->oldest]))
                data->sum = smoothWiggleIteratorRecomputeSum(data);
@@ -1021,13 +1043,13 @@ static void smoothWiggleIteratorReadOne(char * chrom, int position, SmoothWiggle
 	// Let iter run if necessary
 	while (!iter->done && iter->chrom == chrom && iter->finish <= position)
 		pop(iter);
-	
+
 	// Record iter's value as appropriate
 	if (!iter->done && iter->chrom == chrom) {
 		if (iter->start <= position) {
 			data->buffer[data->latest] = iter->value;
 			data->sum += iter->value;
-		} else 
+		} else
 			data->buffer[data->latest] = 0;
 		data->count++;
 		data->last_position = position;
@@ -1139,7 +1161,7 @@ WiggleIterator * SmartReader(char * filename, bool holdFire) {
 }
 
 //////////////////////////////////////////////////////
-// Concatenation 
+// Concatenation
 //////////////////////////////////////////////////////
 
 typedef struct CatWiggleIteratorData_st {
@@ -1175,7 +1197,7 @@ void CatWiggleIteratorPop(WiggleIterator * wi) {
 				break;
 			}
 		}
-	} else 
+	} else
 		wi->done = true;
 }
 
