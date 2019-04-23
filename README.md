@@ -295,6 +295,20 @@ Sums results into fixed-size bins
 wiggletools bin 2 test/fixedStep.bw 
 ```
 
+* toInt
+
+Casts the iterator's output to an `int`, effectively rounding any floating point values toward zero.
+
+```
+wiggletools toInt test/fixedStep.bw
+```
+* floor
+
+Returns the floor of a interator's output. Note that floor rounds the output toward negative infinity.
+
+```
+wiggletools floor test/fixedStep.bw
+```
 **2 Binary operators**
 
 The following operators read data from exactly two iterators, allowing comparisons:
