@@ -302,13 +302,23 @@ Casts the iterator's output to an `int`, effectively rounding any floating point
 ```
 wiggletools toInt test/fixedStep.bw
 ```
+
 * floor
 
-Returns the floor of a interator's output. Note that floor rounds the output toward negative infinity.
+Returns the floor of a iterator's output. Note that floor rounds the output toward negative infinity.
 
 ```
 wiggletools floor test/fixedStep.bw
 ```
+
+* shiftPos
+
+Returns the iterator given with start and end positions shifted by an integer value.
+
+```
+wiggletools shiftPos 10 test/fixedStep.bw
+```
+
 **2 Binary operators**
 
 The following operators read data from exactly two iterators, allowing comparisons:
