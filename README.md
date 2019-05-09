@@ -313,7 +313,7 @@ wiggletools floor test/fixedStep.bw
 
 * shiftPos
 
-Returns the iterator given with start and end positions shifted by an integer value.
+Returns the iterator given with start and end positions shifted downwards by a specified value. Note the given value must be non-negative, as default behavior is to shift coordinates toward zero.
 
 ```
 wiggletools shiftPos 10 test/fixedStep.bw
