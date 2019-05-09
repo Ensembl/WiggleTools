@@ -680,6 +680,39 @@ WiggleIterator * ScaleWiggleIterator(WiggleIterator * i, double s) {
 }
 
 //////////////////////////////////////////////////////
+// ShiftPos operator
+//////////////////////////////////////////////////////
+
+void ShiftPosIteratorPop(WiggleIterator * wi) {
+	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) wi->data;
+	WiggleIterator * iter = data->iter;
+	if (!iter->done) {
+		while (data->scalar >= iter->finish) {
+			pop(iter);
+		}
+		wi->chrom = iter->chrom;
+		wi->start = (data->scalar >= iter->start ? 0 : iter->start - data->scalar);
+		wi->finish = iter->finish - data->scalar;
+		wi->value = iter->value;
+		pop(iter);
+	} else {
+		wi->done = true;
+	}
+}
+
+WiggleIterator * ShiftPosIterator(WiggleIterator * i, double s) {
+	ScaleWiggleIteratorData * data = (ScaleWiggleIteratorData *) calloc(1, sizeof(ScaleWiggleIteratorData));
+	data->iter = NonOverlappingWiggleIterator(i);
+	if (s < 0) {
+		fprintf(stderr, "Cannot provide a negative value. All coordinates are shifted downwards by default.\n");
+		exit(1);
+	}
+	data->scalar = s;
+	float default_value = i->default_value;
+	return newWiggleIterator(data, &ShiftPosIteratorPop, &ScaleWiggleIteratorSeek, default_value);
+}
+
+//////////////////////////////////////////////////////
 // Shifting operator
 //////////////////////////////////////////////////////
 
