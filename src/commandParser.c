@@ -654,9 +654,16 @@ static WiggleIterator * readEnergy() {
 }
 
 static WiggleIterator * readPearson() {
-	WiggleIterator * iter1 = readIterator();
-	WiggleIterator * iter2 = readLastIterator();
-	return PearsonIntegrator(iter1, iter2);
+	WiggleIterator ** iters = calloc(2, sizeof(WiggleIterator *));
+	bool strict = false;
+	char * token = needNextToken();
+	if (strcmp(token, "strict")==0) {
+		strict = true;
+		token = needNextToken();
+	}
+	iters[0] = NonOverlappingWiggleIterator(readIteratorToken(token));
+	iters[1] = NonOverlappingWiggleIterator(readIterator());
+	return PearsonIntegrator(newMultiplexer(iters, 2, strict));
 }
 
 static WiggleIterator * readNDPearson() {
