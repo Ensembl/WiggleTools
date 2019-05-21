@@ -19,6 +19,7 @@
 
 typedef struct wiggleReducerData_st {
 	Multiplexer * multi;
+	bool trim;
 } WiggleReducerData;
 
 void WiggleReducerSeek(WiggleIterator * iter, const char * chrom, int start, int finish) {
@@ -86,6 +87,15 @@ void FillInReductionPop(WiggleIterator * wi) {
 		return;
 	}
 
+	if (data->trim) {
+		while (!multi->inplay[0]) {
+			popMultiplexer(multi);
+			if (multi->done) {
+				wi->done = true;
+				return;
+			}
+		}
+	}
 	wi->chrom = multi->chrom;
 	wi->start = multi->start;
 	wi->finish = multi->finish;
@@ -96,13 +106,14 @@ void FillInReductionPop(WiggleIterator * wi) {
 	popMultiplexer(multi);
 }
 
-WiggleIterator * FillInReduction(Multiplexer * multi) {
+WiggleIterator * FillInReduction(Multiplexer * multi, bool trim) {
 	WiggleReducerData * data = (WiggleReducerData *) calloc(1, sizeof(WiggleReducerData));
 	if (multi->count != 2) {
 		printf("The fill in operator can only work on 2 iterators! Got %i\n", multi->count);
 		exit(1);
 	}
 	data->multi = multi;
+	data->trim = trim;
 	WiggleIterator * res = newWiggleIterator(data, &FillInReductionPop, &WiggleReducerSeek, multi->default_values[1]);
 	return res;
 }
