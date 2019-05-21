@@ -352,7 +352,15 @@ wiggletools overlaps test/fixedStep.bw test/variableStep.bw
 Same as above but trims the regions to the overlapping portions:
 
 ```
-wiggletools trim test/fixedStep.bw test/variableStep.bw 
+wiggletools trim test/fixedStep.bw test/variableStep.bw
+```
+
+* trimFill
+
+Same as trim, but fills in trimmed regions with the default value of the second iterator.
+
+```
+wiggletools trimFill test/fixedStep.bw test/overlapping_coverage.wig
 ```
 
 * nearest

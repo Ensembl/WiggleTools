@@ -92,7 +92,7 @@ WiggleIterator * StdDevReduction ( Multiplexer * );
 WiggleIterator * EntropyReduction ( Multiplexer * );
 WiggleIterator * CVReduction ( Multiplexer * );
 WiggleIterator * MedianReduction ( Multiplexer * );
-WiggleIterator * FillInReduction( Multiplexer * );
+WiggleIterator * FillInReduction( Multiplexer * , bool);
 
 // Sets of sets iterators
 Multiset * newMultiset(Multiplexer **, int);

@@ -51,7 +51,7 @@ puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.cram | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
 puts("\tstatistic_function = AUC | meanI | varI | minI | maxI | stddevI | CVI | energy (wavelength) | pearson (iterator)");
-puts("\tbinary_operator = diff | ratio | overlaps | trim | noverlaps | nearest | apply (statistic) | fillIn");
+puts("\tbinary_operator = diff | ratio | overlaps | trim | noverlaps | nearest | apply (statistic) | fillIn | trimFill");
 puts("\treducer = cat | sum | product | mean | var | stddev | entropy | CV | median | min | max");
 puts("\tsetComparison = ttest | ftest | wilcoxon");
 puts("\tmultiplex_list = (multiplex) | (multiplex) : (multiplex_list)");
@@ -477,8 +477,8 @@ static WiggleIterator * readSum() {
 	return SumReduction(readMultiplexer());
 }
 
-static WiggleIterator * readFillIn() {
-	return FillInReduction(readMultiplexer());
+static WiggleIterator * readFillIn(bool trim) {
+	return FillInReduction(readMultiplexer(), trim);
 }
 
 static char ** getListOfFilenames(int * count, char * first) {
@@ -702,7 +702,9 @@ static WiggleIterator * readIteratorToken(char * token) {
 	if (strcmp(token, "sum") == 0)
 		return readSum();
 	if (strcmp(token, "fillIn") == 0)
-		return readFillIn();
+		return readFillIn(false);
+	if (strcmp(token, "trimFill") == 0)
+		return readFillIn(true);
 	if (strcmp(token, "mult") == 0)
 		return readProduct();
 	if (strcmp(token, "diff") == 0)
