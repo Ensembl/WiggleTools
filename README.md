@@ -616,7 +616,7 @@ wiggletools minI test/fixedStep.bw
 Computes the Pearson correlation between two iterators across all their points:
 
 ```
-wiggletools pearson test/fixedStep.bw test/fixedStep.bw 
+wiggletools pearson test/fixedStep.bw test/fixedStep.bw
 ```
 
 * energy

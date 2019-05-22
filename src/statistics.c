@@ -457,14 +457,11 @@ static void PearsonPop(WiggleIterator * wi) {
 	popMultiplexer(multi);
 }
 
-WiggleIterator * PearsonIntegrator(WiggleIterator * iterX, WiggleIterator * iterY) {
+WiggleIterator * PearsonIntegrator(Multiplexer * multi) {
 	PearsonData * data = (PearsonData *) calloc(1, sizeof(PearsonData));
-	WiggleIterator * iters[2];
-	iters[0] = NonOverlappingWiggleIterator(iterX);
-	iters[1] = NonOverlappingWiggleIterator(iterY);
-	data->multi = newMultiplexer(iters, 2, false);
+	data->multi = multi;
 	data->res = NAN;
-	return newStatisticIterator(data, PearsonPop, PearsonSeek, iterY->default_value, iterY);
+	return newStatisticIterator(data, PearsonPop, PearsonSeek, data->multi->iters[1]->default_value, data->multi->iters[1]);
 }
 
 ////////////////////////////////////////////////////////

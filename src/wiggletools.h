@@ -126,7 +126,7 @@ WiggleIterator * EnergyIntegrator(WiggleIterator *, int);
 void regionProfile(WiggleIterator *, double *, int, int, bool);
 void addProfile(double *, double *, int);
 //	Binary
-WiggleIterator * PearsonIntegrator (WiggleIterator * , WiggleIterator * );
+WiggleIterator * PearsonIntegrator (Multiplexer * multi);
 //	Histograms
 Histogram * histogram(WiggleIterator **, int, int);
 void normalize_histogram(Histogram *);
