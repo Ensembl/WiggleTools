@@ -619,11 +619,6 @@ Computes the Pearson correlation between two iterators across all their points:
 wiggletools pearson test/fixedStep.bw test/fixedStep.bw
 ```
 
-Use the `strict` keyword to discard positions which have no value, instead of using the default value (see section on Default Values below):
-```
-wiggletools pearson strict test/fixedStep.bw test/fixedStep.bw 
-```
-
 * energy
 
 Computes the energy density at a given wavelength:
@@ -741,7 +736,7 @@ wiggletools sum test/fixedStep.wig default 10 test/variableStep.wig
 
 * When a set of iterators A1, A2 ... is composed by a n-ary iterator M, M will skip the regions which are skipped by all the input iterators. However, in the presence of more than one input iterators that do not perfectly overlap, there will be regions which are covered by say A1, but not A2. Two behaviours are defined: if M is *strict*, it skips those regions, else it replaces missing values with the corresponding default values. 
 
-By default, n-ary iterators are not strict, but they can be made so with the *strict* keyword after the n-ary function name (this is also true of the pearson iterator):
+By default, n-ary iterators are not strict, but they can be made so with the *strict* keyword after the n-ary function name:
 
 ```
 wiggletools sum test/fixedStep.wig test/variableStep.wig
