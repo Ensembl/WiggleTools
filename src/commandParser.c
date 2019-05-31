@@ -357,7 +357,7 @@ static Multiplexer ** readMultiplexerList(int * count) {
 }
 
 static Multiset * readMultiset() {
-	int count = 0; 
+	int count = 0;
 	Multiplexer ** multis = readMultiplexerList(&count);
 	return newMultiset(multis, count);
 }
@@ -478,7 +478,10 @@ static WiggleIterator * readSum() {
 }
 
 static WiggleIterator * readFillIn(bool trim) {
-	return FillInReduction(readMultiplexer(), trim);
+	WiggleIterator ** iters = calloc(2, sizeof(WiggleIterator *));
+	iters[0] = readIterator();
+	iters[1] = readIterator();
+	return FillInReduction(newMultiplexer(iters, 2, false), trim);
 }
 
 static char ** getListOfFilenames(int * count, char * first) {
