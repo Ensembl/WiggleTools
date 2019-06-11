@@ -691,7 +691,7 @@ void ShiftPosIteratorPop(WiggleIterator * wi) {
 			pop(iter);
 		}
 		wi->chrom = iter->chrom;
-		wi->start = (data->scalar >= iter->start ? 0 : iter->start - data->scalar);
+		wi->start = (data->scalar >= iter->start ? 1 : iter->start - data->scalar);
 		wi->finish = iter->finish - data->scalar;
 		wi->value = iter->value;
 		pop(iter);
