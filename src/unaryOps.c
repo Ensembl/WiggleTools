@@ -243,7 +243,7 @@ void CompressionWiggleIteratorPop(WiggleIterator * wi) {
 		wi->value = iter->value;
 		pop(iter);
 
-		while (!iter->done && strcmp(iter->chrom, wi->chrom) == 0 && iter->start == wi->finish && ((isnan(iter->value) && isnan(wi->value)) || iter->value == wi->value)) {
+		while (!iter->done && strcmp(iter->chrom, wi->chrom) == 0 && iter->start == wi->finish && ((isnan(iter->value) && isnan(wi->value)) || (fabs(iter->value - wi->value) < __DBL_EPSILON__))) {
 			wi->finish = iter->finish;
 			pop(iter);
 		}
