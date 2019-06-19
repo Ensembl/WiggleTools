@@ -79,7 +79,7 @@ void BigWiggleReaderPop(WiggleIterator * wi) {
 
 void openBigWiggle(BigWiggleReaderData * data, char * filename, bool holdFire) {
 	if(!bwIsBigWig(filename, NULL)) {
-		printf("File %s is not in BigBEd format", filename);
+		printf("File %s is not in BigWig format\n", filename);
 		exit(1);
 	}
 	data->fp = bwOpen(filename, NULL, "r");
