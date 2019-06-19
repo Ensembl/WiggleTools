@@ -79,7 +79,7 @@ void BigBedReaderPop(WiggleIterator * wi) {
 
 void openBigBed(BigBedReaderData * data, char * filename, bool holdFire) {
 	if(!bbIsBigBed(filename, NULL)) {
-		printf("File %s is not in BigBed format", filename);
+		printf("File %s is not in BigBed format\n", filename);
 		exit(1);
 	}
 	data->fp = bbOpen(filename, NULL);
