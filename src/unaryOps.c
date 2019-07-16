@@ -502,7 +502,10 @@ void TrimWiggleIteratorPop(WiggleIterator * wi) {
 		wi->start = source->start > mask->start? source->start: mask->start;
 		wi->finish = source->finish < mask->finish? source->finish: mask->finish;
 		wi->value = source->value;
-		pop(source);
+		if (source->finish <= mask->finish)
+			pop(source);
+		else
+			pop(mask);
 	}
 }
 
