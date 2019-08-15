@@ -1,4 +1,3 @@
-CC=/bin/cc
 CFLAGS=-g -Wall -O3 -std=gnu99
 LIBDIR=../lib
 BINDIR=../bin
