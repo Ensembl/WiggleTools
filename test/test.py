@@ -4,11 +4,11 @@ import shutil
 import subprocess
 
 def test(cmd):
-	print 'Testing: %s' % cmd
+	print('Testing: %s' % cmd)
 	return subprocess.call(cmd, shell = True)
 
 def testOutput(cmd):
-	print 'Testing: %s' % cmd
+	print('Testing: %s' % cmd)
 	p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell = True)
 	assert p.wait() == 0
 	out, err = p.communicate()
@@ -120,4 +120,4 @@ assert test('diff tmp expected') == 0
 
 shutil.rmtree('tmp')
 
-print 'All tests OK'
+print('All tests OK')
