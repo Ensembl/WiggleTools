@@ -415,12 +415,12 @@ Computes the median of the subsequent list of iterators at each position:
 wiggletools median test/fixedStep.bw test/variableStep.bw 
 ```
 
-* variance
+* var
 
 Computes the variance of the subsequent list of iterators at each position:
 
 ```
-wiggletools variance test/fixedStep.bw test/variableStep.bw 
+wiggletools var test/fixedStep.bw test/variableStep.bw 
 ```
 
 * stddev
