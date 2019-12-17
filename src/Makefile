@@ -3,7 +3,7 @@ LIBDIR=../lib
 BINDIR=../bin
 INC=-I../../libBigWig -I../../htslib
 LIB_PATHS=-L${LIBDIR} -L../../libBigWig -L../../htslib
-LIBS= -lwiggletools -l:libBigWig.a -lcurl -l:libhts.a -lgsl  -lgslcblas -lz -lpthread -lm
+LIBS= -lwiggletools -l:libBigWig.a -lcurl -l:libhts.a -lgsl  -lgslcblas -lz -lpthread -lm -llzma -lbz2
 OPTS=-D_PBGZF_USE
 
 default: lib bin
