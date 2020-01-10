@@ -63,9 +63,19 @@ void * readBigWiggle(void * ptr) {
 		readBigWiggleRegion(data, data->chrom, data->start, data->stop);
 	else {
 		int chrom_index;
+		Chrom_length * chrom_lengths = calloc(data->fp->cl->nKeys, sizeof(Chrom_length));
+		for (chrom_index = 0; chrom_index < data->fp->cl->nKeys; chrom_index++) {
+			chrom_lengths[chrom_index].chrom = data->fp->cl->chrom[chrom_index];
+			chrom_lengths[chrom_index].length = data->fp->cl->len[chrom_index];
+		}
+
+		qsort(chrom_lengths, data->fp->cl->nKeys, sizeof(Chrom_length), compare_chrom_lengths);
+
 		for (chrom_index = 0; chrom_index < data->fp->cl->nKeys; chrom_index++)
-			if (readBigWiggleRegion(data, data->fp->cl->chrom[chrom_index], 0, data->fp->cl->len[chrom_index]))
+			if (readBigWiggleRegion(data, chrom_lengths[chrom_index].chrom, 0, chrom_lengths[chrom_index].length))
 				break;
+
+		free(chrom_lengths);
 	}
 
 	endBufferedSignal(data->bufferedReaderData);

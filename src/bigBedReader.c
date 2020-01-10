@@ -1,5 +1,5 @@
 // Copyright [1999-2017] EMBL-European Bioinformatics Institute
-// 
+
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -59,13 +59,24 @@ static int readBigBedRegion(BigBedReaderData * data, char * chrom, int start, in
 
 void * readBigBed(void * ptr) {
 	BigBedReaderData * data = (BigBedReaderData *) ptr;
+
 	if (data->chrom)
 		readBigBedRegion(data, data->chrom, data->start, data->stop);
 	else {
 		int chrom_index;
+		Chrom_length * chrom_lengths = calloc(data->fp->cl->nKeys, sizeof(Chrom_length));
+		for (chrom_index = 0; chrom_index < data->fp->cl->nKeys; chrom_index++) {
+			chrom_lengths[chrom_index].chrom = data->fp->cl->chrom[chrom_index];
+			chrom_lengths[chrom_index].length = data->fp->cl->len[chrom_index];
+		}
+
+		qsort(chrom_lengths, data->fp->cl->nKeys, sizeof(Chrom_length), compare_chrom_lengths);
+
 		for (chrom_index = 0; chrom_index < data->fp->cl->nKeys; chrom_index++)
-			if (readBigBedRegion(data, data->fp->cl->chrom[chrom_index], 0, data->fp->cl->len[chrom_index]))
+			if (readBigBedRegion(data, chrom_lengths[chrom_index].chrom, 0, chrom_lengths[chrom_index].length))
 				break;
+
+		free(chrom_lengths);
 	}
 
 	endBufferedSignal(data->bufferedReaderData);

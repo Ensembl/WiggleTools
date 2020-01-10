@@ -181,3 +181,9 @@ void BufferedReaderPop(WiggleIterator * wi, BufferedReaderData * data) {
 	data->readIndex++;
 }
 
+
+int compare_chrom_lengths(const void * A, const void * B) {
+	Chrom_length * cl_A = (Chrom_length *) A;
+	Chrom_length * cl_B = (Chrom_length *) B;
+	return strcmp(cl_A->chrom, cl_B->chrom);
+}
