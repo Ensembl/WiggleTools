@@ -25,6 +25,8 @@ int main(int argc, char ** argv) {
 		return 0;
 	}
 
+	libBigWigInit(128000);
+
 	rollYourOwn(argc-1, argv+1);
 
 	return 0;

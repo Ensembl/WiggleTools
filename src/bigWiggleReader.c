@@ -26,6 +26,13 @@ typedef struct bigWiggleReaderData_st {
 	BufferedReaderData * bufferedReaderData;
 } BigWiggleReaderData;
 
+void libBigWigInit(int size) {
+	if(bwInit(size) != 0) {
+		fprintf(stderr, "Received an error in bwInit\n");
+		exit(1);
+	}
+}
+
 static int readIteratorIntervals(bwOverlapIterator_t *iter, char * chrom, BigWiggleReaderData * data) {
 	int index;
 	for(index = 0; index < iter->intervals->l; index++) {
@@ -57,6 +64,18 @@ static int readBigWiggleRegion(BigWiggleReaderData * data, char * chrom, int sta
 	return 0;
 }
 
+static int readBigWiggleChromosome(BigWiggleReaderData * data, char * chrom, int length) {
+	int start;
+	int stretch=10000;
+
+	for (start = 0; start < length; start+=stretch) {
+		if (readBigWiggleRegion(data, chrom, start, start+stretch))
+			return 1;
+	}
+
+	return 0;
+}
+
 void * readBigWiggle(void * ptr) {
 	BigWiggleReaderData * data = (BigWiggleReaderData *) ptr;
 	if (data->chrom)
@@ -72,7 +91,7 @@ void * readBigWiggle(void * ptr) {
 		qsort(chrom_lengths, data->fp->cl->nKeys, sizeof(Chrom_length), compare_chrom_lengths);
 
 		for (chrom_index = 0; chrom_index < data->fp->cl->nKeys; chrom_index++)
-			if (readBigWiggleRegion(data, chrom_lengths[chrom_index].chrom, 0, chrom_lengths[chrom_index].length))
+			if (readBigWiggleChromosome(data, chrom_lengths[chrom_index].chrom, chrom_lengths[chrom_index].length))
 				break;
 
 		free(chrom_lengths);

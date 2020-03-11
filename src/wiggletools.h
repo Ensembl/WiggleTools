@@ -141,8 +141,7 @@ Multiplexer * PasteMultiplexer(Multiplexer *,  FILE *, FILE *, bool);
 void destroyWiggleIterator (WiggleIterator *);
 
 // Big file params
-void setMaxBlocks(int);
-void setMaxHeadStart(int);
+void libBigWigInit(int);
 
 // Command line parser
 void rollYourOwn(int argc, char ** argv);
