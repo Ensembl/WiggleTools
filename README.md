@@ -14,6 +14,19 @@ Brew Installation
 brew install brewsci/bio/wiggletools
 ```
 
+Docker Installation
+-----------------
+
+Build a WiggleTools Docker image:
+```
+docker build -t wiggletools .
+```
+
+Run the resulting wiggletools executable, bind-mounting the current working directory into the container:
+```
+docker run -v $PWD:/mnt -w /mnt --rm wiggletools wiggletools [...arguments...]
+```
+
 Pre-requisites
 --------------
 
