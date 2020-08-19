@@ -1,3 +1,8 @@
+[![GitHub license](https://img.shields.io/github/license/Ensembl/WiggleTools)](https://github.com/Ensembl/WiggleTools/blob/master/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Ensembl/WiggleTools)](https://github.com/Ensembl/WiggleTools/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/Ensembl/WiggleTools)](https://github.com/Ensembl/WiggleTools/network)
+[![GitHub issues](https://img.shields.io/github/issues/Ensembl/WiggleTools)](https://github.com/Ensembl/WiggleTools/issues)
+
 # WiggleTools 1.2
 
 Author: [Daniel Zerbino](mailto:zerbino@ebi.ac.uk)
