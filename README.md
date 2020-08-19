@@ -1,38 +1,46 @@
-WiggleTools 1.2
-===============
+# WiggleTools 1.2
 
 Author: [Daniel Zerbino](mailto:zerbino@ebi.ac.uk)
 
-Copyright holder: EMBL-European Bioinformatics Institute (Apache 2 License)
+Copyright holder: [EMBL-European Bioinformatics Institute](https://www.ebi.ac.uk/) (Apache 2 License)
 
 The WiggleTools package allows genomewide data files to be manipulated as numerical functions, equipped with all the standard functional analysis operators (sum, product, product by a scalar, comparators), and derived statistics (mean, median, variance, stddev, t-test, Wilcoxon's rank sum test, etc).
 
-Brew Installation
------------------
+## Conda Installation
+
+Install [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/), then run:
+
+```
+conda install -c bioconda wiggletools
+```
+
+## Brew Installation
+
+Install [Homebrew](https://brew.sh/), then run:
 
 ```
 brew install brewsci/bio/wiggletools
 ```
 
-Docker Installation
------------------
+## Docker Installation
 
-Build a WiggleTools Docker image:
+Pull the latest image from Dockerhub:
 ```
-docker build -t wiggletools .
+docker pull ensemblorg/wiggletools:latest
 ```
 
 Run the resulting wiggletools executable, bind-mounting the current working directory into the container:
 ```
-docker run -v $PWD:/mnt -w /mnt --rm wiggletools wiggletools [...arguments...]
+docker container run --rm --mount type=bind,source="$(pwd)",target=/mnt ensemblorg/wiggletools  [...arguments...]
 ```
 
-Pre-requisites
---------------
+## Build from source
+
+### Pre-requisites
 
 WiggleTools requires three main dependencies: [LibBigWig](https://github.com/dpryan79/libBigWig), [HTSLib](https://github.com/samtools/htslib) and [GSL (GNU scientific)](https://www.gnu.org/software/gsl/) libraries. They themselves require [zlib](http://www.zlib.net/) and [libcurl](https://curl.haxx.se/download.html).
 
-**Installing LibBigWig**
+#### Installing LibBigWig
 
 ```
 git clone https://github.com/dpryan79/libBigWig.git
@@ -40,7 +48,7 @@ cd libBigWig
 make install
 ```
 
-**Installing the htslib library**
+#### Installing the htslib library
 
 ```
 git clone https://github.com/samtools/htslib.git
@@ -48,7 +56,7 @@ cd htslib
 make install
 ```
 
-**Installing the GSL library**
+#### Installing the GSL library
 ```
 wget ftp://www.mirrorservice.org/sites/ftp.gnu.org/gnu/gsl/gsl-latest.tar.gz 
 tar -xvzpf gsl-latest.tar.gz
@@ -58,17 +66,13 @@ make
 make install
 ```
 
-Obtaining WiggleTools
----------------------
+### Installing WiggleTools
 
 If you didn't download WiggleTools yet:
 
 ```
 git clone https://github.com/Ensembl/WiggleTools.git
 ```
-
-Installing WiggleTools
-----------------------
 
 Once you installed the previous libraries and downloaded WiggleTools, you can compile the WiggleTools library:
 
@@ -93,8 +97,7 @@ Just to check, you can launch the tests:
 make test
 ```
 
-Basics
-------
+## Basics
 
 The WiggleTools library, and the derived program, are centered around the use of iterators. An iterator is a function which produces a sequence of values. The cool thing is that iterators can be built off other iterators, offering many combinations. 
 
@@ -116,8 +119,7 @@ If you are an intensive user, you may find that processing many files may break 
 wiggletools run program.txt
 ```
 
-Input files
------------
+## Input files
 
 By default, the executable recognizes the file format from the suffix of the file name:
 
@@ -181,8 +183,7 @@ Requires a .tbi index file in the same directory
 wiggletools test/bcf.bcf
 ```
 
-Streaming data
---------------
+## Streaming data
 
 You can stream data into WiggleTools, e.g.:
 
@@ -197,12 +198,12 @@ samtools view test/bam.bam | wiggletools sam -
 ```
 
 
-Operators
----------
+## Operators
+
 
 However, iterators can be constructed from other iterators, allowing arbitrarily complex constructs to be built. We call these iterators operators. In all the examples below, the iterators are built off simple file readers (for simplicity), but you are free to replace the inputs with other iterators.
 
-**1 Unary operators**
+### 1 Unary operators
 
 The following operators are the most straightforward, because they only read data from a single other iterator.
 
@@ -332,7 +333,7 @@ Returns the iterator given with start and end positions shifted downwards by a s
 wiggletools shiftPos 10 test/fixedStep.bw
 ```
 
-**2 Binary operators**
+### 2 Binary operators
 
 The following operators read data from exactly two iterators, allowing comparisons:
 
@@ -384,7 +385,7 @@ Returns the regions of the second iterator and their distance to the nearest reg
 wiggletools nearest test/fixedStep.bw test/variableStep.bw 
 ```
 
-**3 Multiplexed iterators**
+### 3 Multiplexed iterators
 
 However, sometimes you want to compute statistics across many iterators. In this case, the function is followed by an arbitrary list of iterators, separated by spaces. The list is terminated by a colon (:) separated by spaces from other words. At the very end of a command string, the colon can be omitted (see example in the example for *sum*)
 
@@ -477,7 +478,7 @@ Computes the maximum of the subsequent list of iterators at each position:
 wiggletools max test/fixedStep.bw test/variableStep.bw 
 ```
 
-**4 Comparing sets of sets**
+### 4 Comparing sets of sets
 
 * Welch's t-test
 
@@ -506,7 +507,7 @@ wiggletools wilcoxon test/fixedStep.bw test/variableStep.bw test/fixedStep.wig \
             : test/fixedStep.wig test/variableStep.bw test/fixedStep.wig
 ```
 
-**5 Mapping a unary function to an iterator list:**
+### 5 Mapping a unary function to an iterator list:
 
 If you wish to apply the same function to a list of iterators without typing redundant keywords, you can use the *map* function, which applies said operator to each element of the list:
 
@@ -515,8 +516,7 @@ wiggletools sum map ln test/fixedStep.bw test/variableStep.bw
 wiggletools sum scale -1 test/fixedStep.bw test/variableStep.bw
 ```
 
-Writing into files
-------------------
+## Writing into files
 
 Stdout is great and all, but sometimes you want to specify an output file on the command line without the use of pipes. This is done with the *write* function. It writes the output of an iterator into a wiggle file, and simultaneously returns the same output:
 
@@ -551,8 +551,7 @@ wiggletools write_bg - test/fixedStep.wig
 
 Note that BedGraphs and the BedGraph sections within wiggle files are 0-based, whereas the `normal' wiggle lines have 1-based coordinates.
 
-Writing multidimensional wiggles into files
--------------------------------------------
+## Writing multidimensional wiggles into files
 
 Sometimes, for your own reasons, you may want to print out multiple wiggles side by side. This can be done with the designated *mwrite* and *mwrite_bg* operators
 
@@ -562,8 +561,7 @@ Sometimes, for your own reasons, you may want to print out multiple wiggles side
 wiggletools mwrite_bg - test/overlapping.bed test/fixedStep.bw
 ```
 
-Statistics
-----------
+## Statistics
 
 Sometimes, you just want a statistic across the genome. The following functions do not return a sequence of numbers, just a single number. Some of these integrating functions have "I" appended to them to distinguish them from the iterators with related (yet different) functions. 
 
@@ -640,8 +638,7 @@ Computes the energy density at a given wavelength:
 wiggletools energy 10 test/fixedStep.bw
 ```
 
-Chaining statistics
--------------------
+## Chaining statistics
 
 All the above functions are actually iterators that transmit the same data as they are given, e.g.:
 
@@ -683,8 +680,7 @@ This is a convenience wrapper around the above function: it reads the regions di
 wiggletools apply_paste output_file.txt meanI test/overlapping.bed test/fixedStep.bw
 ```
 
-Profiles
---------
+## Profiles
 
 To generate a fixed width summary of an iterator across a collection of regions, you can request the profiles function. This will print out the profiles, one for each region:
 
@@ -700,8 +696,7 @@ wiggletools profile results.txt 3 test/overlapping.bed test/fixedStep.wig
 
 As above, the output file name can be replaced by a dash (-) to print to standard output.
 
-Histograms
-----------
+## Histograms
 
 To generate a histogram of values across the iterator, simply use the *histogram* command. The number of bins must be pre-defined:
 
@@ -720,8 +715,7 @@ The format of the output is hopefully rather self explanatory: each line starts 
 The algorithm used to compute these histograms is approximate: it adapts the width of the bins to the data received, and requires very little memory or computation. However, the values of the bins is not quite exact, as some points might be counted in a neighbouring bin to the one they should belong to. Normally, over a large datasets, these approximations should roughly even out. 
 
 
-Parallel processing
--------------------
+## Parallel processing
 
 To aid in running Wiggletools efficiently, a script, *parallelWiggletools.py* was designed to automate the batching of multiple jobs and the merging of their output. At the moment, this scripts requires an LSF job queueing system.
 
@@ -735,8 +729,7 @@ parallelWiggletools.py test/chrom_sizes 'write copy.bw test/fixedStep.bw'
 
 Because these are asynchronous jobs, they generate a bunch of files as input, stdout and stderr. If these files are annoying to you, you can change the DUMP\_DIR variable in the parallelWiggleTools script, to another directory which is visible to all the nodes in the LSF farm.
 
-Default Values
---------------
+## Default Values
 
 A basic underlying question is how to deal with missing values. In some cases, no value in a BigWig file implicitly means 0, typically when working with coverage statistics or peaks. However, sometimes, you want positions with no values to be disregarded. 
 
@@ -774,8 +767,7 @@ wiggletools apply meanI unit test/variableStep.bw test/fixedStep.bw
 wiggletools apply meanI fillIn unit test/variableStep.bw test/fixedStep.bw
 ```
 
-Creating your own functions
----------------------------
+## Creating your own functions
 
 If you're looking for guidance on creating your own iterators, you can have a look at:
 * Iterator -> Float: src/statistics.c, MeanIntegrator
@@ -790,7 +782,6 @@ More info on the basic objects at:
 
 You may need some help hooking your new functions to the parser, we can help you out.
 
-Citing WiggleTools
-------------------
+## Citing WiggleTools
 
 [Zerbino DR, Johnson N, Juettemann T, Wilder SP and Flicek PR: **WiggleTools: parallel processing of large collections of genome-wide datasets for visualization and statistical analysis.** *Bioinformatics* 2014 **30**:1008-1009.](http://bioinformatics.oxfordjournals.org/content/30/7/1008)
