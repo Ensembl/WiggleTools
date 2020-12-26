@@ -56,8 +56,10 @@ static int readBigWiggleRegion(BigWiggleReaderData * data, char * chrom, int sta
 		return 0;
 
 	while(iter->data) {
-		if (readIteratorIntervals(iter, chrom, data))
+		if (readIteratorIntervals(iter, chrom, data)) {
+			bwIteratorDestroy(iter);
 			return 1;
+		}
 		iter = bwIteratorNext(iter);
 	}
 	bwIteratorDestroy(iter);

@@ -1,4 +1,3 @@
-Hold fire on writers
 Seekable apply_paste
 Memory tracking & cleaning of chrom labels for text files
 Read score in BigBed files? => Handling overlapping iterators with value in unit and filter

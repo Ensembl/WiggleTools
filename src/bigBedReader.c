@@ -49,8 +49,10 @@ static int readBigBedRegion(BigBedReaderData * data, char * chrom, int start, in
 		return 0;
 	
 	while(iter->data) {
-		if (readIteratorEntries(iter, chrom, data))
+		if (readIteratorEntries(iter, chrom, data)) {
+			bwIteratorDestroy(iter);
 			return 1;
+		}
 		iter = bwIteratorNext(iter);
 	}
 	bwIteratorDestroy(iter);
