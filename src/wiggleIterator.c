@@ -22,6 +22,22 @@ WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterat
 	new->data = data;
 	new->pop = popFunction;
 	new->seek = seek;
+	new->chrom = NULL;
+	new->value = 1; // Default value for non-valued bed tracks;
+	new->strand = 0; // Default value for non-stranded data;
+	new->valuePtr = NULL;
+	new->overlaps = false;
+	new->append = NULL;
+	new->default_value = default_value;
+	pop(new);
+	return new;
+}
+
+WiggleIterator * newWiggleIteratorChromName(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int), double default_value) {
+	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
+	new->data = data;
+	new->pop = popFunction;
+	new->seek = seek;
 	new->chrom = calloc(1000,1);
 	new->value = 1; // Default value for non-valued bed tracks;
 	new->strand = 0; // Default value for non-stranded data;
@@ -35,7 +51,6 @@ WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterat
 
 void destroyWiggleIterator(WiggleIterator * wi) {
 	free(wi->data);
-	free(wi->chrom);
 	free(wi);
 }
 

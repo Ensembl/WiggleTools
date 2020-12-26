@@ -277,9 +277,7 @@ void computeApplyValues(Multiplexer * apply, ApplyMultiplexerData * data, Buffer
 			apply->values[i] = *((double*) (wi->data));
 			WiggleIterator * tmp = wi;
 			wi = wi->append;
-			if (tmp->data)
-				free(tmp->data);
-			free(tmp);
+			destroyWiggleIterator(tmp);
 			i++;
 		}
 	} else

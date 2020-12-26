@@ -306,7 +306,7 @@ void CoverageWiggleIteratorPop(WiggleIterator * wi) {
 	CoverageWiggleIteratorData * data = (CoverageWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
 	if (!iter->done) {
-		if (wi->chrom[0] == '\0')
+		if (wi->chrom == NULL)
 			wi->value = 0;
 
 		while (fh_notempty(data->heap) && fh_min(data->heap) == wi->finish) {

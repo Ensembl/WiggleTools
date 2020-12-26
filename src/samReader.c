@@ -222,5 +222,5 @@ WiggleIterator * SamReader(char * filename) {
 		}
 	} else
 		data->file = stdin;
-	return newWiggleIterator(data, &SamReaderPop, &SamReaderSeek, 0);
+	return newWiggleIteratorChromName(data, &SamReaderPop, &SamReaderSeek, 0);
 }

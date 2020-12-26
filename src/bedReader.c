@@ -120,7 +120,7 @@ WiggleIterator * BedReader(char * filename) {
 		fprintf(stderr, "Could not open bed file %s\n", filename);
 		exit(1);
 	}
-	WiggleIterator * res = newWiggleIterator(data, &BedReaderPop, &BedReaderSeek, 0);
+	WiggleIterator * res = newWiggleIteratorChromName(data, &BedReaderPop, &BedReaderSeek, 0);
 	res->overlaps = true;
 	return res;
 }
