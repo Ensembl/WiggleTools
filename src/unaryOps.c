@@ -383,25 +383,35 @@ WiggleIterator * CoverageWiggleIterator(WiggleIterator * i) {
 typedef struct highPassFilterWiggleIteratorData_st {
 	WiggleIterator * iter;
 	double scalar;
+	bool equal
 } HighPassFilterWiggleIteratorData;
 
 void HighPassFilterWiggleIteratorPop(WiggleIterator * wi) {
 	HighPassFilterWiggleIteratorData * data = (HighPassFilterWiggleIteratorData *) wi->data;
 	WiggleIterator * iter = data->iter;
-	if (!data->iter->done) {
-		while (!data->iter->done && (data->iter->value <= data->scalar || isnan(data->iter->value)))
-			pop(data->iter);
-		if (data->iter->done) {
-			wi->done = true;
-			return;
-		}
-		wi->chrom = iter->chrom;
-		wi->start = iter->start;
-		wi->finish = iter->finish;
+
+	while (!data->iter->done 
+			&& 
+			( 
+			 (data->equal 
+			  && data->iter->value < data->scalar)
+			 || (!data->equal
+				 && data->iter->value <= data->scalar
+			 || isnan(data->iter->value)
+			 )
+			)
+	      )
 		pop(data->iter);
-	} else {
+
+	if (data->iter->done) {
 		wi->done = true;
+		return;
 	}
+
+	wi->chrom = iter->chrom;
+	wi->start = iter->start;
+	wi->finish = iter->finish;
+	pop(data->iter);
 }
 
 void HighPassFilterWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
@@ -410,10 +420,11 @@ void HighPassFilterWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, i
 	pop(wi);
 }
 
-WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator * i, double s) {
+WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator * i, double s, bool equal) {
 	HighPassFilterWiggleIteratorData * data = (HighPassFilterWiggleIteratorData *) calloc(1, sizeof(HighPassFilterWiggleIteratorData));
 	data->iter = i;
 	data->scalar = s;
+	data->equal = equal;
 	return UnionWiggleIterator(newWiggleIterator(data, &HighPassFilterWiggleIteratorPop, &HighPassFilterWiggleIteratorSeek, 0));
 }
 

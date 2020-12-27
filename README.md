@@ -272,6 +272,26 @@ wiggletools lt 5 test/fixedStep.bw
 
 This is useful to define regions in the *apply* function, or to compute information content (see below).
 
+* gte
+
+Returns contiguous boolean regions where the iterator is greater than or equal to a given cutoff:
+
+```
+wiggletools gte 5 test/fixedStep.bw 
+```
+
+This is useful to define regions in the *apply* function, or to compute information content (see below).
+
+* lte
+
+Returns contiguous boolean regions where the iterator is less than or equal to a given cutoff:
+
+```
+wiggletools lte 5 test/fixedStep.bw 
+```
+
+This is useful to define regions in the *apply* function, or to compute information content (see below).
+
 * unit
 
 Returns 1 if the operator is non-zero, 0 otherwise, and merges contiguous positions with the same output value into blocks:

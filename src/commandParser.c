@@ -46,7 +46,7 @@ puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic) | run (file)");
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
-puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | abs | exp | ln | log (float) | pow (float) | offset (float) | shiftPos (int) | scale (float) | gt (float) | lt (float) | default (float) | isZero | toInt | floor | extend (int) | bin (int) | (statistic)");
+puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | abs | exp | ln | log (float) | pow (float) | offset (float) | shiftPos (int) | scale (float) | gt (float) | gte (float) | lt (float) | lte (float) | default (float) | isZero | toInt | floor | extend (int) | bin (int) | (statistic)");
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.cram | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
@@ -181,12 +181,22 @@ static WiggleIterator ** readMappedIteratorList(int * count, bool * strict) {
 		double scalar = atof(needNextToken());
 		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
-			iters[i] = HighPassFilterWiggleIterator(iters[i], scalar);
+			iters[i] = HighPassFilterWiggleIterator(iters[i], scalar, false);
 	} else if (strcmp(token, "lt") == 0) {
 		double scalar = atof(needNextToken());
 		iters = readIteratorList(count, strict);
 		for (i = 0; i < *count; i++)
-			iters[i] = HighPassFilterWiggleIterator(ScaleWiggleIterator(iters[i], -1), -scalar);
+			iters[i] = HighPassFilterWiggleIterator(ScaleWiggleIterator(iters[i], -1), -scalar, false);
+	} else if (strcmp(token, "gte") == 0) {
+		double scalar = atof(needNextToken());
+		iters = readIteratorList(count, strict);
+		for (i = 0; i < *count; i++)
+			iters[i] = HighPassFilterWiggleIterator(iters[i], scalar, true);
+	} else if (strcmp(token, "lte") == 0) {
+		double scalar = atof(needNextToken());
+		iters = readIteratorList(count, strict);
+		for (i = 0; i < *count; i++)
+			iters[i] = HighPassFilterWiggleIterator(ScaleWiggleIterator(iters[i], -1), -scalar, true);
 	} else if (strcmp(token, "default") == 0) {
 		double scalar = atof(needNextToken());
 		iters = readIteratorList(count, strict);
@@ -437,12 +447,22 @@ static WiggleIterator * readNearest() {
 
 static WiggleIterator * readGt() {
 	double cutoff = atof(needNextToken());
-	return HighPassFilterWiggleIterator(readIterator(), cutoff);
+	return HighPassFilterWiggleIterator(readIterator(), cutoff, false);
 }
 
 static WiggleIterator * readLt() {
 	double cutoff = atof(needNextToken());
-	return HighPassFilterWiggleIterator(ScaleWiggleIterator(readIterator(), -1), -cutoff);
+	return HighPassFilterWiggleIterator(ScaleWiggleIterator(readIterator(), -1), -cutoff, false);
+}
+
+static WiggleIterator * readGte() {
+	double cutoff = atof(needNextToken());
+	return HighPassFilterWiggleIterator(readIterator(), cutoff, true);
+}
+
+static WiggleIterator * readLte() {
+	double cutoff = atof(needNextToken());
+	return HighPassFilterWiggleIterator(ScaleWiggleIterator(readIterator(), -1), -cutoff, true);
 }
 
 static WiggleIterator * readDefault() {
@@ -763,6 +783,10 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readGt();
 	if (strcmp(token, "lt") == 0)
 		return readLt();
+	if (strcmp(token, "gte") == 0)
+		return readGte();
+	if (strcmp(token, "lte") == 0)
+		return readLte();
 	if (strcmp(token, "default") == 0)
 		return readDefault();
 	if (strcmp(token, "overlaps") == 0)
