@@ -71,7 +71,10 @@ assert test('../bin/wiggletools do isZero diff pow 2 fixedStep.bw mult fixedStep
 # assert test('../bin/wiggletools do isZero diff smooth 2 fixedStep.wig fixedStep.wig') == 0
 
 # Testing filters
-assert test('../bin/wiggletools do isZero diff lt 5 fixedStep.wig gt -5 scale -1 fixedStep.wig') == 0
+assert float(testOutput('../bin/wiggletools AUC lt 4 fixedStep.wig')) == 4
+assert float(testOutput('../bin/wiggletools AUC lte 4 fixedStep.wig')) == 5
+assert float(testOutput('../bin/wiggletools AUC gte 4 fixedStep.wig')) == 6
+assert float(testOutput('../bin/wiggletools AUC gt 4 fixedStep.wig')) == 5
 
 # Testing apply
 assert test('../bin/wiggletools apply_paste tmp/regional_means.txt meanI overlapping.bed fixedStep.wig') == 0
