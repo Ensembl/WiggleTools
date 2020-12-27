@@ -260,7 +260,11 @@ void TeeWiggleIteratorSeek(WiggleIterator * wi, const char * chrom, int start, i
 
 WiggleIterator * TeeWiggleIterator(WiggleIterator * i, FILE * outfile, bool bedGraph, bool holdFire) {
 	TeeWiggleIteratorData * data = (TeeWiggleIteratorData *) calloc(1, sizeof(TeeWiggleIteratorData));
-	data->iter = CompressionWiggleIterator(i);
+	if (bedGraph) {
+		data->iter = i;
+	} else {
+		data->iter = CompressionWiggleIterator(i);
+	}
 	data->outfile = outfile;
 	if (bedGraph || i->overlaps)
 		data->bedGraph = true;
