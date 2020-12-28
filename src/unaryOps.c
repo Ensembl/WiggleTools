@@ -383,7 +383,7 @@ WiggleIterator * CoverageWiggleIterator(WiggleIterator * i) {
 typedef struct highPassFilterWiggleIteratorData_st {
 	WiggleIterator * iter;
 	double scalar;
-	bool equal
+	bool equal;
 } HighPassFilterWiggleIteratorData;
 
 void HighPassFilterWiggleIteratorPop(WiggleIterator * wi) {
@@ -396,11 +396,10 @@ void HighPassFilterWiggleIteratorPop(WiggleIterator * wi) {
 			 (data->equal 
 			  && data->iter->value < data->scalar)
 			 || (!data->equal
-				 && data->iter->value <= data->scalar
+				 && data->iter->value <= data->scalar)
 			 || isnan(data->iter->value)
 			 )
 			)
-	      )
 		pop(data->iter);
 
 	if (data->iter->done) {

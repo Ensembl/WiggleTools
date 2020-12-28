@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <string.h>
 #include "bufferedReader.h"
 
 static int MAX_HEAD_START = 3;
@@ -62,7 +63,7 @@ static BlockData * createBlockData() {
 	return new;
 }
 
-bool pushValuesToBuffer(BufferedReaderData * data, char * chrom, int start, int finish, double value) {
+bool pushValuesToBuffer(BufferedReaderData * data, const char * chrom, int start, int finish, double value) {
 
 	if (data->blockData == NULL)
 		data->lastBlockData = data->blockData = createBlockData();

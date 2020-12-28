@@ -27,7 +27,7 @@ typedef struct chrom_length_st {
 typedef struct bufferedReaderData_st BufferedReaderData;
 
 void launchBufferedReader(void * (* readFileFunction)(void *), void * f_data, BufferedReaderData ** buf_data);
-bool pushValuesToBuffer(BufferedReaderData * data, char * chrom, int start, int finish, double value);
+bool pushValuesToBuffer(BufferedReaderData * data, const char * chrom, int start, int finish, double value);
 void endBufferedSignal(BufferedReaderData * data);
 void killBufferedReader(BufferedReaderData * data);
 void BufferedReaderPop(WiggleIterator * wi, BufferedReaderData * data);
