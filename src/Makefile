@@ -1,9 +1,7 @@
 CFLAGS=-g -Wall -O3 -std=gnu99
 LIBDIR=../lib
 BINDIR=../bin
-INC=-I../../libBigWig -I../../htslib
-LIB_PATHS=-L${LIBDIR} -L../../libBigWig -L../../htslib
-LIBS= -lwiggletools -l:libBigWig.a -lcurl -l:libhts.a -lgsl  -lgslcblas -lz -lpthread -lm -llzma -lbz2
+LIBS= -lwiggletools -lBigWig -lcurl -lhts -lgsl  -lgslcblas -lz -lpthread -lm -llzma -lbz2
 OPTS=-D_PBGZF_USE
 
 default: lib bin
@@ -12,7 +10,7 @@ bin: ${BINDIR}/wiggletools
 
 ${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggletools.o
 	mkdir -p ${BINDIR}
-	${CC} ${CFLAGS} ${LIB_PATHS} wiggletools.c ${LIBS} -o ${BINDIR}/wiggletools 
+	${CC} ${CFLAGS} -L${LIBDIR} wiggletools.c ${LIBS} -o ${BINDIR}/wiggletools 
 
 lib: ${LIBDIR}/libwiggletools.a 
 
