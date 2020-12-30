@@ -46,7 +46,7 @@ puts("");
 puts("Program grammar:");
 puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic) | run (file)");
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
-puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | abs | exp | ln | log (float) | pow (float) | offset (float) | shiftPos (int) | scale (float) | gt (float) | gte (float) | lt (float) | lte (float) | default (float) | isZero | toInt | floor | extend (int) | bin (int) | (statistic)");
+puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | abs | exp | ln | log (float) | pow (float) | offset (float) | shiftPos (int) | scale (float) | gt (float) | gte (float) | lt (float) | lte (float) | default (float) | isZero | toInt | floor | extend (int) | bin (int) | compress | (statistic)");
 puts("\toutput = (out_filename) | -");
 puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.cram | *.vcf | *.bcf");
 puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
@@ -421,6 +421,10 @@ static WiggleIterator * readBin() {
 	return BinningWiggleIterator(readIterator(), extension);
 }
 
+static WiggleIterator * readCompression() {
+	return CompressionWiggleIterator(readIterator());
+}
+
 static WiggleIterator * readOverlap() {
 	WiggleIterator * mask = readIterator();
 	WiggleIterator * source = readIterator();
@@ -779,6 +783,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readExtend();
 	if (strcmp(token, "bin") == 0)
 		return readBin();
+	if (strcmp(token, "compress") == 0)
+		return readCompression();
 	if (strcmp(token, "gt") == 0)
 		return readGt();
 	if (strcmp(token, "lt") == 0)

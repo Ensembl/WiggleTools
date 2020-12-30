@@ -574,7 +574,13 @@ If you wish to have your output in BedGraph format (takes more space but easier 
 wiggletools write_bg - test/fixedStep.wig 
 ```
 
-Note that BedGraphs and the BedGraph sections within wiggle files are 0-based, whereas the `normal' wiggle lines have 1-based coordinates.
+Note that BedGraphs and the BedGraph sections within wiggle files are 0-based, whereas the `normal' wiggle lines have 1-based coordinates. 
+
+The BedGraph output respects the layout of the input iterator, however if you want consecutive regions with the same value to be collapsed together, you can use the "compress" keyword:
+
+```
+wiggletools write_bg - compress test/fixedStep.wig 
+```
 
 ## Writing multidimensional wiggles into files
 

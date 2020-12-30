@@ -62,6 +62,7 @@ WiggleIterator * NearestWiggleIterator(WiggleIterator *, WiggleIterator *);
 WiggleIterator * IsZero(WiggleIterator *);
 WiggleIterator * Floor(WiggleIterator *);
 WiggleIterator * ToInt(WiggleIterator *);
+WiggleIterator * CompressionWiggleIterator(WiggleIterator *);
 	// Scalar operations
 WiggleIterator * ScaleWiggleIterator (WiggleIterator *, double);
 WiggleIterator * ShiftWiggleIterator(WiggleIterator *, double);
