@@ -987,7 +987,11 @@ static void BinningWiggleIteratorPop(WiggleIterator * wi) {
 
 	// Set new boundaries
 	wi->chrom = iter->chrom;
-	wi->start = iter->start % width;
+	if (wi->start + width < iter->start % width)
+		wi->start = iter->start % width;
+	else
+		wi->start += width;
+
 	wi->finish = wi->start + width;
 
 	// Compute sum
