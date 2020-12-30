@@ -33,17 +33,16 @@ void libBigWigInit(int size) {
 	}
 }
 
-static int readIteratorIntervals(bwOverlapIterator_t *iter, char * chrom, BigWiggleReaderData * data) {
+static int readIteratorIntervals(bwOverlapIterator_t *iter, char * chrom, int stretch_start, int stretch_stop, BigWiggleReaderData * data) {
 	int index;
 	for(index = 0; index < iter->intervals->l; index++) {
 		int start = iter->intervals->start[index] + 1;
 		int finish = iter->intervals->end[index] + 1;
-		if (data->stop > 0) {
-			if (start >= data->stop)
-				return 1;
-			else if (finish > data->stop)
-				finish = data->stop;
-		}
+
+		// Box into queried stretch
+		start = start < stretch_start? stretch_start: start;
+		finish = finish < stretch_stop? finish: stretch_stop;
+
 		if (pushValuesToBuffer(data->bufferedReaderData, chrom, start, finish, iter->intervals->value[index]))
 			return 1;
 	}
@@ -56,7 +55,7 @@ static int readBigWiggleRegion(BigWiggleReaderData * data, char * chrom, int sta
 		return 0;
 
 	while(iter->data) {
-		if (readIteratorIntervals(iter, chrom, data)) {
+		if (readIteratorIntervals(iter, chrom, start, stop, data)) {
 			bwIteratorDestroy(iter);
 			return 1;
 		}
