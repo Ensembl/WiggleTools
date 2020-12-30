@@ -421,7 +421,7 @@ WiggleIterator * HighPassFilterWiggleIterator(WiggleIterator * i, double s, bool
 	data->iter = i;
 	data->scalar = s;
 	data->equal = equal;
-	return UnionWiggleIterator(newWiggleIterator(data, &HighPassFilterWiggleIteratorPop, &HighPassFilterWiggleIteratorSeek, 0));
+	return newWiggleIterator(data, &HighPassFilterWiggleIteratorPop, &HighPassFilterWiggleIteratorSeek, 0, i->overlaps);
 }
 
 //////////////////////////////////////////////////////
