@@ -72,7 +72,8 @@ void UnionWiggleIteratorPop(WiggleIterator * wi) {
 			wi->chrom = iter->chrom;
 			wi->start = iter->start;
 			wi->finish = iter->finish;
-		} else if (wi->chrom == iter->chrom && wi->finish >= iter->start) {
+			wi->value = iter->value;
+		} else if (wi->chrom == iter->chrom && wi->finish > iter->start) {
 			if (iter->finish > wi->finish)
 				wi->finish = iter->finish;
 		} else
