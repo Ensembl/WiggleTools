@@ -54,7 +54,6 @@ WiggleIterator * NonOverlappingWiggleIterator (WiggleIterator *);
 WiggleIterator * AbsWiggleIterator (WiggleIterator * );
 WiggleIterator * NaturalLogWiggleIterator (WiggleIterator *);
 WiggleIterator * NaturalExpWiggleIterator (WiggleIterator *);
-WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator * );
 WiggleIterator * TestNonOverlappingWiggleIterator(WiggleIterator *);
 WiggleIterator * OverlapWiggleIterator(WiggleIterator *, WiggleIterator *);
 WiggleIterator * TrimWiggleIterator(WiggleIterator *, WiggleIterator *);
