@@ -986,11 +986,8 @@ static void BinningWiggleIteratorPop(WiggleIterator * wi) {
 	}
 
 	// Set new boundaries
-	if (wi->chrom == iter->chrom && iter->start < wi->finish + width)
-		wi->start = wi->finish;
-	else
-		wi->start = ((iter->start - 1) / width) * width + 1;
 	wi->chrom = iter->chrom;
+	wi->start = iter->start % width;
 	wi->finish = wi->start + width;
 
 	// Compute sum
@@ -1011,6 +1008,7 @@ static void BinningWiggleIteratorPop(WiggleIterator * wi) {
 		int covered_length = finish - start;
 		wi->value += covered_length * iter->value;
 		total_covered_length += covered_length;
+		// Will be used in next bin
 		if (iter->finish > wi->finish)
 			break;
 		else
