@@ -26,17 +26,16 @@ typedef struct bigBedReaderData_st {
 	BufferedReaderData * bufferedReaderData;
 } BigBedReaderData;
 
-static int readIteratorEntries(bwOverlapIterator_t *iter, char * chrom, BigBedReaderData * data) {
+static int readIteratorEntries(bwOverlapIterator_t *iter, char * chrom, int stretch_start, int stretch_stop, BigBedReaderData * data) {
 	int index;
 	for(index = 0; index < iter->entries->l; index++) {
 		int start = iter->entries->start[index] + 1;
 		int finish = iter->entries->end[index] + 1;
-		if (data->stop > 0) {
-			if (start >= data->stop)
-				return 1;
-			else if (finish > data->stop)
-				finish = data->stop;
-		}
+
+		// Box into queried stretch
+		start = start < stretch_start? stretch_start: start;
+		finish = finish < stretch_stop? finish: stretch_stop;
+
 		if (pushValuesToBuffer(data->bufferedReaderData, chrom, start, finish, 1))
 			return 1;
 	}
@@ -49,7 +48,7 @@ static int readBigBedRegion(BigBedReaderData * data, char * chrom, int start, in
 		return 0;
 	
 	while(iter->data) {
-		if (readIteratorEntries(iter, chrom, data)) {
+		if (readIteratorEntries(iter, chrom, start, stop, data)) {
 			bwIteratorDestroy(iter);
 			return 1;
 		}
