@@ -125,7 +125,5 @@ void BigBedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int fi
 WiggleIterator * BigBedReader(char * f, bool holdFire) {
 	BigBedReaderData * data = (BigBedReaderData *) calloc(1, sizeof(BigBedReaderData));
 	openBigBed(data, f, holdFire);
-	WiggleIterator * res = newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek, 0);
-	res->overlaps = true;
-	return res;
+	return newWiggleIterator(data, &BigBedReaderPop, &BigBedReaderSeek, 0, true);
 }	

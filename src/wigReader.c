@@ -245,5 +245,5 @@ WiggleIterator * WiggleReader(char * f) {
 		data->file = stdin;
 	data->readingMode = BED_GRAPH;
 	data->stop = -1;
-	return CompressionWiggleIterator(newWiggleIteratorChromName(data, &WiggleReaderPop, &WiggleReaderSeek, 0));
+	return CompressionWiggleIterator(newWiggleIteratorChromName(data, &WiggleReaderPop, &WiggleReaderSeek, 0, false));
 }	

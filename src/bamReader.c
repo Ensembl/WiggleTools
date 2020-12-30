@@ -242,5 +242,5 @@ WiggleIterator * BamReader(char * filename, bool holdFire) {
 	OpenBamFile(data, filename);
 	if (!holdFire)
 		launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));
-	return newWiggleIterator(data, &BamReaderPop, &BamReaderSeek, 0);
+	return newWiggleIterator(data, &BamReaderPop, &BamReaderSeek, 0, false);
 }

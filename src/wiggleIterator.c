@@ -17,7 +17,7 @@
 
 #include "wiggleIterator.h"
 
-WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int), double default_value) {
+WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int), double default_value, bool overlapping) {
 	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
 	new->data = data;
 	new->pop = popFunction;
@@ -26,14 +26,14 @@ WiggleIterator * newWiggleIterator(void * data, void (*popFunction)(WiggleIterat
 	new->value = 1; // Default value for non-valued bed tracks;
 	new->strand = 0; // Default value for non-stranded data;
 	new->valuePtr = NULL;
-	new->overlaps = false;
+	new->overlaps = overlapping;
 	new->append = NULL;
 	new->default_value = default_value;
 	pop(new);
 	return new;
 }
 
-WiggleIterator * newWiggleIteratorChromName(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int), double default_value) {
+WiggleIterator * newWiggleIteratorChromName(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int), double default_value, bool overlapping) {
 	WiggleIterator * new = (WiggleIterator *) calloc(1, sizeof(WiggleIterator));
 	new->data = data;
 	new->pop = popFunction;
@@ -42,7 +42,7 @@ WiggleIterator * newWiggleIteratorChromName(void * data, void (*popFunction)(Wig
 	new->value = 1; // Default value for non-valued bed tracks;
 	new->strand = 0; // Default value for non-stranded data;
 	new->valuePtr = NULL;
-	new->overlaps = false;
+	new->overlaps = overlapping;
 	new->append = NULL;
 	new->default_value = default_value;
 	pop(new);

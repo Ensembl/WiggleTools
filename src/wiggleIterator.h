@@ -34,8 +34,8 @@ struct wiggleIterator_st {
 	WiggleIterator * append;
 };
 
-WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int), double default_value);
-WiggleIterator * newWiggleIteratorChromName(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int), double default_value);
+WiggleIterator * newWiggleIterator(void * data, void (*pop)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int), double default_value, bool overlapping);
+WiggleIterator * newWiggleIteratorChromName(void * data, void (*popFunction)(WiggleIterator *), void (*seek)(WiggleIterator *, const char *, int, int), double default_value, bool overlapping);
 void pop(WiggleIterator *);
 WiggleIterator * CompressionWiggleIterator(WiggleIterator *);
 

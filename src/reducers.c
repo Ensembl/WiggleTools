@@ -68,7 +68,7 @@ WiggleIterator * SelectReduction(Multiplexer * multi, int index) {
 	WiggleSelectData * data = (WiggleSelectData *) calloc(1, sizeof(WiggleSelectData));
 	data->multi = multi;
 	data->index = index;
-	return newWiggleIterator(data, &SelectReductionPop, &WiggleReducerSeek, multi->default_values[index]);
+	return newWiggleIterator(data, &SelectReductionPop, &WiggleReducerSeek, multi->default_values[index], false);
 }
 
 ////////////////////////////////////////////////////////
@@ -114,7 +114,7 @@ WiggleIterator * FillInReduction(Multiplexer * multi, bool trim) {
 	}
 	data->multi = multi;
 	data->trim = trim;
-	WiggleIterator * res = newWiggleIterator(data, &FillInReductionPop, &WiggleReducerSeek, multi->default_values[1]);
+	WiggleIterator * res = newWiggleIterator(data, &FillInReductionPop, &WiggleReducerSeek, multi->default_values[1], false);
 	return res;
 }
 
@@ -182,7 +182,7 @@ WiggleIterator * MaxReduction(Multiplexer * multi) {
 				max = data->multi->default_values[i];
 		}
 	}
-	return newWiggleIterator(data, &MaxReductionPop, &WiggleReducerSeek, max);
+	return newWiggleIterator(data, &MaxReductionPop, &WiggleReducerSeek, max, false);
 }
 
 ////////////////////////////////////////////////////////
@@ -249,7 +249,7 @@ WiggleIterator * MinReduction(Multiplexer * multi) {
 				min = data->multi->default_values[i];
 		}
 	}
-	return newWiggleIterator(data, &MinReductionPop, &WiggleReducerSeek, min);
+	return newWiggleIterator(data, &MinReductionPop, &WiggleReducerSeek, min, false);
 }
 
 ////////////////////////////////////////////////////////
@@ -303,7 +303,7 @@ WiggleIterator * SumReduction(Multiplexer * multi) {
 		}
 		sum += data->multi->default_values[i];
 	}
-	return newWiggleIterator(data, &SumReductionPop, &WiggleReducerSeek, sum);
+	return newWiggleIterator(data, &SumReductionPop, &WiggleReducerSeek, sum, false);
 }
 
 ////////////////////////////////////////////////////////
@@ -357,7 +357,7 @@ WiggleIterator * ProductReduction(Multiplexer * multi) {
 		}
 		prod *= data->multi->default_values[i];
 	}
-	return newWiggleIterator(data, &ProductReductionPop, &WiggleReducerSeek, prod);
+	return newWiggleIterator(data, &ProductReductionPop, &WiggleReducerSeek, prod, false);
 }
 
 ////////////////////////////////////////////////////////
@@ -418,7 +418,7 @@ WiggleIterator * MeanReduction(Multiplexer * multi) {
 		default_value = NAN;
 	else
 		default_value = sum/multi->count;
-	return newWiggleIterator(data, &MeanReductionPop, &WiggleReducerSeek, default_value);
+	return newWiggleIterator(data, &MeanReductionPop, &WiggleReducerSeek, default_value, false);
 }
 
 ////////////////////////////////////////////////////////
@@ -501,7 +501,7 @@ WiggleIterator * VarianceReduction(Multiplexer * multi) {
 		default_value = error/multi->count;
 	}
 
-	return newWiggleIterator(data, &VarianceReductionPop, &WiggleReducerSeek, default_value);
+	return newWiggleIterator(data, &VarianceReductionPop, &WiggleReducerSeek, default_value, false);
 }
 
 ////////////////////////////////////////////////////////
@@ -586,7 +586,7 @@ WiggleIterator * StdDevReduction(Multiplexer * multi) {
 		default_value = sqrt(error/multi->count);
 	}
 
-	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek, default_value);
+	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek, default_value, false);
 }
 
 ////////////////////////////////////////////////////////
@@ -662,7 +662,7 @@ WiggleIterator * EntropyReduction(Multiplexer * multi) {
 			default_value = 0;
 	}
 
-	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek, default_value);
+	return newWiggleIterator(data, &StdDevReductionPop, &WiggleReducerSeek, default_value, false);
 }
 
 ////////////////////////////////////////////////////////
@@ -747,7 +747,7 @@ WiggleIterator * CVReduction(Multiplexer * multi) {
 		default_value = sqrt(error/multi->count)/mean;
 	} else
 		default_value = NAN;
-	return newWiggleIterator(data, &CVReductionPop, &WiggleReducerSeek, default_value);
+	return newWiggleIterator(data, &CVReductionPop, &WiggleReducerSeek, default_value, false);
 }
 
 
@@ -830,5 +830,5 @@ WiggleIterator * MedianReduction(Multiplexer * multi) {
 		qsort(data->vals, multi->count, sizeof(double), &compDoubles);
 		default_value = data->vals[multi->count/2];
 	}
-	return newWiggleIterator(data, &MedianReductionPop, &MedianWiggleReducerSeek, default_value);
+	return newWiggleIterator(data, &MedianReductionPop, &MedianWiggleReducerSeek, default_value, false);
 }

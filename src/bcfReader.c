@@ -100,5 +100,5 @@ WiggleIterator * BcfReader(char * filename, bool holdFire) {
 	OpenBCFFile(data, filename);
 	if (!holdFire)
 		launchBufferedReader(&downloadBCFFile, data, &(data->bufferedReaderData));
-	return newWiggleIterator(data, &BCFReaderPop, &BcfReaderSeek, 0);
+	return newWiggleIterator(data, &BCFReaderPop, &BcfReaderSeek, 0, true);
 }

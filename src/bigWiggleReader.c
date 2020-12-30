@@ -143,5 +143,5 @@ void BigWiggleReaderSeek(WiggleIterator * wi, const char * chrom, int start, int
 WiggleIterator * BigWiggleReader(char * f, bool holdFire) {
 	BigWiggleReaderData * data = (BigWiggleReaderData *) calloc(1, sizeof(BigWiggleReaderData));
 	openBigWiggle(data, f, holdFire);
-	return newWiggleIterator(data, &BigWiggleReaderPop, &BigWiggleReaderSeek, 0);
+	return newWiggleIterator(data, &BigWiggleReaderPop, &BigWiggleReaderSeek, 0, false);
 }	

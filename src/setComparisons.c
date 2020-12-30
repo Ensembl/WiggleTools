@@ -127,7 +127,7 @@ WiggleIterator * TTestReduction(Multiset * multi) {
 		exit(1);
 	}	
 	data->multi = multi;
-	return newWiggleIterator(data, &TTestReductionPop, &SetComparisonSeek, NAN);
+	return newWiggleIterator(data, &TTestReductionPop, &SetComparisonSeek, NAN, false);
 }
 
 
@@ -226,7 +226,7 @@ WiggleIterator * FTestReduction(Multiset * multi) {
 		data->counts[index] = multi->multis[index]->count;
 		data->total_count += data->counts[index];
 	}
-	return newWiggleIterator(data, &FTestReductionPop, &FTestSeek, NAN);
+	return newWiggleIterator(data, &FTestReductionPop, &FTestSeek, NAN, false);
 }
 
 ////////////////////////////////////////////////////////
@@ -386,5 +386,5 @@ WiggleIterator * MWUReduction(Multiset * multi) {
 		data->mu_U = data->n1 * data->n2 / 2;
 		data->sigma_U = sqrt(data->n1 * data->n2 * (data->n1 + data->n2 + 1) / 12);
 	}
-	return newWiggleIterator(data, &MWUReductionPop, &MWUSeek, NAN);
+	return newWiggleIterator(data, &MWUReductionPop, &MWUSeek, NAN, false);
 }

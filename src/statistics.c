@@ -43,7 +43,7 @@ static void StatisticSeek(WiggleIterator * wi, const char * chrom, int start, in
 }
 
 static WiggleIterator * newStatisticIterator(void * data, void (*popFunction)(WiggleIterator *), void (*seekFunction)(WiggleIterator *, const char *, int, int), double default_value, WiggleIterator * source) {
-	WiggleIterator * new = newWiggleIterator(data, popFunction, seekFunction, default_value);
+	WiggleIterator * new = newWiggleIterator(data, popFunction, seekFunction, default_value, false);
 	new->append = source;
 	return new;
 }
@@ -594,5 +594,5 @@ WiggleIterator * PrintStatisticsWiggleIterator(WiggleIterator * i, FILE * file) 
 	PrintStatisticsData * data = (PrintStatisticsData *) calloc(1, sizeof(PrintStatisticsData));
 	data->iter = i;
 	data->file = file;
-	return newWiggleIterator(data, &PrintStatisticsWiggleIteratorPop, &PrintStatisticsWiggleIteratorSeek, i->default_value);
+	return newWiggleIterator(data, &PrintStatisticsWiggleIteratorPop, &PrintStatisticsWiggleIteratorSeek, i->default_value, false);
 }
