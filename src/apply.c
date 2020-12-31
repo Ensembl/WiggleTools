@@ -109,9 +109,9 @@ void BufferedWiggleIteratorSeek(WiggleIterator * apply, const char * chrom, int 
 WiggleIterator * BufferedWiggleIterator(BufferedWiggleIteratorData * data, bool strict) {
 	WiggleIterator * apply;
 	if (strict)
-		apply = newWiggleIterator(data, &StrictBufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value);
+		apply = newWiggleIterator(data, &StrictBufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value, false);
 	else
-		apply = newWiggleIterator(data, &LooseBufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value);
+		apply = newWiggleIterator(data, &LooseBufferedWiggleIteratorPop, &BufferedWiggleIteratorSeek, data->default_value, false);
 	apply->chrom = data->chrom;
 	return apply;
 }
@@ -166,7 +166,7 @@ WiggleIterator * FillInUnaryWiggleIterator(WiggleIterator * source, char * chrom
 	data->source = source;
 	data->first = true;
 	seek(source, chrom, start, finish);
-	return newWiggleIterator(data, &FillInUnaryPop, NULL, source->default_value);
+	return newWiggleIterator(data, &FillInUnaryPop, NULL, source->default_value, false);
 }
 
 //////////////////////////////////////////////////////
