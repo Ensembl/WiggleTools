@@ -82,7 +82,11 @@ void BCFReaderPop(WiggleIterator * wi) {
 void BcfReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
 	BCFReaderData * data = (BCFReaderData *) wi->data;
 
-	killBufferedReader(data->bufferedReaderData);
+	if (data->bufferedReaderData) {
+		killBufferedReader(data->bufferedReaderData);
+		free(data->bufferedReaderData);
+		data->bufferedReaderData = NULL;
+	}
 	data->bcf_iterator = bcf_itr_queryi(data->bcf_index, bcf_hdr_name2id(data->bcf_header, chrom), start, finish);
 	launchBufferedReader(&downloadBCFFile, data, &(data->bufferedReaderData));
 	wi->done = false;
