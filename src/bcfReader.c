@@ -88,15 +88,16 @@ void BcfReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 		data->bufferedReaderData = NULL;
 	}
 	data->bcf_iterator = bcf_itr_queryi(data->bcf_index, bcf_hdr_name2id(data->bcf_header, chrom), start, finish);
+	if (data->bcf_iterator == NULL) {
+		fprintf(stderr, "Could not find index file to BCF file %s.\n", data->filename);
+		exit(1);
+	}
 	launchBufferedReader(&downloadBCFFile, data, &(data->bufferedReaderData));
 	wi->done = false;
 	BCFReaderPop(wi);
 
 	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish <= start))) 
 		BCFReaderPop(wi);
-
-	data->chrom = chrom;
-	data->stop = finish;
 }
 
 WiggleIterator * BcfReader(char * filename, bool holdFire) {
