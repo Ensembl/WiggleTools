@@ -50,7 +50,7 @@ static int readIteratorIntervals(bwOverlapIterator_t *iter, char * chrom, int st
 }
 
 static int readBigWiggleRegion(BigWiggleReaderData * data, char * chrom, int start, int stop) {
-	bwOverlapIterator_t *iter = bwOverlappingIntervalsIterator(data->fp, chrom, start, stop, MAX_BLOCKS);
+	bwOverlapIterator_t *iter = bwOverlappingIntervalsIterator(data->fp, chrom, start - 1, stop - 1, MAX_BLOCKS);
 	if (!iter)
 		return 0;
 
@@ -69,7 +69,7 @@ static int readBigWiggleChromosome(BigWiggleReaderData * data, char * chrom, int
 	int start;
 	int stretch=10000;
 
-	for (start = 0; start < length; start+=stretch) {
+	for (start = 1; start < length; start+=stretch) {
 		if (readBigWiggleRegion(data, chrom, start, start+stretch))
 			return 1;
 	}

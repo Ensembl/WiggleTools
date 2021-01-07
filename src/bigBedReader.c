@@ -43,7 +43,8 @@ static int readIteratorEntries(bwOverlapIterator_t *iter, char * chrom, int stre
 }
 
 static int readBigBedRegion(BigBedReaderData * data, char * chrom, int start, int stop) {
-	bwOverlapIterator_t *iter = bbOverlappingEntriesIterator(data->fp, chrom, start, stop, 0, MAX_BLOCKS);
+	// BigBed format 1 indexed, hence the -1s
+	bwOverlapIterator_t *iter = bbOverlappingEntriesIterator(data->fp, chrom, start - 1, stop - 1, 0, MAX_BLOCKS);
 	if (!iter)
 		return 0;
 	
@@ -74,7 +75,7 @@ void * readBigBed(void * ptr) {
 		qsort(chrom_lengths, data->fp->cl->nKeys, sizeof(Chrom_length), compare_chrom_lengths);
 
 		for (chrom_index = 0; chrom_index < data->fp->cl->nKeys; chrom_index++)
-			if (readBigBedRegion(data, chrom_lengths[chrom_index].chrom, 0, chrom_lengths[chrom_index].length))
+			if (readBigBedRegion(data, chrom_lengths[chrom_index].chrom, 1, chrom_lengths[chrom_index].length))
 				break;
 
 		free(chrom_lengths);

@@ -51,6 +51,21 @@ assert test('../bin/wiggletools do isZero diff variableStep.bw variableStep.wig'
 # Testing VCF and BCF
 assert test('../bin/wiggletools do isZero diff vcf.vcf bcf.bcf') == 0
 
+# Testing BAM & BedGraph
+assert test('../bin/wiggletools do isZero seek GL000200.1 1 1000 diff bam.bam pileup.bg') == 0
+
+# Testing BAM & CRAM
+assert test('../bin/wiggletools do isZero seek GL000200.1 1 1000 diff bam.bam cram.cram') == 0
+
+# Testing Bed and BigBed
+assert test('../bin/wiggletools do isZero seek chr1 2 6 diff overlapping.bed overlapping.bb') == 0
+
+# Testing Wig and BigWig
+assert test('../bin/wiggletools do isZero seek chr1 2 6 diff variableStep.bw variableStep.wig') == 0
+
+# Testing VCF and BCF
+assert test('../bin/wiggletools do isZero seek chr1 2 6 diff vcf.vcf bcf.bcf') == 0
+
 # Testing sum, scale and multiplexers
 assert test('../bin/wiggletools do isZero diff sum fixedStep.bw fixedStep.bw : scale 2 fixedStep.bw') == 0
 
