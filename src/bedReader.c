@@ -60,7 +60,7 @@ void BedReaderPop(WiggleIterator * wi) {
 
 
 		// The reason for creating a new string instead of simply 
-		// overwriting is that other functions may still be pointin
+		// overwriting is that other functions may still be pointing
 		// at the old label
 		if (wi->chrom[0] == '\0' || strcmp(wi->chrom, chrom)) {
 			wi->chrom = (char *) calloc(strlen(chrom) + 1, sizeof(char));
@@ -101,6 +101,10 @@ void BedReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 			fprintf(stderr, "Could not open input file %s\n", data->filename);
 			exit(1);
 		}
+		// The reason for creating a new string instead of simply 
+		// overwriting is that other functions may still be pointing
+		// at the old label
+		wi->chrom = (char *) calloc(strlen(chrom) + 1, sizeof(char));
 		wi->done = false;
 		pop(wi);
 	}
