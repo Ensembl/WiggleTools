@@ -10,7 +10,7 @@ bin: ${BINDIR}/wiggletools
 
 ${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggletools.o
 	mkdir -p ${BINDIR}
-	${CC} ${CFLAGS} -L${LIBDIR} wiggletools.c ${LIBS} -o ${BINDIR}/wiggletools 
+	${CC} ${CFLAGS} -L${LIBDIR} ${LDFLAGS} wiggletools.c ${LIBS} -o ${BINDIR}/wiggletools
 
 lib: ${LIBDIR}/libwiggletools.a 
 
@@ -18,7 +18,7 @@ ${LIBDIR}/libwiggletools.a: wiggleIterator.o wigReader.o bigWiggleReader.o multi
 	mkdir -p ${LIBDIR}
 	ar rcs ${LIBDIR}/libwiggletools.a *.o
 
-%.o: %.c; ${CC} ${CFLAGS} ${INC} ${OPTS} -c $< -o $@
+%.o: %.c; ${CC} ${CFLAGS} ${INC} ${CPPFLAGS} ${OPTS} -c $< -o $@
 
 clean:
 	rm -Rf *.o *.a wiggletools
