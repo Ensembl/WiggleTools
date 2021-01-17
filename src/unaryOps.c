@@ -939,7 +939,7 @@ static void AbsWiggleIteratorPop(WiggleIterator * wi) {
 		wi->start = iter->start;
 		wi->finish = iter->finish;
 		if (!isnan(iter->value))
-			wi->value = abs(iter->value);
+			wi->value = fabs(iter->value);
 		else
 			wi->value = NAN;
 		pop(iter);
@@ -953,7 +953,7 @@ WiggleIterator * AbsWiggleIterator(WiggleIterator * i) {
 	data->iter = NonOverlappingWiggleIterator(i);
 	double default_value;
 	if (!isnan(i->default_value))
-		default_value = abs(i->default_value);
+		default_value = fabs(i->default_value);
 	else
 		default_value = NAN;
 	return newWiggleIterator(data, &AbsWiggleIteratorPop, &UnaryWiggleIteratorSeek, default_value, i->overlaps);
