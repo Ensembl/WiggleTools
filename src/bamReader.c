@@ -25,6 +25,7 @@ typedef struct bamFileReaderData_st {
 	char * chrom;
 	int chrom_tid;
 	int start, stop;
+	bool read_count;
 	BufferedReaderData * bufferedReaderData;
 
 	// BAM stuff
@@ -63,15 +64,7 @@ static bam1_t * nextRead(BamReaderData * data, hts_itr_t * iter, bam1_t * aln) {
 	}
 }
 
-static void downloadBamFileChromosome(BamReaderData * data, char * query_chrom, uint32_t query_start, uint32_t query_stop) {
-	// Create iterator
-	int query_chrom_tid = bam_name2id(data->header, query_chrom);
-	hts_itr_t * iter = sam_itr_queryi(data->idx, query_chrom_tid, query_start, query_stop);
-	if(data->header == NULL || iter == NULL) {
-		fprintf(stderr, "Unable to iterate to region within BAM.");
-		exit(1);
-	}
-
+static void consumeIteratorWithCigars(BamReaderData * data, hts_itr_t * iter, char * query_chrom, int query_chrom_tid, int query_stop) {
 	// Iterate through data
 	bam1_t *aln = bam_init1();
 	FibHeap * starts = fh_makeheap();
@@ -122,8 +115,6 @@ static void downloadBamFileChromosome(BamReaderData * data, char * query_chrom, 
 			if ((start >= query_stop && chrom_tid == query_chrom_tid) || chrom_tid > query_chrom_tid) {
 				fh_deleteheap(starts);
 				fh_deleteheap(ends);
-				if (iter)
-					bam_itr_destroy(iter);
 				return;
 			} else if (finish > query_stop)
 				finish = query_stop;
@@ -131,19 +122,60 @@ static void downloadBamFileChromosome(BamReaderData * data, char * query_chrom, 
 			if (pushValuesToBuffer(data->bufferedReaderData, data->header->target_name[chrom_tid], start, finish, value)) {
 				fh_deleteheap(starts);
 				fh_deleteheap(ends);
-				if (iter)
-					bam_itr_destroy(iter);
 				return;
 			}
 		} else {
 			// No ends => end of file iterator
 			fh_deleteheap(starts);
 			fh_deleteheap(ends);
-			if (iter)
-				bam_itr_destroy(iter);
 			return;
 		}
 	}
+}
+
+static void consumeIteratorNoCigars(BamReaderData * data, hts_itr_t * iter, char * query_chrom, int query_chrom_tid, int query_stop) {
+	// Iterate through data
+	bam1_t *aln = bam_init1();
+	int start, finish, value;
+
+	aln = nextRead(data, iter, aln);
+
+	while(aln && aln->core.tid == query_chrom_tid && aln->core.pos < query_stop) {
+		// Read coordinates
+		// Note that BAM coords are 0-based, hence +1
+		start = aln->core.pos + 1;
+		finish = start + 1;
+
+		// Compute value
+		value = 0;
+		while (aln
+		       && aln->core.tid == query_chrom_tid 
+		       && aln->core.pos == start - 1) {
+			value++;
+			aln = nextRead(data, iter, aln);
+		}
+
+		// Push on
+		if (pushValuesToBuffer(data->bufferedReaderData, query_chrom, start, finish, value)) 
+			return;
+	}
+}
+
+static void downloadBamFileChromosome(BamReaderData * data, char * query_chrom, uint32_t query_start, uint32_t query_stop) {
+	// Create iterator
+	int query_chrom_tid = bam_name2id(data->header, query_chrom);
+	hts_itr_t * iter = sam_itr_queryi(data->idx, query_chrom_tid, query_start, query_stop);
+	if(data->header == NULL || iter == NULL) {
+		fprintf(stderr, "Unable to iterate to region within BAM.");
+		exit(1);
+	}
+	if (data->read_count) 
+		consumeIteratorNoCigars(data, iter, query_chrom, query_chrom_tid, query_stop);
+	else 
+		consumeIteratorWithCigars(data, iter, query_chrom, query_chrom_tid, query_stop);
+
+	if (iter)
+		bam_itr_destroy(iter);
 }
 
 typedef struct {
@@ -237,8 +269,9 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 
 }
 
-WiggleIterator * BamReader(char * filename, bool holdFire) {
+WiggleIterator * BamReader(char * filename, bool holdFire, bool read_count) {
 	BamReaderData * data = (BamReaderData *) calloc(1, sizeof(BamReaderData));
+	data->read_count = read_count;
 	OpenBamFile(data, filename);
 	if (!holdFire)
 		launchBufferedReader(&downloadBamFile, data, &(data->bufferedReaderData));

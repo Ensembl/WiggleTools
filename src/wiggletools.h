@@ -36,8 +36,8 @@ WiggleIterator * WiggleReader (char *);
 WiggleIterator * BigWiggleReader (char *, bool);
 WiggleIterator * BedReader (char *);
 WiggleIterator * BigBedReader (char *, bool);
-WiggleIterator * BamReader (char *, bool);
-WiggleIterator * SamReader (char *);
+WiggleIterator * BamReader (char *, bool, bool);
+WiggleIterator * SamReader (char *, bool);
 WiggleIterator * VcfReader (char *);
 WiggleIterator * BcfReader (char *, bool);
 

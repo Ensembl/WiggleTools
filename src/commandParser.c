@@ -48,7 +48,7 @@ puts("\tprogram = (iterator) | do (iterator) | (extraction) | (statistic) | run 
 puts("\titerator = (in_filename) | (unary_operator) (iterator) | (binary_operator) (iterator) (iterator) | (reducer) (multiplex) | (setComparison) (multiplex_list) | print (output) (statistic)");
 puts("\tunary_operator = unit | coverage | write (output) | write_bg (ouput) | smooth (int) | abs | exp | ln | log (float) | pow (float) | offset (float) | shiftPos (int) | scale (float) | gt (float) | gte (float) | lt (float) | lte (float) | default (float) | isZero | toInt | floor | extend (int) | bin (int) | compress | (statistic)");
 puts("\toutput = (out_filename) | -");
-puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.bam | *.cram | *.vcf | *.bcf");
+puts("\tin_filename = *.wig | *.bw | *.bed | *.bb | *.bg | *.sam | *.bam | *.cram | read_count *.sam | read_count *.bam | read_count *.cram | *.vcf | *.bcf | - | sam -");
 puts("\tstatistic = (statistic_function) (iterator) | ndpearson (multiplex) (multiplex)");
 puts("\tstatistic_function = AUC | meanI | varI | minI | maxI | stddevI | CVI | energy (wavelength) | pearson (iterator)");
 puts("\tbinary_operator = diff | ratio | overlaps | trim | noverlaps | nearest | apply (statistic) | fillIn | trimFill");
@@ -573,7 +573,7 @@ static WiggleIterator * readUnit() {
 }
 
 static WiggleIterator * readSam() {
-	return SamReader(needNextToken());
+	return SamReader(needNextToken(), false);
 }
 
 static WiggleIterator * readCoverage() {
@@ -716,6 +716,21 @@ static WiggleIterator * readToInt() {
 	return ToInt(readIterator());
 }
 
+static WiggleIterator * ReadCount() {
+	char * filename = needNextToken();
+	size_t length = strlen(filename);
+	if (!strcmp(filename + length - 4, ".bam"))
+		return BamReader(filename, holdFire, true);
+	else if (!strcmp(filename + length - 5, ".cram"))
+		return BamReader(filename, holdFire, true);
+	else if (!strcmp(filename + length - 4, ".sam"))
+		return SamReader(filename, true);
+	else {
+		fprintf(stderr, "Could not recognize file format from suffix: %s\n", filename);
+		exit(1);
+	}
+}
+
 static WiggleIterator * readIteratorToken(char * token) {
 	if (strcmp(token, "cat") == 0)
 		return readCat();
@@ -837,6 +852,8 @@ static WiggleIterator * readIteratorToken(char * token) {
 		return readToInt();
 	if (strcmp(token, "apply") == 0)
 		return SelectReduction(readApply(), 0);
+	if (strcmp(token, "read_count") == 0)
+		return ReadCount(holdFire);
 
 	return SmartReader(token, holdFire);
 

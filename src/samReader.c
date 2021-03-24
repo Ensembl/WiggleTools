@@ -21,11 +21,12 @@
 typedef struct samReaderData_st {
 	char  *filename;
 	FILE * file;
-	char * chrom;
+	char * target_chrom;
 	int stop;
+	bool read_count;
 
 	FibHeap * starts, * ends;
-	char chromBuf[1000];
+	char chrom[1000];
 	char cigar[1000];
 	int pos;
 	bool done;
@@ -74,25 +75,29 @@ static int storeReadComponent(FibHeap * starts, FibHeap * ends, int start, char 
 	}
 }
 
-static void readLine(WiggleIterator * wi) {
-	SamReaderData * data = (SamReaderData *) wi->data;
+static void readLine(SamReaderData * data) {
 	char line[5000];
 	char chrom[1000];
 	int pos;
 
 	while (fgets(line, 5000, data->file)) {
-		if (line[0] != '#' && line[0] != EOF) {
-			sscanf(line, "%*s\t%*i\t%s\t%i\t%*i\t%s", chrom, &pos, data->cigar);
-
-			if (strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && pos < data->pos)) {
-				fprintf(stderr, "Sam file %s is not sorted!\nPosition %s:%i is before %s:%i\n", data->filename, chrom, pos, wi->chrom, data->pos);
-				exit(1);
-			}
-
-			strcpy(data->chromBuf, chrom);
-			data->pos = pos;
+		if (line[0] == '#')
+			continue;
+		if (line[0] == EOF) {
+			data->done = true;
 			return;
 		}
+
+		sscanf(line, "%*s\t%*i\t%s\t%i\t%*i\t%s", chrom, &pos, data->cigar);
+
+		if (strcmp(chrom, data->chrom) < 0 || (strcmp(chrom, data->chrom) == 0 && pos < data->pos)) {
+			fprintf(stderr, "Sam file %s is not sorted!\nPosition %s:%i should be before %s:%i\n", data->filename, chrom, pos, data->chrom, data->pos);
+			exit(1);
+		}
+
+		strcpy(data->chrom, chrom);
+		data->pos = pos;
+		return;
 	}
 
 	data->done = true;
@@ -106,20 +111,40 @@ static void storeReadComponents(FibHeap * starts, FibHeap * ends, int start, cha
 		start = storeReadComponent(starts, ends, start, block);
 }
 
-static void loadNextReads(WiggleIterator * wi) {
+static void loadNextReadsOnChrom(WiggleIterator * wi) {
 	SamReaderData * data = (SamReaderData *) wi->data;
 
-	if (data->chromBuf[0] == '\0')
-		readLine(wi);
+	while (!data->done && !strcmp(wi->chrom, data->chrom) && (fh_empty(data->ends) || fh_empty(data->starts) || data->pos <= fh_min(data->ends) || data->pos <= fh_min(data->starts))) {
+		storeReadComponents(data->starts, data->ends, data->pos, data->cigar);
+		readLine(data);
+	}
+}
 
-	if (fh_empty(data->ends) && strcmp(wi->chrom, data->chromBuf)) {
-		wi->chrom = (char *) calloc(strlen(data->chromBuf) + 1, sizeof(char));
-		strcpy(wi->chrom, data->chromBuf);
+static void stepForward(WiggleIterator * wi) {
+	SamReaderData * data = (SamReaderData *) wi->data;
+	// Update coordinates
+	if (wi->value)
+		wi->start = wi->finish;
+	else {
+		wi->start = fh_min(data->starts);
 	}
 
-	while (!data->done && !strcmp(wi->chrom, data->chromBuf) && (fh_empty(data->ends) || fh_empty(data->starts) || data->pos <= fh_min(data->ends) || data->pos <= fh_min(data->starts))) {
-		storeReadComponents(data->starts, data->ends, data->pos, data->cigar);
-		readLine(wi);
+	// Compute value
+	while (fh_notempty(data->starts) && fh_min(data->starts) == wi->start) {
+		wi->value++;
+		fh_extractmin(data->starts);
+	}
+
+	if (fh_notempty(data->starts)) 
+		wi->finish = fh_min(data->starts);
+	if (fh_notempty(data->ends) && (fh_empty(data->starts) || fh_min(data->ends) < wi->finish)) 
+		wi->finish = fh_min(data->ends);
+
+	if (data->stop > 0) {
+		if ((wi->start >= data->stop && strcmp(wi->chrom, data->target_chrom) == 0) || strcmp(wi->chrom, data->target_chrom) > 0)
+			wi->done = true;
+		else if (wi->finish > data->stop)
+			wi->finish = data->stop;
 	}
 }
 
@@ -129,49 +154,66 @@ void SamReaderPop(WiggleIterator * wi) {
 	if (wi->done)
 		return;
 
-	if (wi->chrom[0] == '\0')
+	if (data->read_count) {
+		if (data->done) {
+			fclose(data->file);
+			data->file = NULL;
+			wi->done = true;
+			return;
+		}
+
+		// Initialise iterator values
+		if (!wi->chrom || strcmp(wi->chrom, data->chrom)) {
+			wi->chrom = (char *) calloc(strlen(data->chrom) + 1, sizeof(char));
+			strcpy(wi->chrom, data->chrom);
+		}
+		wi->start = data->pos;
+		wi->finish = data->pos + 1;
 		wi->value = 0;
 
-	while (fh_notempty(data->ends) && fh_min(data->ends) == wi->finish) {
-		wi->value--;
-		fh_extractmin(data->ends);
-	}
-
-	if (wi->value < 0) {
-		fprintf(stderr, "Negative coverage at %s:%i???\n", wi->chrom, wi->finish);
-		exit(1);
-	}
-
-	loadNextReads(wi);
-
-	if (fh_notempty(data->ends)) {
-		if (wi->value)
-			wi->start = wi->finish;
-		else 
-			wi->start = fh_min(data->starts);
-
-		while (fh_notempty(data->starts) && fh_min(data->starts) == wi->start) {
+		// Check for overlapping reads
+		while (!data->done && !strcmp(wi->chrom, data->chrom) && data->pos == wi->start) {
 			wi->value++;
-			fh_extractmin(data->starts);
+			readLine(data);
+		}
+	} else {
+		// Plan A is if already on a chromosome and there is remaining business there:
+		if (wi->chrom) {
+			while (fh_notempty(data->ends) && fh_min(data->ends) == wi->finish) {
+				wi->value--;
+				if (wi->value < 0) {
+					fprintf(stderr, "Negative coverage at %s:%i???\n", wi->chrom, wi->finish);
+					exit(1);
+				}
+				fh_extractmin(data->ends);
+			}
+
+			loadNextReadsOnChrom(wi);
+
+			if (fh_notempty(data->ends)) {
+				stepForward(wi);
+				return;
+			}
+		}
+		
+		// Plan B if nothing to do on chromosome, move to next one:
+		// This re-initialisation is needed because the default init value is 1 for the WiggleIterator
+		wi->value = 0;
+		wi->chrom = (char *) calloc(strlen(data->chrom) + 1, sizeof(char));
+		strcpy(wi->chrom, data->chrom);
+
+		loadNextReadsOnChrom(wi);
+
+		if (fh_notempty(data->ends)) {
+			stepForward(wi);
+			return;
 		}
 
-		if (fh_notempty(data->starts)) 
-			wi->finish = fh_min(data->starts);
-		if (fh_notempty(data->ends) && (fh_empty(data->starts) || fh_min(data->ends) < wi->finish)) 
-			wi->finish = fh_min(data->ends);
-
-		if (data->stop > 0) {
-			if ((wi->start >= data->stop && strcmp(wi->chrom, data->chrom) == 0) || strcmp(wi->chrom, data->chrom) > 0)
-				wi->done = true;
-			else if (wi->finish > data->stop)
-				wi->finish = data->stop;
-		}
-	}
-	else {
+		// Plan C: just quit it
 		fclose(data->file);
 		data->file = NULL;
 		wi->done = true;
-	}
+	} 
 }
 
 void SamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finish) {
@@ -182,9 +224,11 @@ void SamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 		exit(1);
 	}
 
+	// Set targets
 	data->stop = finish;
-	data->chrom = chrom;
+	data->target_chrom = chrom;
 
+	// Possibly start reading file from the top
 	if (!data->file || strcmp(chrom, wi->chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && start < wi->start)) {
 		if (data->file)
 			fclose(data->file);
@@ -193,28 +237,42 @@ void SamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 			exit(1);
 		}
 		wi->done = false;
+		// This is needed to avoid triggering the out of order check in the readLine below
+		data->chrom[0] = '\0';
+		wi->chrom = NULL;
+
+		// Reset coverage data structures
+		if (!data->read_count) {
+			fh_deleteheap(data->starts);
+			fh_deleteheap(data->ends);
+			data->starts = fh_makeheap();
+			data->ends = fh_makeheap();
+		}
+		data->done = false;
+		readLine(data);
+
 		pop(wi);
 	}
 
-	fh_deleteheap(data->starts);
-	fh_deleteheap(data->ends);
-	data->starts = fh_makeheap();
-	data->ends = fh_makeheap();
-	data->done = true;
-	wi->value = 0;
+
+	// Move to starting point
 	while (!wi->done && (strcmp(wi->chrom, chrom) < 0 || (strcmp(chrom, wi->chrom) == 0 && wi->finish < start))) 
 		pop(wi);
 
+	// Trim very first position
 	if (!wi->done && strcmp(chrom, wi->chrom) == 0 && wi->start < start)
 		wi->start = start;
 }
 
-WiggleIterator * SamReader(char * filename) {
+WiggleIterator * SamReader(char * filename, bool read_count) {
 	SamReaderData * data = (SamReaderData *) calloc(1, sizeof(SamReaderData));
 	data->filename = filename;
 	data->stop = -1;
-	data->starts = fh_makeheap();
-	data->ends = fh_makeheap();
+	data->read_count = read_count;
+	if (!read_count) {
+		data->starts = fh_makeheap();
+		data->ends = fh_makeheap();
+	}
 	if (strcmp(filename, "-")) {
 		if (!(data->file = fopen(filename, "r"))) {
 			fprintf(stderr, "Could not open input file %s\n", filename);
@@ -222,5 +280,7 @@ WiggleIterator * SamReader(char * filename) {
 		}
 	} else
 		data->file = stdin;
-	return newWiggleIteratorChromName(data, &SamReaderPop, &SamReaderSeek, 0, false);
+	readLine(data);
+
+	return newWiggleIterator(data, &SamReaderPop, &SamReaderSeek, 0, false);
 }

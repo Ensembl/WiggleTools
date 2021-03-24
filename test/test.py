@@ -39,6 +39,9 @@ assert test('../bin/wiggletools do isZero diff bam.bam cram.cram') == 0
 # Testing BAM & SAM
 assert test('../bin/wiggletools do isZero diff bam.bam sam.sam') == 0
 
+# Testing fast BAM and SAM
+assert test('../bin/wiggletools do isZero diff read_count bam.bam read_count sam.sam') == 0
+
 # Testing BAM & SAM
 assert test('cat sam.sam | ../bin/wiggletools do isZero diff bam.bam sam -') == 0
 
@@ -56,6 +59,9 @@ assert test('../bin/wiggletools do isZero seek GL000200.1 1 1000 diff bam.bam pi
 
 # Testing BAM & CRAM
 assert test('../bin/wiggletools do isZero seek GL000200.1 1 1000 diff bam.bam cram.cram') == 0
+
+# Testing SAM & BedGraph
+assert test('../bin/wiggletools do isZero seek GL000200.1 1 1000 diff sam.sam pileup.bg') == 0
 
 # Testing Bed and BigBed
 assert test('../bin/wiggletools do isZero seek chr1 2 6 diff overlapping.bed overlapping.bb') == 0

@@ -1182,11 +1182,11 @@ WiggleIterator * SmartReader(char * filename, bool holdFire) {
 	else if (!strcmp(filename + length - 3, ".bb"))
 		return BigBedReader(filename, holdFire);
 	else if (!strcmp(filename + length - 4, ".bam"))
-		return BamReader(filename, holdFire);
+		return BamReader(filename, holdFire, false);
 	else if (!strcmp(filename + length - 5, ".cram"))
-		return BamReader(filename, holdFire);
+		return BamReader(filename, holdFire, false);
 	else if (!strcmp(filename + length - 4, ".sam"))
-		return SamReader(filename);
+		return SamReader(filename, false);
 	else if (!strcmp(filename + length - 4, ".vcf"))
 		return VcfReader(filename);
 	else if (!strcmp(filename + length - 4, ".bcf"))
