@@ -16,7 +16,7 @@
 #include <string.h> 
 
 #include "wiggleIterator.h"
-#include "fib.h"
+#include "hashfib.h"
 
 typedef struct samReaderData_st {
 	char  *filename;
@@ -25,7 +25,7 @@ typedef struct samReaderData_st {
 	int stop;
 	bool read_count;
 
-	FibHeap * starts, * ends;
+	HashFib * starts, * ends;
 	char chrom[1000];
 	char cigar[1000];
 	int pos;
@@ -55,7 +55,7 @@ static char * readNextCigarBlock(char * cigar, char * block) {
 		return NULL;
 }
 
-static int storeReadComponent(FibHeap * starts, FibHeap * ends, int start, char * block) {
+static int storeReadComponent(HashFib * starts, HashFib * ends, int start, char * block) {
 	int last = strlen(block) - 1;
 	char type = block[last];
 	block[last] = '\0';
@@ -66,8 +66,8 @@ static int storeReadComponent(FibHeap * starts, FibHeap * ends, int start, char 
 		case 'X':
 		case '=':
 		case 'D':
-			fh_insert(starts, start, 0);
-			fh_insert(ends, start + count, 0);
+			hashfib_insert(starts, start);
+			hashfib_insert(ends, start + count);
 		case 'N':
 			return start + count;
 		default:
@@ -103,7 +103,7 @@ static void readLine(SamReaderData * data) {
 	data->done = true;
 }
 
-static void storeReadComponents(FibHeap * starts, FibHeap * ends, int start, char * cigar) {
+static void storeReadComponents(HashFib * starts, HashFib * ends, int start, char * cigar) {
 	char block[100];
 	char * ptr;
 
@@ -114,7 +114,7 @@ static void storeReadComponents(FibHeap * starts, FibHeap * ends, int start, cha
 static void loadNextReadsOnChrom(WiggleIterator * wi) {
 	SamReaderData * data = (SamReaderData *) wi->data;
 
-	while (!data->done && !strcmp(wi->chrom, data->chrom) && (fh_empty(data->ends) || fh_empty(data->starts) || data->pos <= fh_min(data->ends) || data->pos <= fh_min(data->starts))) {
+	while (!data->done && !strcmp(wi->chrom, data->chrom) && (hashfib_empty(data->ends) || hashfib_empty(data->starts) || data->pos <= hashfib_min(data->ends) || data->pos <= hashfib_min(data->starts))) {
 		storeReadComponents(data->starts, data->ends, data->pos, data->cigar);
 		readLine(data);
 	}
@@ -122,30 +122,35 @@ static void loadNextReadsOnChrom(WiggleIterator * wi) {
 
 static void stepForward(WiggleIterator * wi) {
 	SamReaderData * data = (SamReaderData *) wi->data;
-	// Update coordinates
+	// Choose start
 	if (wi->value)
 		wi->start = wi->finish;
-	else {
-		wi->start = fh_min(data->starts);
+	else
+		wi->start = hashfib_min(data->starts);
+
+	// If overshot
+	if (data->target_chrom && ( 
+			(wi->start >= data->stop && strcmp(wi->chrom, data->target_chrom) == 0) 
+			 || strcmp(wi->chrom, data->target_chrom) > 0
+			 )
+	) {
+		wi->done = true;
+		return;
 	}
 
 	// Compute value
-	while (fh_notempty(data->starts) && fh_min(data->starts) == wi->start) {
-		wi->value++;
-		fh_extractmin(data->starts);
-	}
+	if (!hashfib_empty(data->starts) && hashfib_min(data->starts) == wi->start)
+		wi->value += hashfib_remove_min(data->starts);
 
-	if (fh_notempty(data->starts)) 
-		wi->finish = fh_min(data->starts);
-	if (fh_notempty(data->ends) && (fh_empty(data->starts) || fh_min(data->ends) < wi->finish)) 
-		wi->finish = fh_min(data->ends);
+	// Compute finish
+	if (hashfib_empty(data->starts) || hashfib_min(data->ends) < hashfib_min(data->starts)) 
+		wi->finish = hashfib_min(data->ends);
+	else
+		wi->finish = hashfib_min(data->starts);
 
-	if (data->stop > 0) {
-		if ((wi->start >= data->stop && strcmp(wi->chrom, data->target_chrom) == 0) || strcmp(wi->chrom, data->target_chrom) > 0)
-			wi->done = true;
-		else if (wi->finish > data->stop)
-			wi->finish = data->stop;
-	}
+	// If overshot
+	if (wi->finish > data->stop)
+		wi->finish = data->stop;
 }
 
 void SamReaderPop(WiggleIterator * wi) {
@@ -179,18 +184,17 @@ void SamReaderPop(WiggleIterator * wi) {
 	} else {
 		// Plan A is if already on a chromosome and there is remaining business there:
 		if (wi->chrom) {
-			while (fh_notempty(data->ends) && fh_min(data->ends) == wi->finish) {
-				wi->value--;
+			while (!hashfib_empty(data->ends) && hashfib_min(data->ends) == wi->finish) {
+				wi->value -= hashfib_remove_min(data->ends);
 				if (wi->value < 0) {
 					fprintf(stderr, "Negative coverage at %s:%i???\n", wi->chrom, wi->finish);
 					exit(1);
 				}
-				fh_extractmin(data->ends);
 			}
 
 			loadNextReadsOnChrom(wi);
 
-			if (fh_notempty(data->ends)) {
+			if (!hashfib_empty(data->ends)) {
 				stepForward(wi);
 				return;
 			}
@@ -204,7 +208,7 @@ void SamReaderPop(WiggleIterator * wi) {
 
 		loadNextReadsOnChrom(wi);
 
-		if (fh_notempty(data->ends)) {
+		if (!hashfib_empty(data->ends)) {
 			stepForward(wi);
 			return;
 		}
@@ -243,10 +247,10 @@ void SamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 
 		// Reset coverage data structures
 		if (!data->read_count) {
-			fh_deleteheap(data->starts);
-			fh_deleteheap(data->ends);
-			data->starts = fh_makeheap();
-			data->ends = fh_makeheap();
+			hashfib_destroy(data->starts);
+			hashfib_destroy(data->ends);
+			data->starts = hashfib_construct();
+			data->ends = hashfib_construct();
 		}
 		data->done = false;
 		readLine(data);
@@ -270,8 +274,8 @@ WiggleIterator * SamReader(char * filename, bool read_count) {
 	data->stop = -1;
 	data->read_count = read_count;
 	if (!read_count) {
-		data->starts = fh_makeheap();
-		data->ends = fh_makeheap();
+		data->starts = hashfib_construct();
+		data->ends = hashfib_construct();
 	}
 	if (strcmp(filename, "-")) {
 		if (!(data->file = fopen(filename, "r"))) {

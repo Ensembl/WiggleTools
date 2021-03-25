@@ -17,7 +17,7 @@
 #include "htslib/hts.h"
 #include "wiggleIterator.h"
 #include "bufferedReader.h"
-#include "fib.h"
+#include "hashfib.h"
 
 typedef struct bamFileReaderData_st {
 	// Arguments to downloader
@@ -34,7 +34,7 @@ typedef struct bamFileReaderData_st {
 	bam_hdr_t * header;
 } BamReaderData;
 
-static void storeReadComponents(FibHeap * starts, FibHeap * ends, bam1_t * aln) {
+static void storeReadComponents(HashFib * starts, HashFib * ends, bam1_t * aln) {
 	// Note that BAM coords are 0-based, hence +1
 	int start = aln->core.pos + 1;
 	uint32_t *cigar = bam_get_cigar(aln);
@@ -47,8 +47,8 @@ static void storeReadComponents(FibHeap * starts, FibHeap * ends, bam1_t * aln) 
 			case BAM_CEQUAL:
 			case BAM_CDIFF:
 			case BAM_CDEL:
-				fh_insert(starts, start, 0);
-				fh_insert(ends, start + length, 0);
+				hashfib_insert(starts, start);
+				hashfib_insert(ends, start + length);
 			case BAM_CREF_SKIP:
 				start += length;
 		}
@@ -67,8 +67,8 @@ static bam1_t * nextRead(BamReaderData * data, hts_itr_t * iter, bam1_t * aln) {
 static void consumeIteratorWithCigars(BamReaderData * data, hts_itr_t * iter, char * query_chrom, int query_chrom_tid, int query_stop) {
 	// Iterate through data
 	bam1_t *aln = bam_init1();
-	FibHeap * starts = fh_makeheap();
-	FibHeap * ends = fh_makeheap();
+	HashFib * starts = hashfib_construct();
+	HashFib * ends = hashfib_construct();
 	int start, finish = -1, chrom_tid = -1;
 	int value = 0;
 
@@ -76,58 +76,57 @@ static void consumeIteratorWithCigars(BamReaderData * data, hts_itr_t * iter, ch
 
 	while(1) {
 		// Remove dead weight
-		while (fh_notempty(ends) && fh_min(ends) == finish) {
-			value--;
-			fh_extractmin(ends);
-		}
+		if (!hashfib_empty(ends) && hashfib_min(ends) == finish)
+			value -= hashfib_remove_min(ends);
 
 		// Stream more data into heaps
 		while (aln
-		       && (aln->core.tid == chrom_tid || fh_empty(ends)) 
-		       && (fh_empty(ends) || aln->core.pos <= fh_min(ends) || fh_empty(starts) || aln->core.pos <= fh_min(starts))
+		       && (aln->core.tid == chrom_tid || hashfib_empty(ends)) 
+		       && (hashfib_empty(ends) || aln->core.pos <= hashfib_min(ends) || hashfib_empty(starts) || aln->core.pos <= hashfib_min(starts))
 		) {
 			storeReadComponents(starts, ends, aln);
 			chrom_tid = aln->core.tid;
 			aln = nextRead(data, iter, aln);
 		}
 
-		if (fh_notempty(ends)) {
+		if (!hashfib_empty(ends)) {
 			// Choose new start
 			if (value)
 				start = finish;
 			else
-				start = fh_min(starts);
+				start = hashfib_min(starts);
 
-			// Load new weight
-			while (fh_notempty(starts) && fh_min(starts) == start) {
-				value++;
-				fh_extractmin(starts);
+			// If gone overboard
+			if ((start >= query_stop && chrom_tid == query_chrom_tid) || chrom_tid > query_chrom_tid) {
+				hashfib_destroy(starts);
+				hashfib_destroy(ends);
+				return;
 			}
 
+			// Load new weight
+			if (!hashfib_empty(starts) && hashfib_min(starts) == start) 
+				value += hashfib_remove_min(starts);
+
 			// Choose finish
-			if (fh_notempty(starts))
-				finish = fh_min(starts);
-			if (fh_notempty(ends) && (fh_empty(starts) || fh_min(ends) < finish))
-				finish = fh_min(ends);
+			if (hashfib_empty(starts) || hashfib_min(ends) < hashfib_min(starts))
+				finish = hashfib_min(ends);
+			else 
+				finish = hashfib_min(starts);
 
-
-			// Possible cutoff of data
-			if ((start >= query_stop && chrom_tid == query_chrom_tid) || chrom_tid > query_chrom_tid) {
-				fh_deleteheap(starts);
-				fh_deleteheap(ends);
-				return;
-			} else if (finish > query_stop)
+			// If gone overboard
+			if (finish > query_stop)
 				finish = query_stop;
 
+			// Push out
 			if (pushValuesToBuffer(data->bufferedReaderData, data->header->target_name[chrom_tid], start, finish, value)) {
-				fh_deleteheap(starts);
-				fh_deleteheap(ends);
+				hashfib_destroy(starts);
+				hashfib_destroy(ends);
 				return;
 			}
 		} else {
 			// No ends => end of file iterator
-			fh_deleteheap(starts);
-			fh_deleteheap(ends);
+			hashfib_destroy(starts);
+			hashfib_destroy(ends);
 			return;
 		}
 	}

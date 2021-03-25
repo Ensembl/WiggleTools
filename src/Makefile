@@ -14,7 +14,7 @@ ${BINDIR}/wiggletools: ${LIBDIR}/libwiggletools.a wiggletools.o
 
 lib: ${LIBDIR}/libwiggletools.a 
 
-${LIBDIR}/libwiggletools.a: wiggleIterator.o wigReader.o bigWiggleReader.o multiplexer.o reducers.o bedReader.o bigBedReader.o bamReader.o apply.o commandParser.o wigWriter.o statistics.o unaryOps.o multiSet.o setComparisons.o bufferedReader.o vcfReader.o bcfReader.o plots.o mWigWriter.o recycleBin.o fib.o samReader.o
+${LIBDIR}/libwiggletools.a: wiggleIterator.o wigReader.o bigWiggleReader.o multiplexer.o reducers.o bedReader.o bigBedReader.o bamReader.o apply.o commandParser.o wigWriter.o statistics.o unaryOps.o multiSet.o setComparisons.o bufferedReader.o vcfReader.o bcfReader.o plots.o mWigWriter.o recycleBin.o fib.o samReader.o hash.o hashfib.o
 	mkdir -p ${LIBDIR}
 	ar rcs ${LIBDIR}/libwiggletools.a *.o
 
