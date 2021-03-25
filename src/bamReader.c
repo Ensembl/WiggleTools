@@ -260,6 +260,7 @@ void BamReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 
 	// Set boundaries
 	data->chrom = chrom;
+	data->start = start;
 	data->stop = finish;
 
 	// Weeeee
