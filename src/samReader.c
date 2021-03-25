@@ -128,6 +128,9 @@ static void stepForward(WiggleIterator * wi) {
 	else
 		wi->start = hashfib_min(data->starts);
 
+	if (wi->start == -1)
+		abort();
+
 	// If overshot
 	if (data->target_chrom && ( 
 			(wi->start >= data->stop && strcmp(wi->chrom, data->target_chrom) == 0) 
@@ -149,8 +152,9 @@ static void stepForward(WiggleIterator * wi) {
 		wi->finish = hashfib_min(data->starts);
 
 	// If overshot
-	if (wi->finish > data->stop)
+	if (data->target_chrom && wi->finish > data->stop)
 		wi->finish = data->stop;
+
 }
 
 void SamReaderPop(WiggleIterator * wi) {
