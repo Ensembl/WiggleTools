@@ -167,7 +167,7 @@ static bool downloadBamFileChromosome(BamReaderData * data, char * query_chrom, 
 	int query_chrom_tid = bam_name2id(data->header, query_chrom);
 	hts_itr_t * iter = sam_itr_queryi(data->idx, query_chrom_tid, query_start, query_stop);
 	if(data->header == NULL || iter == NULL) {
-		fprintf(stderr, "Unable to iterate to region within BAM.");
+		fprintf(stderr, "Unable to iterate to region %s:%i-%i within %s BAM file.", query_chrom, query_start, query_stop, data->filename);
 		exit(1);
 	}
 	bool status;
