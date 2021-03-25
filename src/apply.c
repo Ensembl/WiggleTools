@@ -21,7 +21,7 @@
 
 const int MAX_BUFFER = 1e6;
 const int MAX_BUFFER_SUM = 1e6;
-const int MAX_SEEK = 1e6;
+const int MAX_SEEK = 10;
 
 //////////////////////////////////////////////////////
 // Buffered wiggleIterator
@@ -50,10 +50,8 @@ static BufferedWiggleIteratorData * createBufferedWiggleIteratorData(char * chro
 	bufferedData->finish = finish;
 	bufferedData->index = 0;
 	bufferedData->length = finish - start;
-	if (bufferedData->length < MAX_BUFFER) {
-		bufferedData->values = (double *) calloc(bufferedData->length, sizeof(double));
-		bufferedData->set = (bool *) calloc(bufferedData->length, sizeof(bool));
-	}
+	bufferedData->values = (double *) calloc(bufferedData->length, sizeof(double));
+	bufferedData->set = (bool *) calloc(bufferedData->length, sizeof(bool));
 	bufferedData->default_value = default_value;
 	return bufferedData;
 }
@@ -196,24 +194,25 @@ static void addTarget(ApplyMultiplexerData * data, BufferedWiggleIteratorData * 
 }
 
 static void createTargets(ApplyMultiplexerData * data) {
-	int length;
-	int total_buffers = 0;
-
 	if (data->regions->finish - data->regions->start >= MAX_BUFFER) {
 		addTarget(data, createTarget(data));
 		pop(data->regions);
 	} else {
+		int length;
+		int last_finish = data->regions->finish;
+		int total_buffers = 0;
 		while(!data->regions->done 
 		      && (length = data->regions->finish - data->regions->start) < MAX_BUFFER
 		      && (!data->head 
-			  || ((total_buffers += length) < MAX_BUFFER_SUM && data->regions->finish <= data->head->start + MAX_SEEK && !strcmp(data->regions->chrom, data->tail->chrom))
+			  || ((total_buffers += length) < MAX_BUFFER_SUM && data->regions->start <= last_finish + MAX_SEEK && !strcmp(data->regions->chrom, data->tail->chrom))
 			 )
 		     ) 
 		{
+			if (data->regions->finish > last_finish)
+				last_finish = data->regions->finish;
 			addTarget(data, createTarget(data));
 			pop(data->regions);
 		}
-		seek(data->input, data->head->chrom, data->head->start, data->tail->finish);	
 	}
 }
 
@@ -309,6 +308,7 @@ void ApplyMultiplexerPop(Multiplexer * apply) {
 			return;
 		} 
 		createTargets(data);
+		seek(data->input, data->head->chrom, data->head->start, data->tail->finish);	
 	}
 
 	// If ongoing targets are reading:
