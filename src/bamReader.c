@@ -35,6 +35,10 @@ typedef struct bamFileReaderData_st {
 } BamReaderData;
 
 static void storeReadComponents(HashFib * starts, HashFib * ends, bam1_t * aln) {
+	// Sometimes a read has coordinates, but is not mapped (cf BWA)
+	// We should skip these exceptions
+	if (aln->core.flag & 0x4)
+		return;
 	// Note that BAM coords are 0-based, hence +1
 	int start = aln->core.pos + 1;
 	uint32_t *cigar = bam_get_cigar(aln);
