@@ -21,7 +21,7 @@ import os
 import os.path
 
 file=sys.argv[1]
-if (re.call("sort -k1,1 -k2,2n -k3,3n -m %sx/* > %s" % (file, file), shell=True))
+if (re.call("sort -k1,1 -k2,2n -k3,3n -m %sx/* > %s" % (file, file), shell=True)):
 	print 'Error processing directory %sx' % file
 	sys.exit(100)
 os.rmdir(file + "x")
