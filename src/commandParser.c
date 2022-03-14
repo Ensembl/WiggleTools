@@ -23,7 +23,7 @@ bool holdFire = false;
 
 void printHelp() {
 
-puts("WiggleTools");
+puts("WiggleTools v1.2.11");
 puts("");
 puts("Copyright [1999-2017] EMBL-European Bioinformatics Institute");
 puts("Development contact: Daniel Zerbino zerbino@ebi.ac.uk");
