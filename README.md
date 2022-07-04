@@ -43,7 +43,7 @@ docker container run --rm --mount type=bind,source="$(pwd)",target=/mnt ensemblo
 
 ### Pre-requisites
 
-WiggleTools requires three main dependencies: [LibBigWig](https://github.com/dpryan79/libBigWig), [HTSLib](https://github.com/samtools/htslib) and [GSL (GNU scientific)](https://www.gnu.org/software/gsl/) libraries. They themselves require [zlib](http://www.zlib.net/) and [libcurl](https://curl.haxx.se/download.html).
+WiggleTools requires three main dependencies: [LibBigWig](https://github.com/dpryan79/libBigWig), [HTSLib](https://github.com/samtools/htslib) and [GSL (GNU scientific)](https://www.gnu.org/software/gsl/) libraries. They themselves require [zlib](http://www.zlib.net/) [bzip2](https://sourceware.org/bzip2/) and [libcurl](https://curl.haxx.se/download.html).
 
 #### Installing LibBigWig
 
@@ -56,7 +56,7 @@ make install
 #### Installing the htslib library
 
 ```
-git clone https://github.com/samtools/htslib.git
+git clone --recurse-submodules https://github.com/samtools/htslib.git
 cd htslib 
 make install
 ```
@@ -96,7 +96,7 @@ There is no installation routine, meaning that you should copy the relevant file
 
 If the system cannot find 'gsl/gsl_cdf.h' then you need to install the [GNU scientific library](http://www.gnu.org/software/gsl/)
 
-Just to check, you can launch the tests:
+Just to check, you can launch the tests (requires Python):
 
 ```
 make test
