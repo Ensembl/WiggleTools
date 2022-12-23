@@ -39,6 +39,15 @@ Run the resulting wiggletools executable, bind-mounting the current working dire
 docker container run --rm --mount type=bind,source="$(pwd)",target=/mnt ensemblorg/wiggletools  [...arguments...]
 ```
 
+## Guix Installation
+
+Install [GNU Guix](https://guix.gnu.org), then run:
+
+```
+guix pull
+guix install wiggletools
+```
+
 ## Build from source
 
 ### Pre-requisites
