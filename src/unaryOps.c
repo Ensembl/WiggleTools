@@ -88,7 +88,7 @@ void UnionWiggleIteratorPop(WiggleIterator * wi) {
 WiggleIterator * UnionWiggleIterator(WiggleIterator * i) {
 	UnaryWiggleIteratorData * data = (UnaryWiggleIteratorData *) calloc(1, sizeof(UnaryWiggleIteratorData));
 	data->iter = i;
-	return newWiggleIterator(data, &UnionWiggleIteratorPop, &UnaryWiggleIteratorSeek, 0, false);
+	return newWiggleIterator(data, &UnionWiggleIteratorPop, &UnaryWiggleIteratorSeek, i->default_value, false);
 }
 
 //////////////////////////////////////////////////////
