@@ -964,7 +964,7 @@ void parseFile(char * filename) {
 		if (strlen(token)) {
 			if (wordCount >= arrayLength) {
 				arrayLength *= 2;
-				words = realloc(words, arrayLength * sizeof(char));
+				words = realloc(words, arrayLength * sizeof(char *));
 			}
 			words[wordCount++] = token;
 		}
