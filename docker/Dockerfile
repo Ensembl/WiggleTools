@@ -11,9 +11,13 @@ RUN apt update && apt install -y --no-install-recommends\
     libbigwig-dev \ 
     libhts-dev \ 
     libgsl-dev 
-RUN git clone --depth 1 https://github.com/Ensembl/WiggleTools.git
-WORKDIR WiggleTools
+COPY Makefile Makefile
+COPY src src
+COPY python python
 RUN   make LIBS='-lwiggletools -lBigWig -lcurl -lz -lhts -lm -lgsl -lpthread' 
+
+FROM builder as test
+COPY test test
 RUN   make test
 
 FROM ubuntu:20.04
@@ -21,7 +25,7 @@ RUN apt update && apt install -y --no-install-recommends \
     libbigwig0 \
     libhts3 \ 
     libgsl23
-COPY   --from=builder /WiggleTools/bin/wiggletools /usr/local/bin/
+COPY   --from=builder /bin/wiggletools /usr/local/bin/
 WORKDIR /mnt
 ENTRYPOINT ["wiggletools"]
 CMD ["--help"]
