@@ -52,9 +52,9 @@ static int readIteratorIntervals(bwOverlapIterator_t *iter, char * chrom, int st
 static int readBigWiggleRegion(BigWiggleReaderData * data, char * chrom, int start, int stop) {
 	// This hack is required because libBigWig does not handle negative numbers
 	if (start < 1)
-		start = 1
+		start = 1;
 	if (stop < 1)
-		stop = 1
+		stop = 1;
 	bwOverlapIterator_t *iter = bwOverlappingIntervalsIterator(data->fp, chrom, start - 1, stop - 1, MAX_BLOCKS);
 	if (!iter)
 		return 0;

@@ -45,9 +45,9 @@ static int readIteratorEntries(bwOverlapIterator_t *iter, char * chrom, int stre
 static int readBigBedRegion(BigBedReaderData * data, char * chrom, int start, int stop) {
 	// This hack is required because libBigWig does not handle negative numbers
 	if (start < 1)
-		start = 1
+		start = 1;
 	if (stop < 1)
-		stop = 1
+		stop = 1;
 	// BigBed format 1 indexed, hence the -1s
 	bwOverlapIterator_t *iter = bbOverlappingEntriesIterator(data->fp, chrom, start - 1, stop - 1, 0, MAX_BLOCKS);
 	if (!iter)
