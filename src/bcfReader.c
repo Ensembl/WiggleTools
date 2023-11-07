@@ -87,7 +87,8 @@ void BcfReaderSeek(WiggleIterator * wi, const char * chrom, int start, int finis
 		free(data->bufferedReaderData);
 		data->bufferedReaderData = NULL;
 	}
-	data->bcf_iterator = bcf_itr_queryi(data->bcf_index, bcf_hdr_name2id(data->bcf_header, chrom), start, finish);
+	// Note: BCF encoding is 0 based, hence -1s
+	data->bcf_iterator = bcf_itr_queryi(data->bcf_index, bcf_hdr_name2id(data->bcf_header, chrom), start - 1, finish - 1);
 	if (data->bcf_iterator == NULL) {
 		fprintf(stderr, "Could not find index file to BCF file %s.\n", data->filename);
 		exit(1);
