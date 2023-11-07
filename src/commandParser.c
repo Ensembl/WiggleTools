@@ -619,7 +619,7 @@ static WiggleIterator * readSeek() {
 	holdFire = true;
 
 	WiggleIterator * iter = readIterator();
-	seek(iter, chrom, start, finish);
+	seek(iter, chrom, start, finish + 1);
 	return iter;
 }
 
