@@ -160,6 +160,7 @@ wiggletools test/bedfile.bg
 ```
 wiggletools test/overlapping.bed 
 ```
+Note: Bed files need to be sorted ahead of parsing with WiggleTools to ensure the smooth running of the algorithms. If you get an error message, sort your input files using the unix command `LC_COLLATE=C sort -k1,1 -k2,2n` 
 
 * BigBed files
 
